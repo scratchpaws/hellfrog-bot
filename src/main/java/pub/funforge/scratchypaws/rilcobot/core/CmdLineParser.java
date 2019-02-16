@@ -1,5 +1,7 @@
 package pub.funforge.scratchypaws.rilcobot.core;
 
+import besus.utils.collection.Sequental;
+import besus.utils.func.Func;
 import org.apache.tools.ant.types.Commandline;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.MessageBuilder;
@@ -12,32 +14,15 @@ import pub.funforge.scratchypaws.rilcobot.reactions.MsgCreateReaction;
 import pub.funforge.scratchypaws.rilcobot.settings.SettingsController;
 
 import java.util.*;
+import java.util.stream.Stream;
+
+import static besus.utils.PredicateEx.eq;
+import static besus.utils.func.Func.conditional;
+import static besus.utils.func.Func.with;
 
 public class CmdLineParser {
 
     private static final String VERSION_STRING = "0.1.12a";
-    private static final Map<String, BotCommand> botCommands = new HashMap<>();
-    private static final List<MsgCreateReaction> msgCreateReactions = new ArrayList<>();
-
-    public CmdLineParser() {
-        PrefixCommand prefixCommand = new PrefixCommand();
-        botCommands.put(prefixCommand.getPrefix(), prefixCommand);
-        VoteCommand voteCommand = new VoteCommand();
-        botCommands.put(voteCommand.getPrefix(), voteCommand);
-        RightsCommand rightsCommand = new RightsCommand(botCommands, msgCreateReactions);
-        botCommands.put(rightsCommand.getPrefix(), rightsCommand);
-        ServiceCommand serviceCommand = new ServiceCommand();
-        botCommands.put(serviceCommand.getPrefix(), serviceCommand);
-        UpgradeCommand upgradeCommand = new UpgradeCommand();
-        botCommands.put(upgradeCommand.getPrefix(), upgradeCommand);
-        StatisticsCommand statisticsCommand = new StatisticsCommand();
-        botCommands.put(statisticsCommand.getPrefix(), statisticsCommand);
-    }
-
-    void addMsgAddReactions(List<MsgCreateReaction> reactions) {
-        if (reactions != null)
-            msgCreateReactions.addAll(reactions);
-    }
 
     void parseCmdLine(MessageCreateEvent event) {
         String cmdlineString = event.getMessageContent();
@@ -65,9 +50,9 @@ public class CmdLineParser {
 
         if (rawCmdline.length >= 1) {
             String commandPrefix = rawCmdline[0].toLowerCase();
-            if (botCommands.containsKey(commandPrefix)) {
-                botCommands.get(commandPrefix).executeCreateMessageEvent(event, rawCmdline, anotherStrings);
-            }
+            BotCommand.all().stream()
+                    .filter(c -> c.getPrefix().equals(commandPrefix))
+                    .forEach(c -> c.executeCreateMessageEvent(event, rawCmdline, anotherStrings));
             if (commandPrefix.equals("help") ||
                     commandPrefix.equals("-h") ||
                     commandPrefix.equals("--help")) {
@@ -82,25 +67,25 @@ public class CmdLineParser {
                         .append("The following commands are available:", MessageDecoration.BOLD)
                         .appendNewLine();
 
-                for (Map.Entry<String, BotCommand> cmd : botCommands.entrySet()) {
-                    helpUsage.append(cmd.getKey())
-                            .append(" - ")
-                            .append(cmd.getValue().getCommandDescription())
-                            .appendNewLine();
-                }
+                BotCommand.all().stream()
+                        .forEach(c -> helpUsage.append(c.getPrefix())
+                                .append(" - ")
+                                .append(c.getCommandDescription())
+                                .appendNewLine()
+                        );
 
-                if (msgCreateReactions.size() > 0) {
+                Sequental<MsgCreateReaction> msgCreateReactions = MsgCreateReaction.all();
+                if (msgCreateReactions.stream().count() > 0) {
                     helpUsage.append("The following reactions with access control available:",
                             MessageDecoration.BOLD)
                             .appendNewLine();
-                    msgCreateReactions.forEach(r -> {
-                        if (r.isAccessControl()) {
-                            helpUsage.append(r.getCommandPrefix())
+                    msgCreateReactions.stream()
+                            .filter(MsgCreateReaction::isAccessControl)
+                            .forEach(r -> helpUsage.append(r.getCommandPrefix())
                                     .append(" - ")
                                     .append(r.getCommandDescription())
-                                    .appendNewLine();
-                        }
-                    });
+                                    .appendNewLine()
+                            );
                 }
 
                 helpUsage.send(event.getChannel());

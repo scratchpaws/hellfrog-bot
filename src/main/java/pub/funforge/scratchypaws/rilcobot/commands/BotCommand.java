@@ -1,5 +1,6 @@
 package pub.funforge.scratchypaws.rilcobot.commands;
 
+import besus.utils.collection.Sequental;
 import org.apache.commons.cli.*;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
@@ -11,6 +12,9 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import pub.funforge.scratchypaws.rilcobot.common.CommonUtils;
+import pub.funforge.scratchypaws.rilcobot.reactions.CustomEmojiReaction;
+import pub.funforge.scratchypaws.rilcobot.reactions.DiceReaction;
+import pub.funforge.scratchypaws.rilcobot.reactions.MsgCreateReaction;
 import pub.funforge.scratchypaws.rilcobot.settings.SettingsController;
 
 import java.awt.*;
@@ -25,6 +29,16 @@ import java.util.Optional;
  * Основные функции команд бота
  */
 public abstract class BotCommand {
+    public static Sequental<BotCommand> all() {
+        return Sequental.all(
+                new PrefixCommand(),
+                new VoteCommand(),
+                new RightsCommand(),
+                new ServiceCommand(),
+                new UpgradeCommand(),
+                new StatisticsCommand())
+                .repeatable();
+    }
 
     private static final int ERROR_MESSAGE = 0;
     private static final int INFO_MESSAGE = 1;

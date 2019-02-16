@@ -30,14 +30,8 @@ public class RightsCommand
             "(such as: vote) also may require permission to manage channel, " +
             "designated for a poll.";
 
-    private final Map<String, BotCommand> knownCommands;
-    private final List<MsgCreateReaction> msgCreateReactions;
-
-    public RightsCommand(Map<String, BotCommand> botCommands, List<MsgCreateReaction> createReactions) {
+    public RightsCommand() {
         super(PREF, DESCRIPTION);
-
-        this.knownCommands = botCommands;
-        this.msgCreateReactions = createReactions;
 
         Option userOption = Option.builder("u")
                 .longOpt("user")
@@ -118,14 +112,15 @@ public class RightsCommand
         for (int i = 0; i < commands.length; i++)
             commands[i] = commands[i].toLowerCase();
 
-        Map<String, MsgCreateReaction> knownReactionsWithAcl = new HashMap<>();
-        msgCreateReactions.stream()
+        Map<String, MsgCreateReaction> knownReactionsWithAcl = new HashMap<>(); //// AAAAAAA why map?
+        MsgCreateReaction.all().stream()
                 .filter(MsgCreateReaction::isAccessControl)
                 .forEach(r -> knownReactionsWithAcl.put(r.getCommandPrefix(), r));
 
-        List<String> unknownCommands = new ArrayList<>(commands.length);
+        List<String> unknownCommands = new ArrayList<>(commands.length);// todo AAAAAAAA
         for (String cmd : commands) {
-            if (!knownCommands.containsKey(cmd) && !knownReactionsWithAcl.containsKey(cmd))
+            if (BotCommand.all().stream().noneMatch(c -> c.getPrefix().equals(cmd))
+                    && !knownReactionsWithAcl.containsKey(cmd))
                 unknownCommands.add(cmd);
         }
 

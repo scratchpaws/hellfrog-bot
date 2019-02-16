@@ -18,14 +18,10 @@ import org.javacord.api.listener.message.reaction.ReactionRemoveListener;
 import org.javacord.api.listener.server.ServerJoinListener;
 import org.javacord.core.entity.permission.PermissionsImpl;
 import pub.funforge.scratchypaws.rilcobot.common.BroadCast;
-import pub.funforge.scratchypaws.rilcobot.reactions.CustomEmojiReaction;
-import pub.funforge.scratchypaws.rilcobot.reactions.DiceReaction;
 import pub.funforge.scratchypaws.rilcobot.reactions.MsgCreateReaction;
 import pub.funforge.scratchypaws.rilcobot.reactions.ReactReaction;
 import pub.funforge.scratchypaws.rilcobot.settings.SettingsController;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 public class EventsListener
@@ -35,18 +31,12 @@ public class EventsListener
 
     private SettingsController settingsController;
     private CmdLineParser cmdLineParser;
-    private List<MsgCreateReaction> msgCreateReactions = new ArrayList<>();
+
     private ReactReaction reactReaction = new ReactReaction();
 
     EventsListener() {
         this.settingsController = SettingsController.getInstance();
         this.cmdLineParser = new CmdLineParser();
-
-        DiceReaction diceReaction = new DiceReaction();
-        msgCreateReactions.add(diceReaction);
-        CustomEmojiReaction emojiReaction = new CustomEmojiReaction();
-        msgCreateReactions.add(emojiReaction);
-        cmdLineParser.addMsgAddReactions(msgCreateReactions);
     }
 
     @Override
@@ -67,11 +57,9 @@ public class EventsListener
             }
         }
 
-        for (MsgCreateReaction msgCreateReaction : msgCreateReactions) {
-            if (msgCreateReaction.canReact(event)) {
-                msgCreateReaction.onMessageCreate(event);
-            }
-        }
+        MsgCreateReaction.all().stream()
+                .filter(r -> r.canReact(event))
+                .forEach(r -> r.onMessageCreate(event));
     }
 
     @Override
@@ -112,6 +100,7 @@ public class EventsListener
                 "Invite url: " + api.createBotInvite(new PermissionsImpl(470149318))
                 : " ";
         String readyMsg = "Bot started. " + invite;
+        System.err.println(readyMsg);
         BroadCast.sendBroadcastToAllBotOwners(readyMsg);
     }
 

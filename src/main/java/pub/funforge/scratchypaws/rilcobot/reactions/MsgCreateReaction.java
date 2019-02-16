@@ -1,5 +1,6 @@
 package pub.funforge.scratchypaws.rilcobot.reactions;
 
+import besus.utils.collection.Sequental;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.server.Server;
@@ -7,6 +8,7 @@ import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.listener.message.MessageCreateListener;
 import org.jetbrains.annotations.Nullable;
+import pub.funforge.scratchypaws.rilcobot.commands.BotCommand;
 import pub.funforge.scratchypaws.rilcobot.common.CommonUtils;
 import pub.funforge.scratchypaws.rilcobot.core.AccessControlCheck;
 
@@ -15,6 +17,12 @@ import java.util.concurrent.CompletableFuture;
 
 public abstract class MsgCreateReaction
         implements MessageCreateListener {
+
+    public static Sequental<MsgCreateReaction> all() {
+         return Sequental
+                 .all(new DiceReaction(), new CustomEmojiReaction())
+                 .repeatable();
+    }
 
     private boolean accessControl = false;
     private boolean strictByChannel = false;
