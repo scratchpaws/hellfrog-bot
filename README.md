@@ -1,2 +1,1 @@
-# hellfrog-bot
-Yet another Discord(tm)(c)(r) bot
+A simple stupid bot for Discord(tm)(r)(c). Can vote, dice and more functions.
