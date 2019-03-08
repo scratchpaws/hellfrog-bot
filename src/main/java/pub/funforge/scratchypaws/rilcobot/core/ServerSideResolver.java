@@ -1,5 +1,6 @@
 package pub.funforge.scratchypaws.rilcobot.core;
 
+import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.permission.PermissionState;
@@ -9,6 +10,7 @@ import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import pub.funforge.scratchypaws.rilcobot.common.CommonUtils;
+import pub.funforge.scratchypaws.rilcobot.settings.SettingsController;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,7 +28,7 @@ public class ServerSideResolver {
     private static final Pattern ROLE_TAG_SEARCH = Pattern.compile("<@&[0-9]+>", Pattern.MULTILINE);
     private static final Pattern CHANNEL_TAG_REGEXP = Pattern.compile("^<#[0-9]+>$"); // <#525287388818178050>
     private static final Pattern CHANNEL_TAG_SEARCH = Pattern.compile("<#[0-9]+>", Pattern.MULTILINE);
-    private static final Pattern EMOJI_TAG_REGEXP = Pattern.compile("^<:.+?:\\d+>$"); // <:swiborg:530385828157980694>
+    private static final Pattern EMOJI_TAG_REGEXP = Pattern.compile("^<a?:.+?:\\d+>$"); // <:swiborg:530385828157980694>
 
     public static Optional<User> resolveUser(Server server, String rawValue) {
         // 1. вначале ищем по явному id

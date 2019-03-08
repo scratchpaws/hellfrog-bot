@@ -12,9 +12,6 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import pub.funforge.scratchypaws.rilcobot.common.CommonUtils;
-import pub.funforge.scratchypaws.rilcobot.reactions.CustomEmojiReaction;
-import pub.funforge.scratchypaws.rilcobot.reactions.DiceReaction;
-import pub.funforge.scratchypaws.rilcobot.reactions.MsgCreateReaction;
 import pub.funforge.scratchypaws.rilcobot.settings.SettingsController;
 
 import java.awt.*;
@@ -36,7 +33,8 @@ public abstract class BotCommand {
                 new RightsCommand(),
                 new ServiceCommand(),
                 new UpgradeCommand(),
-                new StatisticsCommand())
+                new StatisticsCommand(),
+                new JoinLogCommand())
                 .repeatable();
     }
 

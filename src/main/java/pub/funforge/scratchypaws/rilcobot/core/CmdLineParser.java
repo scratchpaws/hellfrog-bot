@@ -22,7 +22,7 @@ import static besus.utils.func.Func.with;
 
 public class CmdLineParser {
 
-    private static final String VERSION_STRING = "0.1.12a";
+    private static final String VERSION_STRING = "0.1.13a";
 
     void parseCmdLine(MessageCreateEvent event) {
         String cmdlineString = event.getMessageContent();

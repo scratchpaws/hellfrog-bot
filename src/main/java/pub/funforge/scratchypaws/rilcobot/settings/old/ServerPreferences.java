@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
@@ -21,6 +22,9 @@ public class ServerPreferences
 
     private ConcurrentHashMap<String, CommandRights> srvCommandRights = new ConcurrentHashMap<>();
     private CopyOnWriteArrayList<ActiveVote> activeVotes = new CopyOnWriteArrayList<>();
+
+    private volatile Boolean joinLeaveDisplay = false;
+    private volatile Long joinLeaveChannel = null;
 
     @JsonIgnore
     private transient ReentrantLock commandRightsGenLock = new ReentrantLock();
@@ -74,5 +78,21 @@ public class ServerPreferences
 
     public void setActiveVotes(List<ActiveVote> activeVotes) {
         this.activeVotes = new CopyOnWriteArrayList<>(activeVotes);
+    }
+
+    public void setJoinLeaveDisplay(boolean state) {
+        this.joinLeaveDisplay = state;
+    }
+
+    public boolean isJoinLeaveDisplay() {
+        return this.joinLeaveDisplay != null && this.joinLeaveDisplay;
+    }
+
+    public void setJoinLeaveChannel(long textChannelId) {
+        this.joinLeaveChannel = textChannelId;
+    }
+
+    public long getJoinLeaveChannel() {
+        return Objects.requireNonNullElse(this.joinLeaveChannel, 0L);
     }
 }

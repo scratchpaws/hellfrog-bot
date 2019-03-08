@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 public class CustomEmojiReaction
         extends MsgCreateReaction {
 
-    private static final Pattern CUSTOM_EMOJI_SEARCH = Pattern.compile("<:.+?:\\d+>", Pattern.MULTILINE);
+    private static final Pattern CUSTOM_EMOJI_SEARCH = Pattern.compile("<a?:.+?:\\d+>", Pattern.MULTILINE);
 
     @Override
     public boolean canReact(MessageCreateEvent event) {
