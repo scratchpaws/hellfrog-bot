@@ -32,8 +32,8 @@ public class DiceReaction
         extends MsgCreateReaction {
 
     private static final String SHORT_ROLL_PREFIX = "(ll|\u0434\u0434)";
-    private static final Pattern DICE_PATTERN = Pattern.compile("^r?(d?\\d{1,2}d\\d+|ll|\u0434\u0434)([=<>]{1,2}\\d+)?");
-    private static final Pattern SEARCH_PATTERN = Pattern.compile("(^|\\n).*r?(d?\\d{1,2}d\\d+|ll|\u0434\u0434)([=<>]{1,2}\\d+)?");
+    private static final Pattern DICE_PATTERN = Pattern.compile("^([rр])?(d?\\d{1,2}d\\d+|ll|\u0434\u0434)([=<>]{1,2}\\d+)?");
+    private static final Pattern SEARCH_PATTERN = Pattern.compile("(^|\\n).*([rр])?(d?\\d{1,2}d\\d+|ll|\u0434\u0434)([=<>]{1,2}\\d+)?");
     private static final String DEFAULT_ROLL = "1d20";
 
     private static final Path ROFL_ROOT = Paths.get("./rofls");
@@ -97,7 +97,7 @@ public class DiceReaction
                     anotherString = ServerSideResolver.resolveMentions(server, anotherString);
                 }
 
-                boolean doRofl = diceValue.startsWith("r");
+                boolean doRofl = diceValue.startsWith("r") || diceValue.startsWith("р");
                 boolean doEquals = diceValue.contains("=");
                 boolean doGreat = diceValue.contains(">");
                 boolean doLess = diceValue.contains("<");
