@@ -63,6 +63,11 @@ public class JoinLogCommand
                                                    MessageCreateEvent event,
                                                    ArrayList<String> anotherLines) {
 
+        if (!canExecuteServerCommand(event, server, channel.getId())) {
+            showAccessDeniedServerMessage(channel);
+            return;
+        }
+
         boolean isChannelSet = cmdline.hasOption('c');
         String textChannelName = isChannelSet ? cmdline.getOptionValue('c') : "";
 
@@ -144,6 +149,8 @@ public class JoinLogCommand
                 }
                 showInfoMessage(msg.getStringBuilder().toString(), channel);
             }
+        } else if (!enableFlag && !disableFlag && !statusFlag) {
+            showErrorMessage("Action required", channel);
         } else {
             showErrorMessage("Only one action may be execute", channel);
         }
