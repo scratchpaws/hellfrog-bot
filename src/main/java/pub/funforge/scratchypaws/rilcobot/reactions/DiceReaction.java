@@ -31,9 +31,9 @@ import java.util.regex.Pattern;
 public class DiceReaction
         extends MsgCreateReaction {
 
-    private static final String SHORT_ROLL_PREFIX = "(ll|\u0434\u0434)";
-    private static final Pattern DICE_PATTERN = Pattern.compile("^([rр])?(d?\\d{1,2}d\\d+|ll|\u0434\u0434)([=<>]{1,2}\\d+)?");
-    private static final Pattern SEARCH_PATTERN = Pattern.compile("(^|\\n).*([rр])?(d?\\d{1,2}d\\d+|ll|\u0434\u0434)([=<>]{1,2}\\d+)?");
+    private static final String SHORT_ROLL_PREFIX = "([lLдД]{2})";
+    private static final Pattern DICE_PATTERN = Pattern.compile("^([rRрР])?(d?\\d{1,2}[dDдД]\\d+|[lLдД]{2})([=<>]{1,2}\\d+)?");
+    private static final Pattern SEARCH_PATTERN = Pattern.compile("(^|\\n).*([rRрР])?(d?\\d{1,2}[dDдД]\\d+|[lLдД]{2})([=<>]{1,2}\\d+)?");
     private static final String DEFAULT_ROLL = "1d20";
 
     private static final Path ROFL_ROOT = Paths.get("./rofls");
@@ -64,7 +64,7 @@ public class DiceReaction
     @Override
     public boolean canReact(MessageCreateEvent event) {
         String messageString = event.getMessageContent();
-        Matcher matcher = SEARCH_PATTERN.matcher(messageString);
+        Matcher matcher = SEARCH_PATTERN.matcher(messageString.toLowerCase());
         return matcher.find();
     }
 
@@ -97,13 +97,14 @@ public class DiceReaction
                     anotherString = ServerSideResolver.resolveMentions(server, anotherString);
                 }
 
-                boolean doRofl = diceValue.startsWith("r") || diceValue.startsWith("р");
+                boolean doRofl = diceValue.toLowerCase().startsWith("r")
+                        || diceValue.toLowerCase().startsWith("р");
                 boolean doEquals = diceValue.contains("=");
                 boolean doGreat = diceValue.contains(">");
                 boolean doLess = diceValue.contains("<");
                 boolean doFilter = doEquals || doGreat || doLess;
 
-                String[] diceParams = diceValue.trim().split("(d|[<>=]{1,2})");
+                String[] diceParams = diceValue.trim().split("([dDдД]|[<>=]{1,2})");
                 if (diceParams.length >= 2 && diceParams.length <= 3) {
                     long diceNum = CommonUtils.onlyNumbersToLong(diceParams[0]);
                     long varNum = CommonUtils.onlyNumbersToLong(diceParams[1]);
