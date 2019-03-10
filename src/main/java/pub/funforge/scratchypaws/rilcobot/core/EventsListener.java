@@ -28,6 +28,7 @@ import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
 import org.javacord.core.entity.permission.PermissionsImpl;
 import pub.funforge.scratchypaws.rilcobot.common.BroadCast;
 import pub.funforge.scratchypaws.rilcobot.common.CommonUtils;
+import pub.funforge.scratchypaws.rilcobot.reactions.VoteReactFilter;
 import pub.funforge.scratchypaws.rilcobot.reactions.MsgCreateReaction;
 import pub.funforge.scratchypaws.rilcobot.reactions.ReactReaction;
 import pub.funforge.scratchypaws.rilcobot.settings.SettingsController;
@@ -45,6 +46,7 @@ public class EventsListener
     private CmdLineParser cmdLineParser;
 
     private ReactReaction reactReaction = new ReactReaction();
+    private VoteReactFilter asVoteReaction = new VoteReactFilter();
 
     EventsListener() {
         this.settingsController = SettingsController.getInstance();
@@ -87,6 +89,7 @@ public class EventsListener
     @Override
     public void onReactionAdd(ReactionAddEvent event) {
         reactReaction.parseReaction(event, true);
+        asVoteReaction.parseAction(event);
     }
 
     @Override

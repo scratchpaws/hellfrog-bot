@@ -1,5 +1,8 @@
 package pub.funforge.scratchypaws.rilcobot.settings.old;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import pub.funforge.scratchypaws.rilcobot.common.CommonUtils;
+
 import java.util.Objects;
 
 /**
@@ -68,5 +71,15 @@ public class VotePoint {
                 ", CustomEmoji=" + CustomEmoji +
                 ", pointText='" + pointText + '\'' +
                 '}';
+    }
+
+    @JsonIgnore
+    public boolean isUnicodeVP() {
+        return !CommonUtils.isTrStringEmpty(emoji);
+    }
+
+    @JsonIgnore
+    public boolean isCustomEmojiVP() {
+        return CustomEmoji != null && CustomEmoji > 0;
     }
 }

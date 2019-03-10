@@ -207,7 +207,11 @@ public class VoteController
         if (point.getEmoji() != null) {
             result.append(point.getEmoji());
         } else if (point.getCustomEmoji() != null) {
-            result.append(emojiCache.get(point.getCustomEmoji()));
+            try {
+                result.append(emojiCache.get(point.getCustomEmoji()));
+            } catch (NullPointerException npe) {
+                result.append("[unknown emoji]");
+            }
         }
         result.append(" -- ")
                 .append(point.getPointText());
