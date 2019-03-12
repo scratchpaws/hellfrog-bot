@@ -3,19 +3,14 @@ package pub.funforge.scratchypaws.rilcobot.commands;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.event.message.MessageCreateEvent;
-import pub.funforge.scratchypaws.rilcobot.common.CommonUtils;
 import pub.funforge.scratchypaws.rilcobot.settings.SettingsController;
 import pub.funforge.scratchypaws.rilcobot.settings.old.ServerStatistic;
-import pub.funforge.scratchypaws.rilcobot.settings.old.SmileStatistic;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class StatisticsCommand
         extends BotCommand {
@@ -106,79 +101,70 @@ public class StatisticsCommand
             }
 
             if (showOption) {
-                MessageBuilder msg = new MessageBuilder()
-                        .append("Collected statistic:", MessageDecoration.BOLD)
-                        .appendNewLine();
 
-                Map<Long, KnownCustomEmoji> emojiCache = new HashMap<>();
-                Map<Long, Calendar> lastUseCache = new HashMap<>();
-                Map<Long, Long> usagesCountCache = new HashMap<>();
-                Set<Long> usagesCounts = new TreeSet<>(Comparator.reverseOrder());
-                for (Map.Entry<Long, SmileStatistic> entry : serverStatistic.getNonDefaultSmileStats().entrySet()) {
-                    long emojiId = entry.getKey();
-                    server.getCustomEmojiById(emojiId)
-                            .ifPresent(e -> emojiCache.put(emojiId, e));
-                    SmileStatistic stats = entry.getValue();
-                    AtomicLong lastUsage = stats.getLastUsage();
-                    if (lastUsage != null && lastUsage.get() > 0) {
-                        Calendar last = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-                        last.setTimeInMillis(lastUsage.get());
-                        lastUseCache.put(emojiId, last);
-                    }
-                    AtomicLong usagesCount = stats.getUsagesCount();
-                    if (usagesCount != null) {
-                        long cnt = usagesCount.get();
-                        usagesCountCache.put(emojiId, cnt);
-                        usagesCounts.add(cnt);
-                    }
-                }
+                TreeMap<Long, List<String>> emojiStat = new TreeMap<>(Comparator.reverseOrder());
 
-                if (usagesCounts.size() == 0) {
-                    msg.append("No emoji statistic")
-                            .appendNewLine();
+                serverStatistic.getNonDefaultSmileStats()
+                        .forEach((id, stat) -> {
+                            if (stat.getUsagesCount() != null && stat.getUsagesCount().get() > 0) {
+                                long usagesCount = stat.getUsagesCount().get();
+                                server.getCustomEmojiById(id)
+                                        .ifPresentOrElse(emoji -> {
+                                            MessageBuilder tmp = new MessageBuilder()
+                                                    .append("- ")
+                                                    .append(String.valueOf(usagesCount))
+                                                    .append(" - ")
+                                                    .append(emoji)
+                                                    .append(" ");
+                                            if (stat.getLastUsage() != null && stat.getLastUsage().get() > 0) {
+                                                Calendar last = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                                                last.setTimeInMillis(stat.getLastUsage().get());
+                                                tmp.append(String.format("last usage at %tF %<tT (GMT)", last));
+                                            }
+                                            if (!emojiStat.containsKey(usagesCount)) {
+                                                List<String> emptyList = new ArrayList<>();
+                                                emojiStat.put(usagesCount, emptyList);
+                                            }
+                                            emojiStat.get(usagesCount)
+                                                    .add(tmp.getStringBuilder().toString());
+                                        }, () -> serverStatistic.getNonDefaultSmileStats()
+                                                    .remove(id));
+                            }
+                        });
+
+                if (emojiStat.size() == 0) {
+                    new MessageBuilder()
+                            .append("Message statistic is empty")
+                            .send(channel);
                 } else {
-                    msg.append("- Custom emoji usage statistic:", MessageDecoration.ITALICS)
-                            .appendNewLine();
-                    for (long usagesTableValue : usagesCounts) {
-                        for (Map.Entry<Long, Long> usageStatEntry : usagesCountCache.entrySet()) {
-                            long usagesCount = usageStatEntry.getValue();
-                            if (usagesCount == usagesTableValue) {
-                                msg.append("   - ")
-                                        .append(String.valueOf(usagesCount))
-                                        .append(" - ");
-                                long emojiId = usageStatEntry.getKey();
-                                if (emojiCache.containsKey(emojiId)) {
-                                    msg.append(emojiCache.get(emojiId));
-                                } else {
-                                    msg.append("(n/a, id: " + emojiId + ")");
-                                }
-                                msg.append(" ");
-                                if (lastUseCache.containsKey(emojiId)) {
-                                    Calendar last = lastUseCache.get(emojiId);
-                                    msg.append(String.format("last usage at %tF %<tT (GMT)", last));
-                                } else {
-                                    msg.append("(last usage unknown)");
-                                }
-                                msg.appendNewLine();
+                    new MessageBuilder()
+                            .append("Collected statistic:", MessageDecoration.BOLD)
+                            .appendNewLine()
+                            .append(">> Custom emoji usage statistic:", MessageDecoration.ITALICS)
+                            .send(channel);
+
+                    int cnt = 0;
+                    final int maxCnt = 20;
+                    MessageBuilder msg = null;
+
+                    for (Map.Entry<Long, List<String>> entry : emojiStat.entrySet()) {
+                        for (String item : entry.getValue()) {
+                            if (msg == null) {
+                                msg = new MessageBuilder();
+                            }
+                            msg.append(item).appendNewLine();
+                            cnt++;
+                            if (cnt == maxCnt) {
+                                msg.send(channel);
+                                msg = null;
+                                cnt = 0;
                             }
                         }
                     }
-                }
 
-                if (msg.getStringBuilder().length() >= 1990) {
-                    List<String> splitted = CommonUtils.splitEqually(msg.getStringBuilder().toString(), 1990);
-                    CompletableFuture.runAsync(() -> {
-                        for (String cut : splitted) {
-                            new MessageBuilder().append(cut)
-                                    .send(channel)
-                                    .exceptionally(t -> {
-                                        System.out.println("Can't sent \"" + cut + "\": " + t);
-                                        return null;
-                                    });
-                        }
-                    });
-                } else {
-                    msg.send(channel);
+                    if (msg != null) {
+                        msg.send(channel);
+                    }
                 }
             }
         } else {

@@ -40,8 +40,10 @@ public class CustomEmojiReaction
                 String[] sub = matched.split(":");
                 if (sub.length == 3) {
                     long customSmileId = CommonUtils.onlyNumbersToLong(sub[2]);
-                    serverStatistic.getSmileStatistic(customSmileId)
-                            .increment();
+                    server.getCustomEmojiById(customSmileId)
+                            .ifPresent(e -> serverStatistic.getSmileStatistic(customSmileId)
+                                    .increment()
+                            );
                 }
             }
         }
