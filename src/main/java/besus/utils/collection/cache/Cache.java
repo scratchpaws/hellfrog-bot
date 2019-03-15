@@ -1,8 +1,8 @@
 package besus.utils.collection.cache;
 
 
-import besus.utils.func.Func;
 import besus.utils.collection.SelfExpiringHashMap;
+import besus.utils.func.Func;
 import rx.functions.Func0;
 
 import java.util.*;

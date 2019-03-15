@@ -5,10 +5,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>pub.funforge.scratchypaws</groupId>
-    <artifactId>rilcobot-discord</artifactId>
-    <version>0.1a</version>
+    <artifactId>hellfrog-bot</artifactId>
+    <version>0.2a</version>
     <packaging>jar</packaging>
-    <name>rilcobot</name>
+    <name>hellfrog</name>
 
     <dependencies>
         <!-- https://mvnrepository.com/artifact/org.jetbrains/annotations -->
@@ -97,7 +97,7 @@
     </dependencies>
 
     <build>
-        <finalName>rilcobot</finalName>
+        <finalName>hellfrog</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -140,7 +140,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>pub.funforge.scratchypaws.rilcobot.core.Loader</mainClass>
+                            <mainClass>xyz.funforge.scratchypaws.hellfrog.core.Loader</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

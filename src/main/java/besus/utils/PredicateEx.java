@@ -1,7 +1,7 @@
 package besus.utils;
 
-import besus.utils.func.Func;
 import besus.utils.collection.Sequental;
+import besus.utils.func.Func;
 import org.apache.commons.lang3.StringUtils;
 import rx.functions.Action0;
 import rx.functions.Action1;
@@ -12,8 +12,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.StreamSupport;
-
-import static besus.utils.func.Func.asStr;
 
 /**
  * Created by besus on 27.05.17.

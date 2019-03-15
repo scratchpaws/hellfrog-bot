@@ -1,13 +1,14 @@
 package besus.utils;
 
 import besus.utils.func.Func;
-//import io.vertx.core.json.JsonObject;
 import rx.functions.Func1;
 import rx.functions.Func2;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+//import io.vertx.core.json.JsonObject;
 
 /**
  * Created by besus on 21.03.17.

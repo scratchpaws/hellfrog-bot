@@ -3,7 +3,6 @@ package besus.utils;
 
 import besus.utils.func.Func;
 import besus.utils.func.Mapper;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
@@ -20,7 +19,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static besus.utils.PredicateEx.*;
-import static besus.utils.PredicateEx.not;
 
 /**
  * Created by user on 3/9/2017.

@@ -1,11 +1,8 @@
 package besus.utils.func;
 
-import besus.utils.Ref;
 import besus.utils.MiscUtils;
-
-import besus.utils.collection.Sequental;
+import besus.utils.Ref;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import rx.functions.*;
 
 import java.util.Arrays;

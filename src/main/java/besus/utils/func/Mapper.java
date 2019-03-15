@@ -2,11 +2,9 @@ package besus.utils.func;
 
 import besus.utils.collection.Sequental;
 
-
 import java.util.*;
 
 import static besus.utils.MiscUtils.coalesce;
-import static besus.utils.func.Func.cast;
 
 
 /**

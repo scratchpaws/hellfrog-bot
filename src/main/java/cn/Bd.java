@@ -12,11 +12,10 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.server.invite.InviteBuilder;
 import org.javacord.api.entity.user.User;
 import org.jetbrains.annotations.NotNull;
-import pub.funforge.scratchypaws.rilcobot.common.BroadCast;
-import pub.funforge.scratchypaws.rilcobot.common.CodeSourceUtils;
-import pub.funforge.scratchypaws.rilcobot.core.ServerSideResolver;
-import pub.funforge.scratchypaws.rilcobot.reactions.DiceReaction;
-import pub.funforge.scratchypaws.rilcobot.settings.SettingsController;
+import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
+import xyz.funforge.scratchypaws.hellfrog.common.CodeSourceUtils;
+import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
+import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -28,8 +27,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -38,7 +35,6 @@ public class Bd {
     private volatile static Server selectedServer = null;
     private volatile static TextChannel serverTextChannel = null;
     private volatile static User selectedUser = null;
-    private static final ReentrantLock dicesModifyLock = new ReentrantLock();
 
     @NotNull
     @MethodInfo("Get info of all other methods")
