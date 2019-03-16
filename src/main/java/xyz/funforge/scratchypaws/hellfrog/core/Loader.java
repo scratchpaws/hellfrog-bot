@@ -22,6 +22,8 @@ public class Loader {
                     api.addReactionRemoveAllListener(eventsListener);
                     api.addServerMemberJoinListener(eventsListener);
                     api.addServerMemberLeaveListener(eventsListener);
+                    api.addServerMemberBanListener(eventsListener);
+                    api.addServerMemberUnbanListener(eventsListener);
                     api.updateActivity(ActivityType.LISTENING, "<prefix> help");
                     SettingsController.getInstance().setDiscordApi(api);
                     api.addServerJoinListener(eventsListener);

@@ -50,6 +50,17 @@ public class VoteReactFilter {
                         return;
                     }
 
+                    if (v.getRolesFilter() != null && v.getRolesFilter().size() > 0) {
+                        boolean nonVoteRole = srv.getRoles(event.getUser())
+                                .stream()
+                                .noneMatch(r -> v.getRolesFilter()
+                                        .contains(r.getId()));
+                        if (nonVoteRole) {
+                            event.removeReaction();
+                            return;
+                        }
+                    }
+
                     // убираем попытку навесить иной пункт уже голосовавшего
                     if (v.isExceptionalVote()) {
                         Message msg = null;

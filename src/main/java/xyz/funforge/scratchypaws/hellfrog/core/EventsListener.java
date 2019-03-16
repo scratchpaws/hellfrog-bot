@@ -15,9 +15,7 @@ import org.javacord.api.event.message.reaction.ReactionAddEvent;
 import org.javacord.api.event.message.reaction.ReactionRemoveAllEvent;
 import org.javacord.api.event.message.reaction.ReactionRemoveEvent;
 import org.javacord.api.event.server.ServerJoinEvent;
-import org.javacord.api.event.server.member.ServerMemberEvent;
-import org.javacord.api.event.server.member.ServerMemberJoinEvent;
-import org.javacord.api.event.server.member.ServerMemberLeaveEvent;
+import org.javacord.api.event.server.member.*;
 import org.javacord.api.listener.message.MessageCreateListener;
 import org.javacord.api.listener.message.MessageDeleteListener;
 import org.javacord.api.listener.message.MessageEditListener;
@@ -25,8 +23,10 @@ import org.javacord.api.listener.message.reaction.ReactionAddListener;
 import org.javacord.api.listener.message.reaction.ReactionRemoveAllListener;
 import org.javacord.api.listener.message.reaction.ReactionRemoveListener;
 import org.javacord.api.listener.server.ServerJoinListener;
+import org.javacord.api.listener.server.member.ServerMemberBanListener;
 import org.javacord.api.listener.server.member.ServerMemberJoinListener;
 import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
+import org.javacord.api.listener.server.member.ServerMemberUnbanListener;
 import org.javacord.core.entity.permission.PermissionsImpl;
 import xyz.funforge.scratchypaws.hellfrog.commands.BotCommand;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
@@ -46,12 +46,34 @@ import java.util.Optional;
 public class EventsListener
         implements MessageCreateListener, MessageEditListener, MessageDeleteListener,
         ReactionAddListener, ReactionRemoveListener, ReactionRemoveAllListener,
-        ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener {
+        ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
+        ServerMemberBanListener, ServerMemberUnbanListener {
 
     private static final String VERSION_STRING = "0.1.14b";
 
     private ReactReaction reactReaction = new ReactReaction();
     private VoteReactFilter asVoteReaction = new VoteReactFilter();
+
+    private enum MemberEventCode {
+        JOIN, LEAVE, BAN, UNBAN;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case JOIN:
+                    return " joined to ";
+                case LEAVE:
+                    return " just left the server ";
+                case BAN:
+                    return " banned on the server ";
+                case UNBAN:
+                    return " unbanned on the server ";
+
+                default:
+                    return "";
+            }
+        }
+    }
 
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
@@ -216,15 +238,25 @@ public class EventsListener
 
     @Override
     public void onServerMemberJoin(ServerMemberJoinEvent event) {
-        onServerJoinLeft(event, true);
+        serverMemberStateDisplay(event, MemberEventCode.JOIN);
     }
 
     @Override
     public void onServerMemberLeave(ServerMemberLeaveEvent event) {
-        onServerJoinLeft(event, false);
+        serverMemberStateDisplay(event, MemberEventCode.LEAVE);
     }
 
-    private void onServerJoinLeft(ServerMemberEvent event, boolean isJoin) {
+    @Override
+    public void onServerMemberBan(ServerMemberBanEvent event) {
+        serverMemberStateDisplay(event, MemberEventCode.BAN);
+    }
+
+    @Override
+    public void onServerMemberUnban(ServerMemberUnbanEvent event) {
+        serverMemberStateDisplay(event, MemberEventCode.UNBAN);
+    }
+
+    private void serverMemberStateDisplay(ServerMemberEvent event, MemberEventCode code) {
         long serverId = event.getServer().getId();
         ServerPreferences preferences = SettingsController.getInstance()
                 .getServerPreferences(serverId);
@@ -232,12 +264,18 @@ public class EventsListener
             Optional<ServerTextChannel> mayBeChannel = event.getServer()
                     .getTextChannelById(preferences.getJoinLeaveChannel());
             mayBeChannel.ifPresent(c -> {
+                String displayUserName;
+                if (event.getServer().getMembers().contains(event.getUser())) {
+                    displayUserName = event.getServer().getDisplayName(event.getUser());
+                } else {
+                    displayUserName = event.getUser().getName();
+                }
                 String message = new MessageBuilder()
-                        .append(event.getUser())
+                        .append(displayUserName, MessageDecoration.BOLD)
                         .append(" (")
                         .append(event.getUser().getDiscriminatedName())
                         .append(")")
-                        .append(isJoin ? " joined to " : " just left the server ")
+                        .append(code)
                         .append(event.getServer().getName(), MessageDecoration.BOLD)
                         .append(" at ")
                         .append(CommonUtils.getCurrentGmtTimeAsString())
