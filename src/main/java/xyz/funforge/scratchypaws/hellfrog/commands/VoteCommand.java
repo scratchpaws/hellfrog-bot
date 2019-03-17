@@ -13,6 +13,7 @@ import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.event.message.MessageCreateEvent;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
 import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
 import xyz.funforge.scratchypaws.hellfrog.core.VoteController;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
@@ -22,6 +23,8 @@ import xyz.funforge.scratchypaws.hellfrog.settings.old.VotePoint;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public class VoteCommand
@@ -36,7 +39,7 @@ public class VoteCommand
             "text after double dashes and spaces.";
     private VoteController voteController;
 
-    public VoteCommand() {
+    VoteCommand() {
         super(BOT_PREFIX, DESCRIPTION);
         super.enableOnlyServerCommandStrict();
         super.enableStrictByChannels();
@@ -61,9 +64,9 @@ public class VoteCommand
 
         Option interruptOption = Option.builder("i")
                 .hasArg()
-                .argName("Vote ID")
+                .argName("Vote ID or \"all\"")
                 .longOpt("interrupt")
-                .desc("Abort voting with the specified ID")
+                .desc("Abort voting with the specified ID. Or interrupt all votes.")
                 .build();
 
         Option rolesFilter = Option.builder("r")
@@ -91,9 +94,22 @@ public class VoteCommand
                 .desc("Single choice (only one option allowed)")
                 .build();
 
+        Option defaultPoint = Option.builder("d")
+                .longOpt("default")
+                .desc("Use first vote point as default if no choose")
+                .build();
+
+        Option winThreshold = Option.builder("w")
+                .longOpt("win")
+                .hasArg()
+                .argName("threshold")
+                .desc("Set threshold for single choice with default vote point and second point. " +
+                        "It also automatically activates the default vote point option.")
+                .build();
+
         super.addCmdlineOption(timeoutOption, emojiOptions,
                 interruptOption, rolesFilter, listOption, chatName,
-                singleChoose);
+                singleChoose, defaultPoint, winThreshold);
         super.setFooter(FOOTER);
     }
 
@@ -128,12 +144,15 @@ public class VoteCommand
         }
 
         boolean interruptMode = cmdline.hasOption('i');
-        if (interruptMode && !CommonUtils.isLong(cmdline.getOptionValue('i'))) {
-            showErrorMessage("Vote ID must be a number", channel);
+        boolean interruptAll = CommonUtils.safeEqualsTrimStr(cmdline.getOptionValue('i'), "all");
+        short interruptId = (short) (interruptMode ? CommonUtils.onlyNumbersToLong(cmdline.getOptionValue('i')) : 0);
+
+        if (interruptMode && !CommonUtils.isLong(cmdline.getOptionValue('i')) && !interruptAll) {
+            showErrorMessage("Vote ID must be a number or \"all\"", channel);
             return;
         }
-        short interruptId = (short) (interruptMode ? CommonUtils.onlyNumbersToLong(cmdline.getOptionValue('i')) : 0);
-        if (interruptMode && interruptId <= 0) {
+
+        if (interruptMode && interruptId <= 0 && !interruptAll) {
             showErrorMessage("Vote ID must be a positive number great that zero", channel);
             return;
         }
@@ -144,8 +163,18 @@ public class VoteCommand
         boolean specifiedChannel = cmdline.hasOption('c');
         boolean singleChooseMode = cmdline.hasOption('s');
 
-        if ((interruptMode || listMode) && (hasPoints || rolesFilter || hasTimeout || specifiedChannel || singleChooseMode)) {
-            showErrorMessage("Cannot specify different modes of the command at the same time.", channel);
+        boolean hasWinThreshold = cmdline.hasOption('w') && !CommonUtils.isTrStringEmpty(cmdline.getOptionValue('w'));
+        long winThreshold = CommonUtils.onlyNumbersToLong(cmdline.getOptionValue('w'));
+        if (hasWinThreshold && winThreshold <= 0) {
+            showErrorMessage("Win threshold parameter must be a positive number great that zero", channel);
+            return;
+        }
+        boolean defaultChoose = cmdline.hasOption('d') || hasWinThreshold;
+
+        if ((interruptMode || listMode) && (hasPoints || rolesFilter || hasTimeout || specifiedChannel
+                || singleChooseMode || defaultChoose)) {
+            showErrorMessage("Cannot specify different modes and it arguments " +
+                    "of the command at the same time.", channel);
             return;
         }
 
@@ -172,70 +201,104 @@ public class VoteCommand
                     estimateMinutes = 0;
                 }
                 String estimateMst = vote.isHasTimer() ? ", estimate in " + estimateMinutes + "min., " : ", ";
+                String channelTag = "[channel not found]";
+                boolean removeVote = false;
+                boolean messageIsExists = false;
+                String voteUrl = "";
+
                 if (mayBeChannel.isPresent()) {
                     ServerTextChannel textChannel = mayBeChannel.get();
+                    channelTag = textChannel.getMentionTag();
+
                     try {
                         textChannel.getMessageById(vote.getMessageId()).join();
-                        resultMessage.append("  * into channel ")
-                                .append(textChannel)
-                                .append(": id - ")
-                                .append(vote.getId())
-                                .append(estimateMst)
-                                .append("vote text - ")
-                                .append(vote.getReadableVoteText())
-                                .append(vote.isExceptionalVote() ? " [single choice]" : "")
-                                .appendNewLine();
+                        messageIsExists = true;
+
+                        voteUrl = "https://discordapp.com/channels/" +
+                                server.getId() + "/" +
+                                textChannel.getId() + "/" +
+                                vote.getMessageId();
+
                     } catch (Exception err) {
-                        activeVotes.remove(vote);
-                        settingsController.saveServerSideParameters(server.getId());
-                        resultMessage.append("  * into channel ")
-                                .append(textChannel)
-                                .append(": id - ")
-                                .append(vote.getId())
-                                .append(estimateMst)
-                                .append("vote text - ")
-                                .append(vote.getReadableVoteText())
-                                .append(vote.isExceptionalVote() ? " [single choice]" : "")
-                                .append(".")
-                                .append(" Vote message cannot be found. Deleted from active votes.",
-                                        MessageDecoration.BOLD)
-                                .appendNewLine();
+                        removeVote = true;
                     }
                 } else {
-                    activeVotes.remove(vote);
-                    settingsController.saveServerSideParameters(server.getId());
-                    resultMessage.append("  * [channel not found]")
-                            .append(": id - ")
-                            .append(vote.getId())
-                            .append(estimateMst)
-                            .append("vote text - ")
-                            .append(vote.getReadableVoteText())
-                            .append(vote.isExceptionalVote() ? " [single choice]" : "")
-                            .append(".")
-                            .append(" Text channel cannot be found. Deleted from active votes.",
-                                    MessageDecoration.BOLD)
-                            .appendNewLine();
+                    removeVote = true;
                 }
+
+                resultMessage.append("* into channel ")
+                        .append(channelTag)
+                        .append(": id - ")
+                        .append(vote.getId())
+                        .append(estimateMst)
+                        .append("vote text - ")
+                        .append(vote.getReadableVoteText())
+                        .append(vote.isExceptionalVote() ? " [single choice]" : "")
+                        .append(vote.isWithDefaultPoint() ? " [with default point]" : "")
+                        .append(vote.getWinThreshold() > 0 ? " [win threshold: " +
+                                vote.getWinThreshold() : "")
+                        .append(". ");
+
+                if (mayBeChannel.isPresent() && !messageIsExists) {
+                    resultMessage.append(" Vote message cannot be found. " +
+                                    "Deleted from active votes.",
+                            MessageDecoration.BOLD);
+                } else if (mayBeChannel.isEmpty()) {
+                    resultMessage.append(" Text channel cannot be found. " +
+                                    "Deleted from active votes.",
+                            MessageDecoration.BOLD);
+                }
+
+                if (removeVote) {
+                    settingsController.getServerPreferences(server.getId())
+                            .getActiveVotes()
+                            .remove(vote);
+                }
+
+                if (!CommonUtils.isTrStringEmpty(voteUrl)) {
+                    resultMessage.appendNewLine()
+                            .append("URL: ")
+                            .append(voteUrl);
+                }
+                resultMessage.appendNewLine();
             }
 
-            resultMessage.send(channel);
+            MessageUtils.sendLongMessage(resultMessage, channel);
         } else if (interruptMode) {
             List<ActiveVote> activeVotes = settingsController.getServerPreferences(server.getId())
                     .getActiveVotes();
-            boolean found = false;
-            for (ActiveVote activeVote : activeVotes) {
-                if (activeVote.getId() == interruptId) {
-                    found = true;
-                    if (canExecuteServerCommand(event, server, activeVote.getTextChatId())) {
-                        voteController.interruptVote(server.getId(), interruptId);
-                    } else {
-                        showAccessDeniedServerMessage(channel);
-                        return;
+            if (interruptAll) {
+                CompletableFuture.runAsync(() ->
+                        activeVotes.forEach(v -> {
+                            int cnt = 0;
+                            if (canExecuteServerCommand(event, server, v.getTextChatId())) {
+                                voteController.interruptVote(server.getId(), v.getId());
+                            } else {
+                                cnt++;
+                            }
+                            if (cnt > 0) {
+                                showErrorMessage("Some votes cannot be interrupted " +
+                                                "(access denied)",
+                                        channel);
+                            }
+                        })
+                );
+            } else {
+                boolean found = false;
+                for (ActiveVote activeVote : activeVotes) {
+                    if (activeVote.getId() == interruptId) {
+                        found = true;
+                        if (canExecuteServerCommand(event, server, activeVote.getTextChatId())) {
+                            voteController.interruptVote(server.getId(), interruptId);
+                        } else {
+                            showAccessDeniedServerMessage(channel);
+                            return;
+                        }
                     }
                 }
-            }
-            if (!found) {
-                showErrorMessage("Unable to find a vote with the specified ID", channel);
+                if (!found) {
+                    showErrorMessage("Unable to find a vote with the specified ID", channel);
+                }
             }
         } else {
 
@@ -286,18 +349,18 @@ public class VoteCommand
             Map<Long, KnownCustomEmoji> foundCustomEmoji = new HashMap<>();
 
             if (!hasPoints) {
-                VotePoint positive = new VotePoint();
-                positive.setId(1L);
-                positive.setEmoji(EmojiParser.parseToUnicode(":thumbsup:"));
-                positive.setPointText("Vote up");
-
                 VotePoint negative = new VotePoint();
-                negative.setId(2L);
+                negative.setId(1L);
                 negative.setEmoji(EmojiParser.parseToUnicode(":thumbsdown:"));
                 negative.setPointText("Vote down");
 
-                votePoints.add(positive);
+                VotePoint positive = new VotePoint();
+                positive.setId(2L);
+                positive.setEmoji(EmojiParser.parseToUnicode(":thumbsup:"));
+                positive.setPointText("Vote up");
+
                 votePoints.add(negative);
+                votePoints.add(positive);
             } else {
                 long counter = 1L;
                 for (int i = 0; i < rawPoints.size(); i += 2) {
@@ -344,25 +407,23 @@ public class VoteCommand
                 }
             }
 
+            if (defaultChoose && votePoints.size() < 2) {
+                showErrorMessage("Voting with the default vote point should have " +
+                        "two or more vote points", channel);
+                return;
+            }
 
+            if (hasWinThreshold && votePoints.size() != 2) {
+                showErrorMessage("Voting with the winner threshold " +
+                        "should have only two vote points", channel);
+                return;
+            }
 
             Instant currentTime = Instant.now();
             Instant futureTime = ChronoUnit.MINUTES.addTo(currentTime, timeout);
             long endDate = futureTime.getEpochSecond();
 
             ActiveVote newVote = new ActiveVote();
-            Random rnd = new Random();
-            while (true) {
-                short newId = (short) Math.abs(rnd.nextInt(32767));
-                List<ActiveVote> anotherVotes = settingsController.getServerPreferences(server.getId())
-                        .getActiveVotes();
-                for (ActiveVote another : anotherVotes) {
-                    if (another.getId() == newId)
-                        continue;
-                }
-                newVote.setId(newId);
-                break;
-            }
             newVote.setEndDate(endDate);
             newVote.setHasTimer(hasTimeout);
             newVote.setRolesFilter(parsedRoles.getFound()
@@ -385,11 +446,18 @@ public class VoteCommand
             newVote.setMessageId(null);
             newVote.setTextChatId(null);
             newVote.setExceptionalVote(singleChooseMode);
+            newVote.setWinThreshold(winThreshold);
+            newVote.setWithDefaultPoint(defaultChoose);
 
             MessageBuilder resultMessage = new MessageBuilder()
                     .append(newVote.getReadableVoteText())
                     .appendNewLine();
+            boolean skipFirstDefault = defaultChoose;
             for (VotePoint votePoint : votePoints) {
+                if (skipFirstDefault) {
+                    skipFirstDefault = false;
+                    continue;
+                }
                 resultMessage.append("  - ");
                 if (votePoint.getEmoji() != null) {
                     resultMessage.append(votePoint.getEmoji());
@@ -403,7 +471,12 @@ public class VoteCommand
 
             try {
                 Message msg = resultMessage.send(targetChannel).join();
+                skipFirstDefault = defaultChoose;
                 for (VotePoint votePoint : votePoints) {
+                    if (skipFirstDefault) {
+                        skipFirstDefault = false;
+                        continue;
+                    }
                     if (votePoint.getEmoji() != null) {
                         msg.addReaction(votePoint.getEmoji());
                     } else {
@@ -412,6 +485,25 @@ public class VoteCommand
                 }
                 newVote.setMessageId(msg.getId());
                 newVote.setTextChatId(targetChannel.getId());
+
+                while (true) {
+                    search_unique_id_cycle:
+                    {
+                        int rnd = ThreadLocalRandom.
+                                current()
+                                .nextInt(32676);
+                        short newId = (short) Math.abs(rnd);
+                        List<ActiveVote> anotherVotes = settingsController.getServerPreferences(server.getId())
+                                .getActiveVotes();
+                        for (ActiveVote another : anotherVotes) {
+                            if (another.getId() == newId)
+                                break search_unique_id_cycle;
+                        }
+                        newVote.setId(newId);
+                        break;
+                    }
+                }
+
                 settingsController.getServerPreferences(server.getId())
                         .getActiveVotes()
                         .add(newVote);

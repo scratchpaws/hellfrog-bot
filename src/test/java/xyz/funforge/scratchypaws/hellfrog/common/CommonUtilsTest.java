@@ -55,4 +55,11 @@ public class CommonUtilsTest {
         Assertions.assertEquals(5L, CommonUtils.getHighValue(6L));
         Assertions.assertEquals(8L, CommonUtils.getHighValue(10L));
     }
+
+    @Test
+    public void testEquals() {
+        Assertions.assertFalse(CommonUtils.safeEqualsTrimStr(null, null));
+        Assertions.assertTrue(CommonUtils.safeEqualsTrimStr("all", "all"));
+        Assertions.assertTrue(CommonUtils.safeEqualsTrimStr(" all ", "all"));
+    }
 }

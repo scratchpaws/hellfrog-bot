@@ -2,6 +2,7 @@ package xyz.funforge.scratchypaws.hellfrog.core;
 
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.permission.PermissionState;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.Permissions;

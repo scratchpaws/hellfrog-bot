@@ -87,4 +87,10 @@ public class CommonUtils {
         }
         return ret;
     }
+
+    public static boolean safeEqualsTrimStr(String that, String then) {
+        return !CommonUtils.isTrStringEmpty(that)
+                && !CommonUtils.isTrStringEmpty(then)
+                && that.trim().equals(then.trim());
+    }
 }

@@ -19,6 +19,8 @@ public class ActiveVote
     private List<VotePoint> votePoints;
     private String readableVoteText;
     private Boolean exceptionalVote;
+    private Boolean withDefaultPoint;
+    private Long winThreshold;
 
     public short getId() {
         return id;
@@ -90,6 +92,22 @@ public class ActiveVote
 
     public void setExceptionalVote(Boolean exceptionalVote) {
         this.exceptionalVote = Objects.requireNonNullElse(exceptionalVote, false);
+    }
+
+    public void setWithDefaultPoint(boolean withDefaultPoint) {
+        this.withDefaultPoint = withDefaultPoint;
+    }
+
+    public boolean isWithDefaultPoint() {
+        return withDefaultPoint != null && withDefaultPoint;
+    }
+
+    public void setWinThreshold(long winThreshold) {
+        this.winThreshold = winThreshold;
+    }
+
+    public long getWinThreshold() {
+        return this.winThreshold != null ? this.winThreshold : -1L;
     }
 
     @Override
