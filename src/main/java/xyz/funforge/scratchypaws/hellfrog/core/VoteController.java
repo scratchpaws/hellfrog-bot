@@ -2,12 +2,13 @@ package xyz.funforge.scratchypaws.hellfrog.core;
 
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.ServerTextChannel;
-import org.javacord.api.entity.emoji.CustomEmoji;
 import org.javacord.api.entity.emoji.Emoji;
+import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.Reaction;
+import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.user.User;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
@@ -18,6 +19,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class VoteController
         implements Runnable {
@@ -90,35 +92,40 @@ public class VoteController
                             Message voteMsg = channel.getMessageById(activeVote.getMessageId()).join();
 
                             List<Long> alreadyVoted = new ArrayList<>();
-                            Map<Long, CustomEmoji> emojiCache = new HashMap<>();
+                            Map<Long, KnownCustomEmoji> emojiCache = new HashMap<>();
+
+                            activeVote.getVotePoints()
+                                    .stream()
+                                    .filter(VotePoint::isCustomEmojiVP)
+                                    .filter(vp -> vp.getCustomEmoji() != null && vp.getCustomEmoji() > 0)
+                                    .map(vp -> channel.getServer().getCustomEmojiById(vp.getCustomEmoji()))
+                                    .filter(Optional::isPresent)
+                                    .map(Optional::get)
+                                    .forEach(kqe -> emojiCache.put(kqe.getId(), kqe));
+
+                            TreeSet<Long> globalVoted = new TreeSet<>();
+                            boolean withDefaultPoint = (activeVote.isWithDefaultPoint()
+                                    || activeVote.getWinThreshold() > 0)
+                                    && activeVote.getVotePoints().size() > 0;
+
                             for (Reaction reaction : voteMsg.getReactions()) {
 
                                 Emoji emoji = reaction.getEmoji();
-                                VotePoint assotiatedPoint = null;
-                                if (emoji.isUnicodeEmoji() && emoji.asUnicodeEmoji().isPresent()) {
-                                    String unicodeEmoji = emoji.asUnicodeEmoji().get();
-                                    for (VotePoint point : activeVote.getVotePoints()) {
-                                        if (point.getEmoji() != null && point.getEmoji().equals(unicodeEmoji)) {
-                                            assotiatedPoint = point;
-                                            break;
-                                        }
+                                VotePoint associatePoint = null;
+                                for (VotePoint point : activeVote.getVotePoints()) {
+                                    if (point.equalsEmoji(emoji)) {
+                                        associatePoint = point;
+                                        break;
                                     }
-                                } else if (emoji.isCustomEmoji() && emoji.asCustomEmoji().isPresent()) {
-                                    CustomEmoji customEmoji = emoji.asCustomEmoji().get();
-                                    long customId = customEmoji.getId();
-                                    for (VotePoint point : activeVote.getVotePoints()) {
-                                        if (point.getCustomEmoji() != null && point.getCustomEmoji().equals(customId)) {
-                                            assotiatedPoint = point;
-                                            emojiCache.put(customId, customEmoji);
-                                            break;
-                                        }
-                                    }
-                                } else {
+                                }
+
+                                if (associatePoint == null) {
                                     continue;
                                 }
 
-                                if (assotiatedPoint == null) {
+                                if (withDefaultPoint && activeVote.getVotePoints().get(0).equalsEmoji(emoji)) {
                                     continue;
+                                    // дефолтный обсчитываем далее
                                 }
 
                                 int addToPoint = 0;
@@ -128,23 +135,51 @@ public class VoteController
                                     if (votedUser.isBot()) continue;
                                     if (activeVote.isExceptionalVote() &&
                                             alreadyVoted.contains(votedUser.getId())) continue;
-                                    alreadyVoted.add(votedUser.getId());
 
                                     if (activeVote.getRolesFilter() != null && activeVote.getRolesFilter().size() > 0) {
                                         for (Role role : votedUser.getRoles(channel.getServer())) {
                                             if (activeVote.getRolesFilter().contains(role.getId())) {
                                                 addToPoint++;
+                                                alreadyVoted.add(votedUser.getId());
                                                 break;
                                             }
                                         }
                                     } else {
+                                        alreadyVoted.add(votedUser.getId());
                                         addToPoint++;
                                     }
                                 }
+                                List<Long> collectedUserIds = votedUsers.stream()
+                                        .map(User::getId)
+                                        .collect(Collectors.toList());
+                                globalVoted.addAll(collectedUserIds);
 
-                                int currentPoints = pointsLevel.get(assotiatedPoint);
+                                int currentPoints = pointsLevel.get(associatePoint);
                                 currentPoints += addToPoint;
-                                pointsLevel.put(assotiatedPoint, currentPoints);
+                                pointsLevel.put(associatePoint, currentPoints);
+                            }
+
+                            if (withDefaultPoint) {
+                                VotePoint defaultPoint = activeVote.getVotePoints().get(0);
+                                long noCaresUser = channel.getServer().getMembers().stream()
+                                        .filter(m -> !m.isBot())
+                                        .filter(m -> {
+                                            Collection<PermissionType> pt = channel.getEffectiveAllowedPermissions(m);
+                                            return pt.contains(PermissionType.READ_MESSAGES)
+                                                    && pt.contains(PermissionType.ADD_REACTIONS);
+                                        }).filter(m -> {
+                                            if (activeVote.getRolesFilter() != null && activeVote.getRolesFilter().size() > 0) {
+                                                for (Role role : m.getRoles(channel.getServer())) {
+                                                    if (activeVote.getRolesFilter().contains(role.getId())) {
+                                                        return true;
+                                                    }
+                                                }
+                                                return false;
+                                            }
+                                            return true;
+                                        }).filter(m -> !globalVoted.contains(m.getId()))
+                                        .count();
+                                pointsLevel.put(defaultPoint, (int) noCaresUser);
                             }
 
                             MessageBuilder result = new MessageBuilder()
@@ -170,9 +205,22 @@ public class VoteController
                                 result.append("Nobody cares", MessageDecoration.BOLD);
                             } else {
                                 List<VotePoint> winners = new ArrayList<>();
-                                for (Map.Entry<VotePoint, Integer> pointResult : pointsLevel.entrySet()) {
-                                    if (pointResult.getValue() == winnerLevel)
-                                        winners.add(pointResult.getKey());
+                                if (activeVote.getWinThreshold() > 0 && withDefaultPoint) {
+                                    long threshold = activeVote.getWinThreshold();
+                                    List<VotePoint> points = activeVote.getVotePoints();
+                                    VotePoint defPoint = points.get(0);
+                                    VotePoint selectable = points.get(1);
+                                    int getForSelectable = pointsLevel.get(selectable);
+                                    if (getForSelectable >= threshold) {
+                                        winners.add(selectable);
+                                    } else {
+                                        winners.add(defPoint);
+                                    }
+                                } else {
+                                    for (Map.Entry<VotePoint, Integer> pointResult : pointsLevel.entrySet()) {
+                                        if (pointResult.getValue() == winnerLevel)
+                                            winners.add(pointResult.getKey());
+                                    }
                                 }
                                 if (winners.size() == 1) {
                                     result.append("Winner:", MessageDecoration.BOLD)
@@ -202,19 +250,9 @@ public class VoteController
         }
     }
 
-    private void buildVotePointString(Map<Long, CustomEmoji> emojiCache, MessageBuilder result, VotePoint point) {
-        result.append("  *");
-        if (point.getEmoji() != null) {
-            result.append(point.getEmoji());
-        } else if (point.getCustomEmoji() != null) {
-            try {
-                result.append(emojiCache.get(point.getCustomEmoji()));
-            } catch (NullPointerException npe) {
-                result.append("[unknown emoji]");
-            }
-        }
-        result.append(" -- ")
-                .append(point.getPointText());
+    private void buildVotePointString(Map<Long, KnownCustomEmoji> emojiCache, MessageBuilder result, VotePoint point) {
+        result.append("  *")
+                .append(point.buildVoteString(emojiCache));
     }
 
     public void stop() {

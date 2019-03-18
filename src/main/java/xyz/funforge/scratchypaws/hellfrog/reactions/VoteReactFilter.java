@@ -6,6 +6,7 @@ import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.event.message.reaction.ReactionAddEvent;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
+import xyz.funforge.scratchypaws.hellfrog.settings.old.VotePoint;
 
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
@@ -32,19 +33,16 @@ public class VoteReactFilter {
 
                     // удаляем все попытки поставить "левые" реакции действующим голосованиям
                     boolean invalidReaction = v.getVotePoints()
-                            .stream().noneMatch(vp -> {
-                                if (emoji.isUnicodeEmoji()
-                                        && emoji.asUnicodeEmoji().isPresent()
-                                        && vp.isUnicodeVP()) {
-                                    return emoji.asUnicodeEmoji().get().equals(vp.getEmoji());
-                                }
-                                if (emoji.isCustomEmoji()
-                                        && emoji.asCustomEmoji().isPresent()
-                                        && vp.isCustomEmojiVP()) {
-                                    return emoji.asCustomEmoji().get().getId() == vp.getCustomEmoji();
-                                }
-                                return false;
-                            });
+                            .stream().noneMatch(vp ->
+                                    vp.equalsEmoji(emoji)
+                            );
+                    boolean hasDefault = (v.isWithDefaultPoint() ||
+                            v.getWinThreshold() > 0)
+                            && v.getVotePoints().size() > 0;
+                    if (hasDefault) {
+                        VotePoint defPoint = v.getVotePoints().get(0);
+                        invalidReaction = invalidReaction || defPoint.equalsEmoji(emoji);
+                    }
                     if (invalidReaction) {
                         event.removeReaction();
                         return;

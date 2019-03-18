@@ -236,7 +236,7 @@ public class VoteCommand
                         .append(vote.isExceptionalVote() ? " [single choice]" : "")
                         .append(vote.isWithDefaultPoint() ? " [with default point]" : "")
                         .append(vote.getWinThreshold() > 0 ? " [win threshold: " +
-                                vote.getWinThreshold() : "")
+                                vote.getWinThreshold() + "]" : "")
                         .append(". ");
 
                 if (mayBeChannel.isPresent() && !messageIsExists) {
@@ -458,17 +458,24 @@ public class VoteCommand
                     skipFirstDefault = false;
                     continue;
                 }
-                resultMessage.append("  - ");
-                if (votePoint.getEmoji() != null) {
-                    resultMessage.append(votePoint.getEmoji());
-                } else {
-                    resultMessage.append(foundCustomEmoji.get(votePoint.getCustomEmoji()));
-                }
-                resultMessage.append(" - ")
-                        .append(votePoint.getPointText())
+                resultMessage.append("  - ")
+                        .append(votePoint.buildVoteString(foundCustomEmoji))
                         .appendNewLine();
             }
-
+            if (defaultChoose && votePoints.size() > 0) {
+                VotePoint voteDefault = votePoints.get(0);
+                resultMessage.append("default: ")
+                        .append(voteDefault.buildVoteString(foundCustomEmoji))
+                        .appendNewLine();
+            }
+            if (hasWinThreshold && winThreshold > 0) {
+                resultMessage.append("Selectable voting point will ")
+                        .append("WIN", MessageDecoration.BOLD)
+                        .append(" if it dial ")
+                        .append(String.valueOf(winThreshold), MessageDecoration.BOLD)
+                        .append(" votes.")
+                        .appendNewLine();
+            }
             try {
                 Message msg = resultMessage.send(targetChannel).join();
                 skipFirstDefault = defaultChoose;

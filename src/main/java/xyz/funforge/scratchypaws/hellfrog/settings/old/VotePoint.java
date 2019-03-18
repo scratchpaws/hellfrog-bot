@@ -1,8 +1,11 @@
 package xyz.funforge.scratchypaws.hellfrog.settings.old;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.javacord.api.entity.emoji.Emoji;
+import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -12,7 +15,7 @@ public class VotePoint {
 
     private long id;
     private String emoji;
-    private Long CustomEmoji;
+    private Long customEmoji;
     private String pointText;
 
     public long getId() {
@@ -32,11 +35,11 @@ public class VotePoint {
     }
 
     public Long getCustomEmoji() {
-        return CustomEmoji;
+        return customEmoji;
     }
 
     public void setCustomEmoji(Long customEmoji) {
-        CustomEmoji = customEmoji;
+        this.customEmoji = customEmoji;
     }
 
     public String getPointText() {
@@ -54,13 +57,13 @@ public class VotePoint {
         VotePoint votePoint = (VotePoint) o;
         return id == votePoint.id &&
                 Objects.equals(emoji, votePoint.emoji) &&
-                Objects.equals(CustomEmoji, votePoint.CustomEmoji) &&
+                Objects.equals(customEmoji, votePoint.customEmoji) &&
                 Objects.equals(pointText, votePoint.pointText);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, emoji, CustomEmoji, pointText);
+        return Objects.hash(id, emoji, customEmoji, pointText);
     }
 
     @Override
@@ -68,9 +71,39 @@ public class VotePoint {
         return "VotePoint{" +
                 "id=" + id +
                 ", emoji='" + emoji + '\'' +
-                ", CustomEmoji=" + CustomEmoji +
+                ", CustomEmoji=" + customEmoji +
                 ", pointText='" + pointText + '\'' +
                 '}';
+    }
+
+    @JsonIgnore
+    public String buildVoteString(Map<Long, KnownCustomEmoji> emojiCache) {
+        StringBuilder voteString = new StringBuilder();
+        if (this.isUnicodeVP()) {
+            voteString.append(emoji);
+        } else if (this.isCustomEmojiVP() && emojiCache != null && emojiCache.containsKey(customEmoji)) {
+            voteString.append(emojiCache.get(customEmoji).getMentionTag());
+        } else {
+            voteString.append("[unknown emoji]");
+        }
+        voteString.append(" - ")
+                .append(this.getPointText());
+        return voteString.toString();
+    }
+
+    public boolean equalsEmoji(Emoji external) {
+        if (external == null) return false;
+        if (external.isUnicodeEmoji() && external.asUnicodeEmoji().isPresent()) {
+            String unicodeEmoji = external.asUnicodeEmoji().get();
+            return !CommonUtils.isTrStringEmpty(emoji)
+                    && unicodeEmoji.equals(emoji);
+        } else if (external.isCustomEmoji() && external.asCustomEmoji().isPresent()) {
+            long customId = external.asCustomEmoji().get().getId();
+            return customEmoji != null
+                    && customEmoji > 0
+                    && customId == customEmoji;
+        }
+        return false;
     }
 
     @JsonIgnore
@@ -80,6 +113,6 @@ public class VotePoint {
 
     @JsonIgnore
     public boolean isCustomEmojiVP() {
-        return CustomEmoji != null && CustomEmoji > 0;
+        return customEmoji != null && customEmoji > 0;
     }
 }
