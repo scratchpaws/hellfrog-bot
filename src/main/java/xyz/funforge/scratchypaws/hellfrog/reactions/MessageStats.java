@@ -1,6 +1,8 @@
 package xyz.funforge.scratchypaws.hellfrog.reactions;
 
+import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.MessageAuthor;
+import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.MessageDeleteEvent;
@@ -46,23 +48,27 @@ public class MessageStats
 
     private void onMessage(MessageEvent event, @Nullable User author, boolean isCreate) {
         event.getServer().ifPresent(s ->
-                event.getServerTextChannel().ifPresent(ch -> {
-                    ServerStatistic stat = SettingsController.getInstance().getServerStatistic(s.getId());
-                    if (!stat.isCollectNonDefaultSmileStats()) return;
-                    MessageStatistic textChatStatistic = stat.getTextChatStatistic(ch);
-                    react(textChatStatistic, ch.getName(), isCreate);
-                    if (author != null) {
-                        String displayUserName = s.getDisplayName(author) + " (" + author.getDiscriminatedName() + ")";
-                        MessageStatistic userGlobalStat = stat.getUserMessageStatistic(author);
-                        MessageStatistic userTextChatStat = textChatStatistic.getChildItemStatistic(author.getId());
-                        react(userGlobalStat, displayUserName, isCreate);
-                        react(userTextChatStat, displayUserName, isCreate);
-                    }
-                })
+                event.getServerTextChannel().ifPresent(ch ->
+                    collectStat(s, ch, author, isCreate)
+                )
         );
     }
 
-    private void react(MessageStatistic stats, String lastKnownName, boolean isCreate) {
+    public static void collectStat(Server s, ServerTextChannel ch, @Nullable User author, boolean isCreate) {
+        ServerStatistic stat = SettingsController.getInstance().getServerStatistic(s.getId());
+        if (!stat.isCollectNonDefaultSmileStats()) return;
+        MessageStatistic textChatStatistic = stat.getTextChatStatistic(ch);
+        react(textChatStatistic, ch.getName(), isCreate);
+        if (author != null) {
+            String displayUserName = s.getDisplayName(author) + " (" + author.getDiscriminatedName() + ")";
+            MessageStatistic userGlobalStat = stat.getUserMessageStatistic(author);
+            MessageStatistic userTextChatStat = textChatStatistic.getChildItemStatistic(author.getId());
+            react(userGlobalStat, displayUserName, isCreate);
+            react(userTextChatStat, displayUserName, isCreate);
+        }
+    }
+
+    private static void react(MessageStatistic stats, String lastKnownName, boolean isCreate) {
         if (isCreate) {
             stats.increment();
         } else {

@@ -5,17 +5,24 @@ import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
+import org.javacord.api.entity.message.MessageSet;
+import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
 import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
+import xyz.funforge.scratchypaws.hellfrog.reactions.MessageStats;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerStatistic;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class StatisticsCommand
         extends BotCommand {
@@ -23,6 +30,7 @@ public class StatisticsCommand
     private static final String PREFIX = "stat";
     private static final String DESCRIPTION = "Manage server statistics";
 
+    private static final AtomicBoolean activeRebuildProcess = new AtomicBoolean(false);
 
     StatisticsCommand() {
         super(PREFIX, DESCRIPTION);
@@ -76,8 +84,12 @@ public class StatisticsCommand
                 .desc("Show user messages statistic only")
                 .build();
 
+        Option rebuild = Option.builder("b")
+                .desc("Full scan and rebuild statistic")
+                .build();
+
         super.enableOnlyServerCommandStrict();
-        super.addCmdlineOption(enable, disable, show, reset, status, smilesOnly, textChat, userStats);
+        super.addCmdlineOption(enable, disable, show, reset, status, smilesOnly, textChat, userStats, rebuild);
     }
 
     @Override
@@ -100,12 +112,14 @@ public class StatisticsCommand
         boolean smilesOnly = cmdline.hasOption('m');
         boolean textChatsFilter = cmdline.hasOption('c');
         boolean usersStatsFilter = cmdline.hasOption('u');
+        boolean rebuildOption = cmdline.hasOption('b');
 
         List<String> smileList = getOptionalArgsList(cmdline, 'm');
         List<String> textChats = getOptionalArgsList(cmdline, 'c');
         List<String> usersList = getOptionalArgsList(cmdline, 'u');
 
-        if ((smilesOnly || textChatsFilter || usersStatsFilter) && (enableOption || disableOption || resetOption)) {
+        if ((smilesOnly || textChatsFilter || usersStatsFilter)
+                && (enableOption || disableOption || resetOption || rebuildOption)) {
             showErrorMessage("Display options (-m/-c) are set only when displaying statistics", channel);
             return;
         }
@@ -115,7 +129,7 @@ public class StatisticsCommand
             return;
         }
 
-        if (enableOption ^ disableOption ^ showOption ^ resetOption ^ statusOption) {
+        if (enableOption ^ disableOption ^ showOption ^ resetOption ^ statusOption ^ rebuildOption) {
             long serverId = server.getId();
             SettingsController settingsController = SettingsController.getInstance();
             ServerStatistic serverStatistic = settingsController.getServerStatistic(serverId);
@@ -140,7 +154,12 @@ public class StatisticsCommand
                 }
             }
 
-            if (resetOption) {
+            if (rebuildOption && activeRebuildProcess.get()) {
+                showErrorMessage("Statistic rebuild already in progress", channel);
+                return;
+            }
+
+            if (resetOption || rebuildOption) {
                 serverStatistic.clear();
                 settingsController.saveServerSideStatistic(serverId);
                 showInfoMessage("Statistic will be reset.", channel);
@@ -253,6 +272,22 @@ public class StatisticsCommand
                     MessageUtils.sendLongMessage(resultMessage, channel);
                 }
             }
+
+            if (rebuildOption) {
+                EmbedBuilder embed = new EmbedBuilder();
+                embed.setAuthor(event.getMessageAuthor());
+                embed.setTimestampToNow();
+                embed.setDescription("Starting...");
+                embed.setFooter("Please wait...");
+                embed.setTitle("Rebuilding server statistic...");
+                new MessageBuilder()
+                        .setEmbed(embed)
+                        .send(channel)
+                        .thenAccept(message ->
+                                CompletableFuture.runAsync(() ->
+                                        parallelRebuildStatistic(message, embed))
+                        );
+            }
         } else {
             showErrorMessage("Only one option may be use.", channel);
         }
@@ -261,5 +296,130 @@ public class StatisticsCommand
     @Override
     protected void executeCreateMessageEventDirect(CommandLine cmdline, ArrayList<String> cmdlineArgs, TextChannel channel, MessageCreateEvent event, ArrayList<String> anotherLines) {
         showErrorMessage("Not allowed into private", channel);
+    }
+
+    private void parallelRebuildStatistic(Message msg, EmbedBuilder embed) {
+        activeRebuildProcess.set(true);
+        try {
+            msg.getServer().ifPresent(server -> server.getTextChannels().stream()
+                    .filter(TextChannel::canYouReadMessageHistory)
+                    .forEach(channel -> {
+                        embed.setTimestampToNow()
+                                .setDescription("Processing server text channel \""
+                                        + channel.getName() + "\"")
+                                .setFooter("Begin read messages...");
+                        editSilently(msg, embed);
+
+                        long currentMsgNumber = 0L;
+                        Message currentHistMsg = null;
+                        for (int trying = 1; trying <= 3; trying++) {
+                            try {
+                                embed.setFooter("Get last message of channel, trying "
+                                        + trying + " of 3...");
+                                editSilently(msg, embed);
+
+                                MessageSet firstProbe = channel.getMessages(1)
+                                        .get(10, TimeUnit.SECONDS);
+                                Optional<Message> mayBeMsg = firstProbe.getOldestMessage();
+                                if (mayBeMsg.isPresent()) {
+                                    currentHistMsg = mayBeMsg.get();
+                                    break;
+                                } else {
+                                    embed.setFooter("Channel has not last message");
+                                    editSilently(msg, embed);
+                                    return;
+                                }
+                            } catch (Exception err) {
+                                embed.setFooter("Unable to get latest message: " + err);
+                                if (doSleepExcepted(msg, embed)) return;
+                            }
+                        }
+
+                        if (currentHistMsg == null)
+                            return;
+                        MessageSet set = null;
+
+                        do {
+                            for (int trying = 1; trying <= 3; trying++) {
+                                try {
+                                    boolean appendToHistory = set == null;
+                                    embed.setFooter("Get next portion message of channel, trying "
+                                            + trying + " of 3...");
+                                    editSilently(msg, embed);
+
+                                    set = currentHistMsg.getMessagesBefore(100)
+                                            .get(10, TimeUnit.SECONDS);
+
+                                    embed.setFooter("Ok, parsing...");
+                                    editSilently(msg, embed);
+                                    if (appendToHistory) {
+                                        set.add(currentHistMsg);
+                                    }
+                                    break;
+                                } catch (Exception err) {
+                                    embed.setFooter("Unable to extract messages: " + err);
+                                    if (doSleepExcepted(msg, embed)) return;
+                                }
+                            }
+
+                            if (set != null && set.size() > 0) {
+                                for (Message hist : set) {
+                                    if (!hist.getAuthor().isUser())
+                                        continue;
+                                    if (hist.getAuthor().isYourself())
+                                        continue;
+                                    currentMsgNumber++;
+                                    User author = null;
+                                    Optional<User> mayBeUser = hist.getAuthor().asUser();
+                                    if (mayBeUser.isPresent()) {
+                                        author = mayBeUser.get();
+                                    }
+                                    MessageStats.collectStat(channel.getServer(),
+                                            channel, author, true);
+                                    if (currentMsgNumber % 50L == 0L) {
+                                        embed.setFooter("Processed ~" + currentMsgNumber + " messages.");
+                                        editSilently(msg, embed);
+                                    }
+                                }
+                                Optional<Message> oldest = set.getOldestMessage();
+                                if (oldest.isPresent()) {
+                                    currentHistMsg = oldest.get();
+                                } else {
+                                    break;
+                                }
+                            } else {
+                                embed.setFooter("Next portion message is empty");
+                                editSilently(msg, embed);
+                            }
+                        } while (set != null && set.size() > 0);
+
+                        embed.setFooter("Done");
+                        editSilently(msg, embed);
+                    })
+            );
+
+            embed.setFooter("...");
+            embed.setDescription("Done");
+            editSilently(msg, embed);
+        } finally {
+            activeRebuildProcess.set(false);
+        }
+    }
+
+    private boolean doSleepExcepted(Message msg, EmbedBuilder embed) {
+        editSilently(msg, embed);
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException brk) {
+            return true;
+        }
+        return false;
+    }
+
+    private void editSilently(Message msg, EmbedBuilder embed) {
+        try {
+            msg.edit(embed).get(10, TimeUnit.SECONDS);
+        } catch (Exception ignore) {
+        }
     }
 }

@@ -122,7 +122,6 @@ public class MessageStatistic {
     @JsonIgnore
     public MessageStatistic getChildItemStatistic(long itemId) {
         if (childStatistic == null) {
-            System.err.println("child is null");
             childCreationLock.lock();
             try {
                 if (childStatistic == null) {
