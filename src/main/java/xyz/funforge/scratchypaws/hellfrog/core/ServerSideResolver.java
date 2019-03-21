@@ -2,13 +2,14 @@ package xyz.funforge.scratchypaws.hellfrog.core;
 
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
-import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.permission.PermissionState;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 
 import java.util.ArrayList;
@@ -128,7 +129,8 @@ public class ServerSideResolver {
         return Optional.empty();
     }
 
-    public static String getCustomEmojiRawId(String rawEmoji) {
+    @Contract(pure = true)
+    public static String getCustomEmojiRawId(@NotNull String rawEmoji) {
         String[] split = rawEmoji.split(":");
         if (split.length == 3) {
             return split[2];
@@ -143,7 +145,7 @@ public class ServerSideResolver {
         return result;
     }
 
-    public static ParseResult<User> resolveUsersList(Server server, List<String> rawUserList) {
+    public static ParseResult<User> resolveUsersList(Server server, @NotNull List<String> rawUserList) {
         ParseResult<User> result = new ParseResult<>();
         List<User> resolvedUsers = new ArrayList<>(rawUserList.size());
         List<String> unresolvedUsers = new ArrayList<>(rawUserList.size());
@@ -160,7 +162,7 @@ public class ServerSideResolver {
         return result;
     }
 
-    public static ParseResult<Role> resolveRolesList(Server server, List<String> rawRolesList) {
+    public static ParseResult<Role> resolveRolesList(Server server, @NotNull List<String> rawRolesList) {
         ParseResult<Role> result = new ParseResult<>();
         List<Role> resolvedRoles = new ArrayList<>(rawRolesList.size());
         List<String> unresolvedRoles = new ArrayList<>(rawRolesList.size());
@@ -177,7 +179,7 @@ public class ServerSideResolver {
         return result;
     }
 
-    public static ParseResult<ServerTextChannel> resolveTextChannelsList(Server server, List<String> rawTextChannelList) {
+    public static ParseResult<ServerTextChannel> resolveTextChannelsList(Server server, @NotNull List<String> rawTextChannelList) {
         ParseResult<ServerTextChannel> result = new ParseResult<>();
         List<ServerTextChannel> resolvedChannels = new ArrayList<>(rawTextChannelList.size());
         List<String> unresolvedChannels = new ArrayList<>(rawTextChannelList.size());
@@ -191,6 +193,23 @@ public class ServerSideResolver {
         }
         result.setFound(resolvedChannels);
         result.setNotFound(unresolvedChannels);
+        return result;
+    }
+
+    public static ParseResult<KnownCustomEmoji> resolveKnownEmojiList(Server server, @NotNull List<String> rawEmojiList) {
+        ParseResult<KnownCustomEmoji> result = new ParseResult<>();
+        List<KnownCustomEmoji> resolvedEmoji = new ArrayList<>(rawEmojiList.size());
+        List<String> unresolvedEmoji = new ArrayList<>(rawEmojiList.size());
+        for (String rawEmoji : rawEmojiList) {
+            Optional<KnownCustomEmoji> mayBeEmoji = ServerSideResolver.resolveCustomEmoji(server, rawEmoji);
+            if (mayBeEmoji.isPresent()) {
+                resolvedEmoji.add(mayBeEmoji.get());
+            } else {
+                unresolvedEmoji.add(rawEmoji);
+            }
+        }
+        result.setFound(resolvedEmoji);
+        result.setNotFound(unresolvedEmoji);
         return result;
     }
 

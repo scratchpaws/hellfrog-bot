@@ -31,6 +31,7 @@ import org.javacord.core.entity.permission.PermissionsImpl;
 import xyz.funforge.scratchypaws.hellfrog.commands.BotCommand;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
+import xyz.funforge.scratchypaws.hellfrog.reactions.MessageStats;
 import xyz.funforge.scratchypaws.hellfrog.reactions.MsgCreateReaction;
 import xyz.funforge.scratchypaws.hellfrog.reactions.ReactReaction;
 import xyz.funforge.scratchypaws.hellfrog.reactions.VoteReactFilter;
@@ -49,10 +50,11 @@ public class EventsListener
         ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener {
 
-    private static final String VERSION_STRING = "0.1.14b";
+    private static final String VERSION_STRING = "0.1.17b";
 
     private ReactReaction reactReaction = new ReactReaction();
     private VoteReactFilter asVoteReaction = new VoteReactFilter();
+    private MessageStats messageStats = new MessageStats();
 
     private enum MemberEventCode {
         JOIN, LEAVE, BAN, UNBAN;
@@ -77,6 +79,8 @@ public class EventsListener
 
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
+        messageStats.onMessageCreate(event);
+
         String strMessage = event.getMessageContent();
         Optional<Server> mayBeServer = event.getServer();
 
@@ -195,7 +199,7 @@ public class EventsListener
 
     @Override
     public void onMessageDelete(MessageDeleteEvent event) {
-
+        messageStats.onMessageDelete(event);
     }
 
     @Override

@@ -159,6 +159,12 @@ public class SettingsController {
                     if (stat.getNonDefaultSmileStats() == null) {
                         stat.setNonDefaultSmileStats(new ConcurrentHashMap<>());
                     }
+                    if (stat.getUserMessagesStats() == null) {
+                        stat.setUserMessagesStats(new ConcurrentHashMap<>());
+                    }
+                    if (stat.getTextChatStats() == null) {
+                        stat.setTextChatStats(new ConcurrentHashMap<>());
+                    }
                     statByServer.put(serverId, stat);
                 } catch (NullPointerException | IOException statReadErr) {
                     System.err.println("Unable to read statistic file " + entry + ": " + statReadErr);

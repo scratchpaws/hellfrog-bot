@@ -2,11 +2,16 @@ package xyz.funforge.scratchypaws.hellfrog.commands;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
+import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
+import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
+import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
+import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerStatistic;
 
@@ -18,7 +23,8 @@ public class StatisticsCommand
     private static final String PREFIX = "stat";
     private static final String DESCRIPTION = "Manage server statistics";
 
-    public StatisticsCommand() {
+
+    StatisticsCommand() {
         super(PREFIX, DESCRIPTION);
 
         Option enable = Option.builder("e")
@@ -46,12 +52,40 @@ public class StatisticsCommand
                 .desc("Show statistic activity")
                 .build();
 
+        Option smilesOnly = Option.builder("m")
+                .longOpt("smiles")
+                .hasArgs()
+                .optionalArg(true)
+                .argName("emoji")
+                .desc("Show smiles statistic only")
+                .build();
+
+        Option textChat = Option.builder("c")
+                .longOpt("chat")
+                .hasArgs()
+                .optionalArg(true)
+                .argName("text chat")
+                .desc("Show text chat statistic only")
+                .build();
+
+        Option userStats = Option.builder("u")
+                .longOpt("user")
+                .hasArg()
+                .optionalArg(true)
+                .argName("user")
+                .desc("Show user messages statistic only")
+                .build();
+
         super.enableOnlyServerCommandStrict();
-        super.addCmdlineOption(enable, disable, show, reset, status);
+        super.addCmdlineOption(enable, disable, show, reset, status, smilesOnly, textChat, userStats);
     }
 
     @Override
-    protected void executeCreateMessageEventServer(Server server, CommandLine cmdline, ArrayList<String> cmdlineArgs, TextChannel channel, MessageCreateEvent event, ArrayList<String> anotherLines) {
+    protected void executeCreateMessageEventServer(Server server,
+                                                   CommandLine cmdline, ArrayList<String> cmdlineArgs,
+                                                   TextChannel channel,
+                                                   MessageCreateEvent event,
+                                                   ArrayList<String> anotherLines) {
 
         if (!canExecuteServerCommand(event, server)) {
             showAccessDeniedServerMessage(channel);
@@ -63,6 +97,23 @@ public class StatisticsCommand
         boolean showOption = cmdline.hasOption('l');
         boolean resetOption = cmdline.hasOption('r');
         boolean statusOption = cmdline.hasOption('s');
+        boolean smilesOnly = cmdline.hasOption('m');
+        boolean textChatsFilter = cmdline.hasOption('c');
+        boolean usersStatsFilter = cmdline.hasOption('u');
+
+        List<String> smileList = getOptionalArgsList(cmdline, 'm');
+        List<String> textChats = getOptionalArgsList(cmdline, 'c');
+        List<String> usersList = getOptionalArgsList(cmdline, 'u');
+
+        if ((smilesOnly || textChatsFilter || usersStatsFilter) && (enableOption || disableOption || resetOption)) {
+            showErrorMessage("Display options (-m/-c) are set only when displaying statistics", channel);
+            return;
+        }
+
+        if (smilesOnly && (textChatsFilter || usersStatsFilter)) {
+            showErrorMessage("Display only emoji and filtering by users and text chat do not mix", channel);
+            return;
+        }
 
         if (enableOption ^ disableOption ^ showOption ^ resetOption ^ statusOption) {
             long serverId = server.getId();
@@ -90,7 +141,7 @@ public class StatisticsCommand
             }
 
             if (resetOption) {
-                serverStatistic.getNonDefaultSmileStats().clear();
+                serverStatistic.clear();
                 settingsController.saveServerSideStatistic(serverId);
                 showInfoMessage("Statistic will be reset.", channel);
             }
@@ -102,16 +153,52 @@ public class StatisticsCommand
 
             if (showOption) {
 
+                ServerSideResolver.ParseResult<ServerTextChannel> parsedTextChannel = ServerSideResolver
+                        .resolveTextChannelsList(server, textChats);
+
+                ServerSideResolver.ParseResult<KnownCustomEmoji> parsedCustomEmoji = ServerSideResolver
+                        .resolveKnownEmojiList(server, smileList);
+
+                ServerSideResolver.ParseResult<User> parsedUsers = ServerSideResolver
+                        .resolveUsersList(server, usersList);
+
+                if (parsedTextChannel.hasNotFound()) {
+                    showErrorMessage("Unable to find text channels: " +
+                            parsedTextChannel.getNotFoundStringList(), channel);
+                    return;
+                }
+
+                if (parsedCustomEmoji.hasNotFound()) {
+                    showErrorMessage("Unable to find emoji: " +
+                            parsedCustomEmoji.getNotFoundStringList(), channel);
+                    return;
+                }
+
+                if (parsedUsers.hasNotFound()) {
+                    showErrorMessage("Unable to find users: " +
+                            parsedUsers.getNotFoundStringList(), channel);
+                    return;
+                }
+
                 TreeMap<Long, List<String>> emojiStat = new TreeMap<>(Comparator.reverseOrder());
+                TreeMap<Long, List<String>> userStats = serverStatistic.buildUserStats(parsedUsers.getFound());
+                TreeMap<Long, List<String>> textChatStat = serverStatistic.buildTextChatStats(parsedTextChannel.getFound(),
+                        parsedUsers.getFound());
 
                 serverStatistic.getNonDefaultSmileStats()
                         .forEach((id, stat) -> {
-                            if (stat.getUsagesCount() != null && stat.getUsagesCount().get() > 0) {
+                            if (stat.getUsagesCount() != null && stat.getUsagesCount().get() > 0L) {
                                 long usagesCount = stat.getUsagesCount().get();
+                                if (parsedCustomEmoji.hasFound()) {
+                                    boolean found = parsedCustomEmoji.getFound()
+                                            .stream()
+                                            .anyMatch(e -> e.getId() == id);
+                                    if (!found)
+                                        return;
+                                }
                                 server.getCustomEmojiById(id)
                                         .ifPresentOrElse(emoji -> {
                                             MessageBuilder tmp = new MessageBuilder()
-                                                    .append("- ")
                                                     .append(String.valueOf(usagesCount))
                                                     .append(" - ")
                                                     .append(emoji)
@@ -128,43 +215,42 @@ public class StatisticsCommand
                                             emojiStat.get(usagesCount)
                                                     .add(tmp.getStringBuilder().toString());
                                         }, () -> serverStatistic.getNonDefaultSmileStats()
-                                                    .remove(id));
+                                                .remove(id));
                             }
                         });
 
-                if (emojiStat.size() == 0) {
+                if (emojiStat.size() == 0 && userStats.size() == 0 && textChatStat.size() == 0) {
                     new MessageBuilder()
                             .append("Message statistic is empty")
                             .send(channel);
                 } else {
-                    new MessageBuilder()
-                            .append("Collected statistic:", MessageDecoration.BOLD)
-                            .appendNewLine()
-                            .append(">> Custom emoji usage statistic:", MessageDecoration.ITALICS)
-                            .send(channel);
+                    MessageBuilder resultMessage = new MessageBuilder();
 
-                    int cnt = 0;
-                    final int maxCnt = 20;
-                    MessageBuilder msg = null;
+                    resultMessage.append("Collected statistic:", MessageDecoration.BOLD)
+                            .appendNewLine();
 
-                    for (Map.Entry<Long, List<String>> entry : emojiStat.entrySet()) {
-                        for (String item : entry.getValue()) {
-                            if (msg == null) {
-                                msg = new MessageBuilder();
-                            }
-                            msg.append(item).appendNewLine();
-                            cnt++;
-                            if (cnt == maxCnt) {
-                                msg.send(channel);
-                                msg = null;
-                                cnt = 0;
-                            }
-                        }
+                    if (emojiStat.size() > 0 && !textChatsFilter && !usersStatsFilter) {
+                        resultMessage.append(">> Custom emoji usage statistic:", MessageDecoration.ITALICS)
+                                .appendNewLine();
+
+                        ServerStatistic.appendResultStats(resultMessage, emojiStat, 1);
                     }
 
-                    if (msg != null) {
-                        msg.send(channel);
+                    if (userStats.size() > 0 && !smilesOnly && !textChatsFilter) {
+                        resultMessage.append(">> User message statistics:", MessageDecoration.ITALICS)
+                                .appendNewLine();
+
+                        ServerStatistic.appendResultStats(resultMessage, userStats, 1);
                     }
+
+                    if (textChatStat.size() > 0 && !smilesOnly) {
+                        resultMessage.append(">> Text chat message statistics:", MessageDecoration.ITALICS)
+                                .appendNewLine();
+
+                        ServerStatistic.appendResultStats(resultMessage, textChatStat, 1);
+                    }
+
+                    MessageUtils.sendLongMessage(resultMessage, channel);
                 }
             }
         } else {

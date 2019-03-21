@@ -320,4 +320,11 @@ public abstract class BotCommand {
                         .setDescription(textMessage))
                 .send(channel);
     }
+
+    List<String> getOptionalArgsList(CommandLine cmdline, char arg) {
+        String[] values = cmdline.getOptionValues(arg);
+        return values != null && values.length > 0
+                ? Arrays.asList(values)
+                : new ArrayList<>(0);
+    }
 }
