@@ -2,6 +2,9 @@ package xyz.funforge.scratchypaws.hellfrog.common;
 
 import org.jetbrains.annotations.Contract;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 
 public class CommonUtils {
@@ -56,7 +59,7 @@ public class CommonUtils {
     public static String getCurrentGmtTimeAsString() {
         TimeZone tz = TimeZone.getTimeZone("GMT");
         Calendar current = Calendar.getInstance(tz);
-        return String.format("%tF %<tT (GMT)", current);
+        return String.format("%tF %<tT (UTC)", current);
     }
 
     public static long getLowValue(long maxValue) {
@@ -92,5 +95,25 @@ public class CommonUtils {
         return !CommonUtils.isTrStringEmpty(that)
                 && !CommonUtils.isTrStringEmpty(then)
                 && that.trim().equals(then.trim());
+    }
+
+    public static long getLatestDate(Instant entityDateTime, long lastDateOfCalendar) {
+        Calendar cl = instantToCalendar(entityDateTime);
+        if (lastDateOfCalendar >= 0) {
+            Calendar current = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+            current.setTimeInMillis(lastDateOfCalendar);
+            if (cl.after(current)) {
+                return cl.getTimeInMillis();
+            } else {
+                return lastDateOfCalendar;
+            }
+        } else {
+            return cl.getTimeInMillis();
+        }
+    }
+
+    public static Calendar instantToCalendar(Instant instant) {
+        ZonedDateTime zdt = ZonedDateTime.ofInstant(instant, ZoneId.of("UTC"));
+        return GregorianCalendar.from(zdt);
     }
 }

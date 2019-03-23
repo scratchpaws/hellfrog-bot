@@ -9,15 +9,47 @@ import org.javacord.api.event.message.MessageDeleteEvent;
 import org.javacord.api.event.message.MessageEvent;
 import org.javacord.api.listener.message.MessageCreateListener;
 import org.javacord.api.listener.message.MessageDeleteListener;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.MessageStatistic;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerStatistic;
 
+import java.time.Instant;
 import java.util.Optional;
 
 public class MessageStats
         implements MessageCreateListener, MessageDeleteListener {
+
+    public static void collectStat(@NotNull Server s, @NotNull ServerTextChannel ch,
+                                   @Nullable User author, @Nullable Instant messageDate,
+                                   boolean isCreate) {
+        ServerStatistic stat = SettingsController.getInstance().getServerStatistic(s.getId());
+        if (!stat.isCollectNonDefaultSmileStats()) return;
+        MessageStatistic textChatStatistic = stat.getTextChatStatistic(ch);
+        react(textChatStatistic, ch.getName(), messageDate, isCreate);
+        if (author != null) {
+            String displayUserName = s.getDisplayName(author) + " (" + author.getDiscriminatedName() + ")";
+            MessageStatistic userGlobalStat = stat.getUserMessageStatistic(author);
+            MessageStatistic userTextChatStat = textChatStatistic.getChildItemStatistic(author.getId());
+            react(userGlobalStat, displayUserName, messageDate, isCreate);
+            react(userTextChatStat, displayUserName, messageDate, isCreate);
+        }
+    }
+
+    private static void react(@NotNull MessageStatistic stats, @NotNull String lastKnownName,
+                              @Nullable Instant messageDate, boolean isCreate) {
+        if (isCreate) {
+            if (messageDate != null) {
+                stats.incrementWithLastDate(messageDate);
+            } else {
+                stats.increment();
+            }
+        } else {
+            stats.decrement();
+        }
+        stats.setLastKnownName(lastKnownName);
+    }
 
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
@@ -28,7 +60,8 @@ public class MessageStats
         if (mayBeUser.isPresent()) {
             author = mayBeUser.get();
         }
-        onMessage(event, author, true);
+        Instant messageDate = event.getMessage().getCreationTimestamp();
+        onMessage(event, author, messageDate, true);
     }
 
     @Override
@@ -43,37 +76,14 @@ public class MessageStats
                 user = mayBeUser.get();
             }
         }
-        onMessage(event, user, false);
+        onMessage(event, user, null, false);
     }
 
-    private void onMessage(MessageEvent event, @Nullable User author, boolean isCreate) {
+    private void onMessage(@NotNull MessageEvent event, @Nullable User author, @Nullable Instant messageDate, boolean isCreate) {
         event.getServer().ifPresent(s ->
                 event.getServerTextChannel().ifPresent(ch ->
-                    collectStat(s, ch, author, isCreate)
+                        collectStat(s, ch, author, messageDate, isCreate)
                 )
         );
-    }
-
-    public static void collectStat(Server s, ServerTextChannel ch, @Nullable User author, boolean isCreate) {
-        ServerStatistic stat = SettingsController.getInstance().getServerStatistic(s.getId());
-        if (!stat.isCollectNonDefaultSmileStats()) return;
-        MessageStatistic textChatStatistic = stat.getTextChatStatistic(ch);
-        react(textChatStatistic, ch.getName(), isCreate);
-        if (author != null) {
-            String displayUserName = s.getDisplayName(author) + " (" + author.getDiscriminatedName() + ")";
-            MessageStatistic userGlobalStat = stat.getUserMessageStatistic(author);
-            MessageStatistic userTextChatStat = textChatStatistic.getChildItemStatistic(author.getId());
-            react(userGlobalStat, displayUserName, isCreate);
-            react(userTextChatStat, displayUserName, isCreate);
-        }
-    }
-
-    private static void react(MessageStatistic stats, String lastKnownName, boolean isCreate) {
-        if (isCreate) {
-            stats.increment();
-        } else {
-            stats.decrement();
-        }
-        stats.setLastKnownName(lastKnownName);
     }
 }

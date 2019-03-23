@@ -1,7 +1,6 @@
 package xyz.funforge.scratchypaws.hellfrog.reactions;
 
 import com.vdurmont.emoji.EmojiParser;
-import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
@@ -21,6 +20,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -71,7 +71,7 @@ public class DiceReaction
     @Override
     void parallelExecuteReact(String strMessage, @Nullable Server server,
                               @Nullable User user, TextChannel textChannel,
-                              DiscordApi api) {
+                              Instant messageCreateDate) {
 
         SettingsController.getInstance().updateLastCommandUsage();
         List<String> lines = Arrays.asList(strMessage.split("\n"));

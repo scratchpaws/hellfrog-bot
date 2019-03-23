@@ -3,6 +3,10 @@ package xyz.funforge.scratchypaws.hellfrog.common;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
+import java.util.Calendar;
+import java.util.TimeZone;
+
 public class CommonUtilsTest {
 
     @Test
@@ -61,5 +65,19 @@ public class CommonUtilsTest {
         Assertions.assertFalse(CommonUtils.safeEqualsTrimStr(null, null));
         Assertions.assertTrue(CommonUtils.safeEqualsTrimStr("all", "all"));
         Assertions.assertTrue(CommonUtils.safeEqualsTrimStr(" all ", "all"));
+    }
+
+    @Test
+    public void latestDateTimeTest() {
+        final String dateTimeFormatter = "%tF %<tT.%<tL";
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        System.err.println(String.format(dateTimeFormatter, calendar));
+        Instant instant = Instant.now();
+        System.err.println(String.format(dateTimeFormatter, CommonUtils.instantToCalendar(instant)));
+
+        long result = CommonUtils.getLatestDate(instant, calendar.getTimeInMillis());
+        long instantAsCalendarToLong = CommonUtils.instantToCalendar(instant).getTimeInMillis();
+
+        Assertions.assertEquals(result, instantAsCalendarToLong);
     }
 }

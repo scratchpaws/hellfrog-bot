@@ -1,7 +1,9 @@
 package xyz.funforge.scratchypaws.hellfrog.settings.old;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 
+import java.time.Instant;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicLong;
@@ -22,6 +24,14 @@ public class SmileStatistic {
         return lastUsage;
     }
 
+    public void setUsagesCount(AtomicLong usagesCount) {
+        this.usagesCount = usagesCount;
+    }
+
+    public void setLastUsage(AtomicLong lastUsage) {
+        this.lastUsage = lastUsage;
+    }
+
     public void increment() {
         checkExist();
         usagesCount.incrementAndGet();
@@ -33,6 +43,12 @@ public class SmileStatistic {
         if (usagesCount.get() > 0)
             usagesCount.decrementAndGet();
         updateLastUsage();
+    }
+
+    public void incrementWithLastDate(Instant lastDate) {
+        checkExist();
+        usagesCount.incrementAndGet();
+        lastUsage.set(CommonUtils.getLatestDate(lastDate, lastUsage.get()));
     }
 
     private void updateLastUsage() {

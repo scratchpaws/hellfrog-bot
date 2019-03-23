@@ -10,10 +10,36 @@ import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerStatistic;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.SmileStatistic;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class ReactReaction {
+
+    public static void collectStat(final Server server,
+                                   final CustomEmoji customEmoji,
+                                   final boolean isAdd,
+                                   final Instant reactDate) {
+
+        SettingsController settingsController = SettingsController.getInstance();
+        ServerStatistic serverStatistic = settingsController.getServerStatistic(server.getId());
+        if (!serverStatistic.isCollectNonDefaultSmileStats()) return;
+
+        long emojiId = customEmoji.getId();
+        server.getCustomEmojiById(emojiId)
+                .ifPresent(kce -> {
+                    SmileStatistic stat = serverStatistic.getSmileStatistic(emojiId);
+                    if (isAdd) {
+                        if (reactDate != null) {
+                            stat.incrementWithLastDate(reactDate);
+                        } else {
+                            stat.increment();
+                        }
+                    } else {
+                        stat.decrement();
+                    }
+                });
+    }
 
     public void parseReaction(@NotNull SingleReactionEvent event, final boolean isAdd) {
         Optional<Server> mayBeServer = event.getServer();
@@ -30,26 +56,6 @@ public class ReactReaction {
         final Server server = mayBeServer.get();
         final CustomEmoji customEmoji = mayBeCustomEmoji.get();
 
-        CompletableFuture.runAsync(() -> parallelExecute(server, customEmoji, isAdd));
-    }
-
-    private void parallelExecute(final Server server,
-                                 final CustomEmoji customEmoji,
-                                 final boolean isAdd) {
-
-        SettingsController settingsController = SettingsController.getInstance();
-        ServerStatistic serverStatistic = settingsController.getServerStatistic(server.getId());
-        if (!serverStatistic.isCollectNonDefaultSmileStats()) return;
-
-        long emojiId = customEmoji.getId();
-        server.getCustomEmojiById(emojiId)
-                .ifPresent(kce -> {
-                    SmileStatistic stat = serverStatistic.getSmileStatistic(emojiId);
-                    if (isAdd) {
-                        stat.increment();
-                    } else {
-                        stat.decrement();
-                    }
-                });
+        CompletableFuture.runAsync(() -> collectStat(server, customEmoji, isAdd, Instant.now()));
     }
 }

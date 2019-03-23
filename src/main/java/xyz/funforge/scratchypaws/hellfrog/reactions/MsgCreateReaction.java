@@ -1,7 +1,6 @@
 package xyz.funforge.scratchypaws.hellfrog.reactions;
 
 import besus.utils.collection.Sequental;
-import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -11,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 import xyz.funforge.scratchypaws.hellfrog.core.AccessControlCheck;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -66,13 +66,13 @@ public abstract class MsgCreateReaction
         final Server server = mayBeServer.orElse(null);
         final User user = mayBeUser.orElse(null);
         final TextChannel textChannel = event.getChannel();
-        final DiscordApi api = event.getApi();
-        CompletableFuture.runAsync(() -> parallelExecuteReact(strMessage, server, user, textChannel, api));
+        final Instant messageCreateDate = event.getMessage().getCreationTimestamp();
+        CompletableFuture.runAsync(() -> parallelExecuteReact(strMessage, server, user, textChannel, messageCreateDate));
     }
 
     abstract void parallelExecuteReact(String strMessage, @Nullable Server server,
                                        @Nullable User user, TextChannel textChannel,
-                                       DiscordApi api);
+                                       Instant messageCreateDate);
 
     public boolean isAccessControl() {
         return accessControl;

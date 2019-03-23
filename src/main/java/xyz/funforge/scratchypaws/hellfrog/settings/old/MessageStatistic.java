@@ -2,7 +2,9 @@ package xyz.funforge.scratchypaws.hellfrog.settings.old;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.jetbrains.annotations.NotNull;
+import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 
+import java.time.Instant;
 import java.util.Calendar;
 import java.util.Objects;
 import java.util.TimeZone;
@@ -65,6 +67,11 @@ public class MessageStatistic {
     public void increment() {
         updateLastMessage();
         messagesCount.incrementAndGet();
+    }
+
+    public void incrementWithLastDate(Instant lastDate) {
+        messagesCount.incrementAndGet();
+        lastMessageDate.set(CommonUtils.getLatestDate(lastDate, lastMessageDate.get()));
     }
 
     public void decrement() {
