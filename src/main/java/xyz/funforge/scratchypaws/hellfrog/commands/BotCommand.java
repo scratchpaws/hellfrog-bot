@@ -318,7 +318,16 @@ public abstract class BotCommand {
                         .setColor(messageColor)
                         .setTitle(SettingsController.getInstance().getBotName())
                         .setDescription(textMessage))
-                .send(channel);
+                .send(channel).thenAccept(m -> {
+                    if (type == ERROR_MESSAGE) {
+                        try {
+                            Thread.sleep(10000L);
+                            if (m.canYouDelete())
+                                m.delete();
+                        } catch (InterruptedException ignore) {
+                        }
+                    }
+        });
     }
 
     List<String> getOptionalArgsList(CommandLine cmdline, char arg) {

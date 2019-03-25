@@ -1,6 +1,6 @@
 package xyz.funforge.scratchypaws.hellfrog.core;
 
-import org.javacord.api.entity.message.MessageAuthor;
+import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -12,35 +12,32 @@ import java.util.Optional;
 
 public class AccessControlCheck {
 
-    public static boolean canExecuteOnServer(String prefix, MessageCreateEvent event, Server server,
+    static boolean canExecuteOnServer(String prefix, User user, Server server, TextChannel channel,
                                              boolean strictByChannels, long... anotherTargetChannel) {
         SettingsController settingsController = SettingsController.getInstance();
-        MessageAuthor messageAuthor = event.getMessageAuthor();
-        long userId = messageAuthor.getId();
+        long userId = user.getId();
         long serverId = server.getId();
         boolean isAllowUser = settingsController.getServerPreferences(serverId)
                 .getRightsForCommand(prefix)
                 .isAllowUser(userId);
         boolean isBotRoleOwner = false;
-        Optional<User> mayBeUser = messageAuthor.asUser();
-        if (mayBeUser.isPresent()) {
-            User user = mayBeUser.get();
-            List<Long> allowRoles = settingsController.getServerPreferences(serverId)
-                    .getRightsForCommand(prefix)
-                    .getAllowRoles();
-            for (Role role : user.getRoles(server)) {
-                if (allowRoles.contains(role.getId())) {
-                    isBotRoleOwner = true;
-                    break;
-                }
+
+        List<Long> allowRoles = settingsController.getServerPreferences(serverId)
+                .getRightsForCommand(prefix)
+                .getAllowRoles();
+        for (Role role : user.getRoles(server)) {
+            if (allowRoles.contains(role.getId())) {
+                isBotRoleOwner = true;
+                break;
             }
         }
-        boolean isServerAdmin = messageAuthor.canManageServer() ||
-                messageAuthor.isServerAdmin();
+
+        boolean isServerAdmin =server.isAdmin(user) || server.canManage(user);
+
         boolean isAllowedForChannel = true;
         if (strictByChannels && settingsController.getServerPreferences(serverId)
                 .getRightsForCommand(prefix).getAllowChannels().size() > 0) {
-            long channelId = event.getChannel().getId();
+            long channelId = channel.getId();
             if (anotherTargetChannel != null && anotherTargetChannel.length > 0) {
                 for (long anotherChannelId : anotherTargetChannel) {
                     isAllowedForChannel &= settingsController.getServerPreferences(serverId)
@@ -54,5 +51,15 @@ public class AccessControlCheck {
             }
         }
         return (isAllowedForChannel && (isBotRoleOwner || isAllowUser)) || isServerAdmin;
+    }
+
+    public static boolean canExecuteOnServer(String prefix, MessageCreateEvent event, Server server,
+                                             boolean strictByChannels, long... anotherTargetChannel) {
+        Optional<User> mayBeUser = event.getMessageAuthor().asUser();
+        return mayBeUser.filter(user ->
+                canExecuteOnServer(prefix, user, server,
+                        event.getChannel(), strictByChannels,
+                anotherTargetChannel)
+        ).isPresent();
     }
 }

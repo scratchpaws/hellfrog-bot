@@ -76,12 +76,12 @@ public class StatisticsCommand
                 .desc("Show user messages statistic only")
                 .build();
 
-        Option rebuild = Option.builder("b")
+        /*Option rebuild = Option.builder("b")
                 .desc("Full scan and rebuild statistic")
-                .build();
+                .build();*/
 
         super.enableOnlyServerCommandStrict();
-        super.addCmdlineOption(enable, disable, show, reset, status, smilesOnly, textChat, userStats, rebuild);
+        super.addCmdlineOption(enable, disable, show, reset, status, smilesOnly, textChat, userStats);
     }
 
     @Override
@@ -219,7 +219,7 @@ public class StatisticsCommand
                                             if (stat.getLastUsage() != null && stat.getLastUsage().get() > 0) {
                                                 Calendar last = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
                                                 last.setTimeInMillis(stat.getLastUsage().get());
-                                                tmp.append(String.format("last usage at %tF %<tT (GMT)", last));
+                                                tmp.append(String.format("last usage at %tF %<tT (UTC)", last));
                                             }
                                             if (!emojiStat.containsKey(usagesCount)) {
                                                 List<String> emptyList = new ArrayList<>();
