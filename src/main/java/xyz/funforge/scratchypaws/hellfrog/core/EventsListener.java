@@ -8,6 +8,7 @@ import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.MessageDeleteEvent;
 import org.javacord.api.event.message.MessageEditEvent;
@@ -195,6 +196,11 @@ public class EventsListener
         msgBuilder.appendNewLine();
         msgBuilder.append("Type \"" + botPrefix + " help\" for more help.");
         msgBuilder.send(channel);
+        if (channel.getServer().canYouChangeOwnNickname()) {
+            User ownUser = channel.getApi().getYourself();
+            channel.getServer().updateNickname(ownUser, SettingsController.getInstance().getBotName() + " ("
+                    + botPrefix + " help)");
+        }
     }
 
     @Override

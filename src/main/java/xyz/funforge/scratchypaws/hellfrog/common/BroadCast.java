@@ -31,9 +31,10 @@ public class BroadCast {
                     User user = discordApi.getUserById(ownerId).join();
                     new MessageBuilder()
                             .setEmbed(new EmbedBuilder()
-                                    .setTitle("WARNING (" + CommonUtils.getCurrentGmtTimeAsString() + ")")
+                                    .setTitle("WARNING")
                                     .setColor(Color.RED)
-                                    .setDescription(broadcastMessage))
+                                    .setDescription(broadcastMessage)
+                                    .setTimestampToNow())
                             .send(user);
                     alreadyNotified.add(ownerId);
                 } catch (Exception err) {

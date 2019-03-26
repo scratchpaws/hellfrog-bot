@@ -4,6 +4,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
@@ -87,6 +88,11 @@ public class PrefixCommand
                         settingsController.setBotPrefix(serverId, newPrefix);
                         showInfoMessage("Prefix changed to " + newPrefix.trim() +
                                 " on server " + serverName, channel);
+                        if (server.canYouChangeOwnNickname()) {
+                            User botUser = server.getApi().getYourself();
+                            server.updateNickname(botUser, settingsController.getBotName() + " ("
+                                    + newPrefix + " help)");
+                        }
                     } else {
                         showAccessDeniedServerMessage(channel);
                     }

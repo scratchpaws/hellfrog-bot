@@ -112,7 +112,7 @@ public abstract class BotCommand {
     /**
      * Выполнить команду при обработке события создания сообщения
      *
-     * @param event событие
+     * @param event      событие
      * @param rawCmdline распарсенная командная строка
      */
     public void executeCreateMessageEvent(MessageCreateEvent event, String[] rawCmdline, ArrayList<String> anotherLines) {
@@ -158,11 +158,11 @@ public abstract class BotCommand {
     /**
      * Обработка команды, поступившей из текстового канала сервера.
      *
-     * @param server      Сервер текстового канала, откуда поступило сообщение
-     * @param cmdline     обработанные аргументы командной строки
-     * @param cmdlineArgs оставшиеся значения командной строки
-     * @param channel     текстовый канал, откуда поступило сообщение
-     * @param event       событие сообщения
+     * @param server       Сервер текстового канала, откуда поступило сообщение
+     * @param cmdline      обработанные аргументы командной строки
+     * @param cmdlineArgs  оставшиеся значения командной строки
+     * @param channel      текстовый канал, откуда поступило сообщение
+     * @param event        событие сообщения
      * @param anotherLines другие строки в команде, не относящиеся к команде
      */
     protected abstract void executeCreateMessageEventServer(Server server,
@@ -175,10 +175,10 @@ public abstract class BotCommand {
     /**
      * Обработка команды, поступившей из привата.
      *
-     * @param cmdline     обработанные аргументы командной строки
-     * @param cmdlineArgs оставшиеся значения командной строки
-     * @param channel     текстовый канал, откуда поступило сообщение
-     * @param event       событие сообщения
+     * @param cmdline      обработанные аргументы командной строки
+     * @param cmdlineArgs  оставшиеся значения командной строки
+     * @param channel      текстовый канал, откуда поступило сообщение
+     * @param event        событие сообщения
      * @param anotherLines другие строки в команде, не относящиеся к команде
      */
     protected abstract void executeCreateMessageEventDirect(CommandLine cmdline,
@@ -313,20 +313,23 @@ public abstract class BotCommand {
                 messageColor = Color.CYAN;
                 break;
         }
+        User yourself = channel.getApi().getYourself();
         new MessageBuilder()
                 .setEmbed(new EmbedBuilder()
                         .setColor(messageColor)
-                        .setTitle(SettingsController.getInstance().getBotName())
-                        .setDescription(textMessage))
+                        .setDescription(textMessage)
+                        .setTimestampToNow()
+                        .setFooter(type == ERROR_MESSAGE ? "This message will automatically delete in 20 seconds." : null)
+                        .setAuthor(yourself))
                 .send(channel).thenAccept(m -> {
-                    if (type == ERROR_MESSAGE) {
-                        try {
-                            Thread.sleep(10000L);
-                            if (m.canYouDelete())
-                                m.delete();
-                        } catch (InterruptedException ignore) {
-                        }
-                    }
+            if (type == ERROR_MESSAGE) {
+                try {
+                    Thread.sleep(20_000L);
+                    if (m.canYouDelete())
+                        m.delete();
+                } catch (InterruptedException ignore) {
+                }
+            }
         });
     }
 

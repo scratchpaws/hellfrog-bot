@@ -515,6 +515,13 @@ public class VoteCommand
                         .getActiveVotes()
                         .add(newVote);
                 settingsController.saveServerSideParameters(server.getId());
+
+                String voteUrl = "https://discordapp.com/channels/" +
+                        server.getId() + "/" +
+                        newVote.getTextChatId() + "/" +
+                        newVote.getMessageId();
+
+                showInfoMessage("Vote created: " + voteUrl, channel);
             } catch (Exception err) {
                 showErrorMessage("Unable to create vote: " + err.getMessage(), channel);
             }
