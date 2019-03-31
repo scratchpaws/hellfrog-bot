@@ -42,7 +42,7 @@ public interface Func {
     }
 
     static <S, T> AnySupplier<T> statefulSupplier(S state, AnyFunc<Ref<S>, T> next) {
-        return new AnySupplier<>() {
+        return new AnySupplier<T>() {
             Ref<S> s = new Ref<>(state);
 
             @Override

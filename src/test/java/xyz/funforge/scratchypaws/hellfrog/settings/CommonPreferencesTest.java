@@ -26,8 +26,8 @@ public class CommonPreferencesTest {
         Assertions.assertEquals(restored.getGlobalBotOwners().getClass(), CopyOnWriteArrayList.class);
         Assertions.assertTrue(restored.getGlobalBotOwners().contains(6L));
         Assertions.assertTrue(restored.getGlobalBotOwners().contains(7L));
-        Assertions.assertEquals(restored.getBotName(), "TestBot");
-        Assertions.assertEquals(restored.getCommonBotPrefix(), ">>");
-        Assertions.assertEquals(restored.getApiKey(), "some");
+        Assertions.assertEquals("TestBot", restored.getBotName());
+        Assertions.assertEquals(">>", restored.getCommonBotPrefix());
+        Assertions.assertEquals("some", restored.getApiKey());
     }
 }

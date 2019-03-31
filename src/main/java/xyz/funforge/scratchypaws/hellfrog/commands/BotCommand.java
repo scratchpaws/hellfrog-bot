@@ -26,30 +26,17 @@ import java.util.Optional;
  * Основные функции команд бота
  */
 public abstract class BotCommand {
-    public static Sequental<BotCommand> all() {
-        return Sequental.all(
-                new PrefixCommand(),
-                new VoteCommand(),
-                new RightsCommand(),
-                new ServiceCommand(),
-                new UpgradeCommand(),
-                new StatisticsCommand(),
-                new JoinLogCommand())
-                .repeatable();
-    }
-
     private static final int ERROR_MESSAGE = 0;
     private static final int INFO_MESSAGE = 1;
     private static final int HELP_USAGE_WIDTH = 512;
     private final String prefix;
     private final String description;
-    private Options control = new Options();
+    final private Options control = new Options();
     private String helpUsage = null;
     private boolean strictByChannels = false;
     private boolean onlyServerCommand = false;
     private String footer = "";
     private boolean updateLastUsage = true;
-
     BotCommand(String botPrefix, String description) {
         this.prefix = botPrefix;
         this.description = description;
@@ -62,21 +49,33 @@ public abstract class BotCommand {
         control.addOption(helpOption);
     }
 
-    void addCmdlineOption(Option... options) {
+    public static Sequental<BotCommand> all() {
+        return Sequental.all(
+                new PrefixCommand(),
+                new VoteCommand(),
+                new RightsCommand(),
+                new ServiceCommand(),
+                new UpgradeCommand(),
+                new StatisticsCommand(),
+                new JoinLogCommand())
+                .repeatable();
+    }
+
+    final void addCmdlineOption(Option... options) {
         for (Option option : options) {
             control.addOption(option);
         }
     }
 
-    void enableStrictByChannels() {
+    final void enableStrictByChannels() {
         this.strictByChannels = true;
     }
 
-    void enableOnlyServerCommandStrict() {
+    final void enableOnlyServerCommandStrict() {
         this.onlyServerCommand = true;
     }
 
-    void disableUpdateLastCommandUsage() {
+    final void disableUpdateLastCommandUsage() {
         this.updateLastUsage = false;
     }
 
@@ -112,8 +111,10 @@ public abstract class BotCommand {
     /**
      * Выполнить команду при обработке события создания сообщения
      *
-     * @param event      событие
-     * @param rawCmdline распарсенная командная строка
+     * @param event        событие
+     * @param rawCmdline   распарсенная командная строка
+     * @param anotherLines остальные строки сообщения команды, не являющиеся
+     *                     самой командой (расположены на новых строках)
      */
     public void executeCreateMessageEvent(MessageCreateEvent event, String[] rawCmdline, ArrayList<String> anotherLines) {
 

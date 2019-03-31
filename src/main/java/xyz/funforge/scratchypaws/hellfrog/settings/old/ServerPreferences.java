@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
@@ -15,19 +14,16 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ServerPreferences
         implements Serializable {
 
+    @JsonIgnore
+    private final ReentrantLock commandRightsGenLock = new ReentrantLock();
     /**
      * Префикс для вызова команд бота
      */
     private volatile String botPrefix = "h!f";
-
     private ConcurrentHashMap<String, CommandRights> srvCommandRights = new ConcurrentHashMap<>();
     private CopyOnWriteArrayList<ActiveVote> activeVotes = new CopyOnWriteArrayList<>();
-
     private volatile Boolean joinLeaveDisplay = false;
     private volatile Long joinLeaveChannel = null;
-
-    @JsonIgnore
-    private transient ReentrantLock commandRightsGenLock = new ReentrantLock();
 
     /**
      * Получить префикс для вызова бота на данном сервере
@@ -80,19 +76,19 @@ public class ServerPreferences
         this.activeVotes = new CopyOnWriteArrayList<>(activeVotes);
     }
 
-    public void setJoinLeaveDisplay(boolean state) {
-        this.joinLeaveDisplay = state;
-    }
-
     public boolean isJoinLeaveDisplay() {
         return this.joinLeaveDisplay != null && this.joinLeaveDisplay;
     }
 
-    public void setJoinLeaveChannel(long textChannelId) {
-        this.joinLeaveChannel = textChannelId;
+    public void setJoinLeaveDisplay(boolean state) {
+        this.joinLeaveDisplay = state;
     }
 
     public long getJoinLeaveChannel() {
-        return Objects.requireNonNullElse(this.joinLeaveChannel, 0L);
+        return this.joinLeaveChannel != null ? this.joinLeaveChannel : 0L;
+    }
+
+    public void setJoinLeaveChannel(long textChannelId) {
+        this.joinLeaveChannel = textChannelId;
     }
 }

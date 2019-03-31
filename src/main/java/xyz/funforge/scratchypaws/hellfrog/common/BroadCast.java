@@ -20,28 +20,27 @@ public class BroadCast {
         DiscordApi discordApi = settingsController.getDiscordApi();
         long mainOwner = discordApi.getOwnerId();
         toNotify.add(mainOwner);
-        for (long ownerId : settingsController.getGlobalBotOwners()) {
-            if (ownerId != mainOwner)
-                toNotify.add(ownerId);
-        }
+        settingsController.getGlobalBotOwners().stream()
+                .filter((ownerId) -> (ownerId != mainOwner))
+                .forEachOrdered(toNotify::add);
 
-        for (long ownerId : toNotify) {
-            if (!alreadyNotified.contains(ownerId)) {
-                try {
-                    User user = discordApi.getUserById(ownerId).join();
-                    new MessageBuilder()
-                            .setEmbed(new EmbedBuilder()
-                                    .setTitle("WARNING")
-                                    .setColor(Color.RED)
-                                    .setDescription(broadcastMessage)
-                                    .setTimestampToNow())
-                            .send(user);
-                    alreadyNotified.add(ownerId);
-                } catch (Exception err) {
-                    err.printStackTrace();
-                }
-            }
-        }
+        toNotify.stream()
+                .filter((ownerId) -> (!alreadyNotified.contains(ownerId)))
+                .forEachOrdered((ownerId) -> {
+                    try {
+                        User user = discordApi.getUserById(ownerId).join();
+                        new MessageBuilder()
+                                .setEmbed(new EmbedBuilder()
+                                        .setTitle("WARNING")
+                                        .setColor(Color.RED)
+                                        .setDescription(broadcastMessage)
+                                        .setTimestampToNow())
+                                .send(user);
+                        alreadyNotified.add(ownerId);
+                    } catch (Exception err) {
+                        err.printStackTrace();
+                    }
+                });
     }
 
     public static void sendBroadcastUnsafeUsageCE(String broadcastMessage, MessageCreateEvent event) {

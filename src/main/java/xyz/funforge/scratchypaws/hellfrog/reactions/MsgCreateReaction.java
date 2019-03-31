@@ -17,16 +17,16 @@ import java.util.concurrent.CompletableFuture;
 public abstract class MsgCreateReaction
         implements MessageCreateListener {
 
-    public static Sequental<MsgCreateReaction> all() {
-         return Sequental
-                 .all(new DiceReaction(), new CustomEmojiReaction())
-                 .repeatable();
-    }
-
     private boolean accessControl = false;
     private boolean strictByChannel = false;
     private String commandPrefix = "";
     private String commandDescription = "";
+
+    public static Sequental<MsgCreateReaction> all() {
+        return Sequental
+                .all(new DiceReaction(), new CustomEmojiReaction())
+                .repeatable();
+    }
 
     void enableAccessControl() {
         if (CommonUtils.isTrStringEmpty(commandPrefix) ||

@@ -4,8 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.util.Calendar;
-import java.util.TimeZone;
+import java.util.*;
 
 public class CommonUtilsTest {
 
@@ -79,5 +78,30 @@ public class CommonUtilsTest {
         long instantAsCalendarToLong = CommonUtils.instantToCalendar(instant).getTimeInMillis();
 
         Assertions.assertEquals(result, instantAsCalendarToLong);
+    }
+
+    @Test
+    public void firstOrEmptyTest() {
+        List<String> empty = Collections.emptyList();
+        List<String> nulled = null;
+        List<String> once = new ArrayList<>();
+        List<String> multiple = new ArrayList<>();
+
+        String one = "one";
+        String two = "two";
+
+        once.add(one);
+        multiple.add(one);
+        multiple.add(two);
+
+        Optional<String> ofEmpty = CommonUtils.getFirstOrEmpty(empty);
+        Optional<String> ofNulled = CommonUtils.getFirstOrEmpty(nulled);
+        Optional<String> ofOnce = CommonUtils.getFirstOrEmpty(once);
+        Optional<String> ofMultiple = CommonUtils.getFirstOrEmpty(multiple);
+
+        Assertions.assertFalse(ofEmpty.isPresent());
+        Assertions.assertFalse(ofNulled.isPresent());
+        Assertions.assertEquals(one, ofOnce.get());
+        Assertions.assertEquals(one, ofMultiple.get());
     }
 }

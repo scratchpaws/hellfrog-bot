@@ -9,11 +9,14 @@ import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
+import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.core.entity.permission.PermissionsImpl;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.OptionalUtils;
 import xyz.funforge.scratchypaws.hellfrog.reactions.DiceReaction;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
@@ -39,7 +42,7 @@ public class ServiceCommand
     private static final String PREF = "srv";
     private static final String DESCRIPTIONS = "Common bot service commands";
 
-    public ServiceCommand() {
+    ServiceCommand() {
         super(PREF, DESCRIPTIONS);
 
         Option stopBot = Option.builder("s")
@@ -234,15 +237,23 @@ public class ServiceCommand
                 .stop();
         settingsController
                 .saveCommonPreferences();
-        for (long serverId : settingsController.getServerListWithConfig()) {
-            settingsController.saveServerSideParameters(serverId);
-        }
-        for (long serverId : settingsController.getServerListWithStatistic()) {
-            settingsController.saveServerSideStatistic(serverId);
-        }
+        settingsController.getServerListWithConfig()
+                .forEach(settingsController::saveServerSideParameters);
+        settingsController.getServerListWithStatistic()
+                .forEach(settingsController::saveServerSideStatistic);
 
+        User yourself = event.getApi().getYourself();
+        String userData = "Stop called by " + event.getMessageAuthor().getId() +
+                (event.getMessageAuthor().asUser()
+                        .map(user -> " (" + user.getDiscriminatedName() + ") ")
+                        .orElse(" "));
         new MessageBuilder()
-                .append("Bot stopping NOW!")
+                .setEmbed(new EmbedBuilder()
+                        .setAuthor(yourself)
+                        .setTimestampToNow()
+                        .setTitle("WARNING")
+                        .setDescription("Bot stopping NOW!")
+                        .setFooter(userData))
                 .send(event.getChannel()).join();
 
         BroadCast.sendBroadcastUnsafeUsageCE("call bot stopping", event);
@@ -261,41 +272,42 @@ public class ServiceCommand
         final long channelId = event.getChannel().getId();
 
         if (settingsController.isEnableRemoteDebug()) {
-            anotherLines.stream()
-                    .reduce((s1, s2) -> s1 + " " + s2)
-                    .ifPresentOrElse(cmd -> {
-                        final String command = cmd.replaceAll("`{3}", "");
-                        CompletableFuture.runAsync(() -> executeDebugCommand(command, channelId));
-                    }, new Thread(() -> {
-                        List<MessageAttachment> attachmentList = event.getMessage()
-                                .getAttachments();
-                        if (attachmentList.size() > 0) {
-                            for (MessageAttachment attachment : attachmentList) {
-                                try {
-                                    byte[] attach = attachment.downloadAsByteArray()
-                                            .join();
-                                    String buff;
-                                    StringBuilder execScript = new StringBuilder();
-                                    try (BufferedReader textReader = new BufferedReader(
-                                            new InputStreamReader(new ByteArrayInputStream(attach), StandardCharsets.UTF_8))) {
-                                        while ((buff = textReader.readLine()) != null) {
-                                            execScript.append(buff)
-                                                    .append('\n');
-                                        }
-                                    }
-                                    executeDebugCommand(execScript.toString(), event.getChannel().getId());
-                                } catch (Exception err) {
-                                    new MessageBuilder()
-                                            .append("Exception reached while attachment downloading:", MessageDecoration.BOLD)
-                                            .appendNewLine()
-                                            .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
-                                            .send(event.getChannel());
+            Optional<String> shellCmd = anotherLines.stream()
+                    .reduce((s1, s2) -> s1 + " " + s2);
+
+            OptionalUtils.ifPresentOrElse(shellCmd, cmd -> {
+                final String command = cmd.replaceAll("`{3}", "");
+                CompletableFuture.runAsync(() -> executeDebugCommand(command, channelId));
+            }, new Thread(() -> {
+                List<MessageAttachment> attachmentList = event.getMessage()
+                        .getAttachments();
+                if (attachmentList.size() > 0) {
+                    attachmentList.forEach((attachment) -> {
+                        try {
+                            byte[] attach = attachment.downloadAsByteArray()
+                                    .join();
+                            String buff;
+                            StringBuilder execScript = new StringBuilder();
+                            try (BufferedReader textReader = new BufferedReader(
+                                    new InputStreamReader(new ByteArrayInputStream(attach), StandardCharsets.UTF_8))) {
+                                while ((buff = textReader.readLine()) != null) {
+                                    execScript.append(buff)
+                                            .append('\n');
                                 }
                             }
-                        } else {
-                            showErrorMessage("Debug script required", event.getChannel());
+                            executeDebugCommand(execScript.toString(), event.getChannel().getId());
+                        } catch (Exception err) {
+                            new MessageBuilder()
+                                    .append("Exception reached while attachment downloading:", MessageDecoration.BOLD)
+                                    .appendNewLine()
+                                    .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
+                                    .send(event.getChannel());
                         }
-                    }));
+                    });
+                } else {
+                    showErrorMessage("Debug script required", event.getChannel());
+                }
+            }));
 
         } else {
             showErrorMessage("Remote debug not allowed", event.getChannel());
@@ -356,7 +368,7 @@ public class ServiceCommand
 
     private void uploadRoflAction(MessageCreateEvent event, boolean isWin) {
         BroadCast.sendBroadcastUnsafeUsageCE("upload rofl file", event);
-        if (event.getMessageAttachments().size() == 0) {
+        if (event.getMessageAttachments().isEmpty()) {
             showErrorMessage("Attach files requred", event.getChannel());
             return;
         }

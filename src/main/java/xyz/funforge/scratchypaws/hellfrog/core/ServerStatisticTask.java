@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 public class ServerStatisticTask
         implements Runnable {
 
-    private ScheduledFuture<?> scheduled;
+    private final ScheduledFuture<?> scheduled;
 
     public ServerStatisticTask() {
         scheduled = Executors.newSingleThreadScheduledExecutor()

@@ -37,7 +37,7 @@ public class VoteCommand
             "point is longer than one word, it must be enclosed in quotes. Commas are not " +
             "allowed inside the voting point. It is necessary to specify the descriptive " +
             "text after double dashes and spaces.";
-    private VoteController voteController;
+    private final VoteController voteController;
 
     VoteCommand() {
         super(BOT_PREFIX, DESCRIPTION);
@@ -191,77 +191,73 @@ public class VoteCommand
                 resultMessage.append("No active votes");
             }
 
-            for (ActiveVote vote : activeVotes) {
-                if (vote.getMessageId() == null || vote.getTextChatId() == null) continue;
-                Optional<ServerTextChannel> mayBeChannel = server.getTextChannelById(vote.getTextChatId());
-                Instant estimate = vote.isHasTimer() ? Instant.ofEpochSecond(vote.getEndDate()) : Instant.now();
-                Instant currentTime = Instant.now();
-                long estimateMinutes = ChronoUnit.MINUTES.between(currentTime, estimate);
-                if (estimateMinutes <= 0) {
-                    estimateMinutes = 0;
-                }
-                String estimateMst = vote.isHasTimer() ? ", estimate in " + estimateMinutes + "min., " : ", ";
-                String channelTag = "[channel not found]";
-                boolean removeVote = false;
-                boolean messageIsExists = false;
-                String voteUrl = "";
+            activeVotes.stream()
+                    .filter((vote) -> !(vote.getMessageId() == null || vote.getTextChatId() == null))
+                    .forEachOrdered((vote) -> {
+                        Optional<ServerTextChannel> mayBeChannel = server.getTextChannelById(vote.getTextChatId());
+                        Instant estimate = vote.isHasTimer() ? Instant.ofEpochSecond(vote.getEndDate()) : Instant.now();
+                        Instant currentTime = Instant.now();
+                        long estimateMinutes = ChronoUnit.MINUTES.between(currentTime, estimate);
+                        if (estimateMinutes <= 0) {
+                            estimateMinutes = 0;
+                        }
+                        String estimateMst = vote.isHasTimer() ? ", estimate in " + estimateMinutes + "min., " : ", ";
+                        String channelTag = "[channel not found]";
+                        boolean removeVote = false;
+                        boolean messageIsExists = false;
+                        String voteUrl = "";
+                        if (mayBeChannel.isPresent()) {
+                            ServerTextChannel textChannel = mayBeChannel.get();
+                            channelTag = textChannel.getMentionTag();
 
-                if (mayBeChannel.isPresent()) {
-                    ServerTextChannel textChannel = mayBeChannel.get();
-                    channelTag = textChannel.getMentionTag();
+                            try {
+                                textChannel.getMessageById(vote.getMessageId()).join();
+                                messageIsExists = true;
 
-                    try {
-                        textChannel.getMessageById(vote.getMessageId()).join();
-                        messageIsExists = true;
+                                voteUrl = "https://discordapp.com/channels/" +
+                                        server.getId() + "/" +
+                                        textChannel.getId() + "/" +
+                                        vote.getMessageId();
 
-                        voteUrl = "https://discordapp.com/channels/" +
-                                server.getId() + "/" +
-                                textChannel.getId() + "/" +
-                                vote.getMessageId();
-
-                    } catch (Exception err) {
-                        removeVote = true;
-                    }
-                } else {
-                    removeVote = true;
-                }
-
-                resultMessage.append("* into channel ")
-                        .append(channelTag)
-                        .append(": id - ")
-                        .append(vote.getId())
-                        .append(estimateMst)
-                        .append("vote text - ")
-                        .append(vote.getReadableVoteText())
-                        .append(vote.isExceptionalVote() ? " [single choice]" : "")
-                        .append(vote.isWithDefaultPoint() ? " [with default point]" : "")
-                        .append(vote.getWinThreshold() > 0 ? " [win threshold: " +
-                                vote.getWinThreshold() + "]" : "")
-                        .append(". ");
-
-                if (mayBeChannel.isPresent() && !messageIsExists) {
-                    resultMessage.append(" Vote message cannot be found. " +
-                                    "Deleted from active votes.",
-                            MessageDecoration.BOLD);
-                } else if (mayBeChannel.isEmpty()) {
-                    resultMessage.append(" Text channel cannot be found. " +
-                                    "Deleted from active votes.",
-                            MessageDecoration.BOLD);
-                }
-
-                if (removeVote) {
-                    settingsController.getServerPreferences(server.getId())
-                            .getActiveVotes()
-                            .remove(vote);
-                }
-
-                if (!CommonUtils.isTrStringEmpty(voteUrl)) {
-                    resultMessage.appendNewLine()
-                            .append("URL: ")
-                            .append(voteUrl);
-                }
-                resultMessage.appendNewLine();
-            }
+                            } catch (Exception err) {
+                                removeVote = true;
+                            }
+                        } else {
+                            removeVote = true;
+                        }
+                        resultMessage.append("* into channel ")
+                                .append(channelTag)
+                                .append(": id - ")
+                                .append(vote.getId())
+                                .append(estimateMst)
+                                .append("vote text - ")
+                                .append(vote.getReadableVoteText())
+                                .append(vote.isExceptionalVote() ? " [single choice]" : "")
+                                .append(vote.isWithDefaultPoint() ? " [with default point]" : "")
+                                .append(vote.getWinThreshold() > 0 ? " [win threshold: " +
+                                        vote.getWinThreshold() + "]" : "")
+                                .append(". ");
+                        if (mayBeChannel.isPresent() && !messageIsExists) {
+                            resultMessage.append(" Vote message cannot be found. " +
+                                            "Deleted from active votes.",
+                                    MessageDecoration.BOLD);
+                        } else if (mayBeChannel.isEmpty()) {
+                            resultMessage.append(" Text channel cannot be found. " +
+                                            "Deleted from active votes.",
+                                    MessageDecoration.BOLD);
+                        }
+                        if (removeVote) {
+                            settingsController.getServerPreferences(server.getId())
+                                    .getActiveVotes()
+                                    .remove(vote);
+                        }
+                        if (!CommonUtils.isTrStringEmpty(voteUrl)) {
+                            resultMessage.appendNewLine()
+                                    .append("URL: ")
+                                    .append(voteUrl);
+                        }
+                        resultMessage.appendNewLine();
+                    });
 
             MessageUtils.sendLongMessage(resultMessage, channel);
         } else if (interruptMode) {
@@ -319,7 +315,7 @@ public class VoteCommand
                 return;
             }
 
-            if (cmdlineArgs.size() == 0 && anotherLines.size() == 0) {
+            if (cmdlineArgs.isEmpty() && anotherLines.isEmpty()) {
                 showErrorMessage("Descriptive text must be specified", channel);
                 return;
             }
@@ -373,7 +369,7 @@ public class VoteCommand
                     String rawEmoji = rawPoints.get(i);
 
                     List<String> naturalEmoji = EmojiParser.extractEmojis(rawEmoji);
-                    if (naturalEmoji.size() == 0) {
+                    if (naturalEmoji.isEmpty()) {
                         Optional<KnownCustomEmoji> customEmoji = ServerSideResolver.resolveCustomEmoji(server, rawEmoji);
                         if (customEmoji.isPresent()) {
                             KnownCustomEmoji custom = customEmoji.get();
@@ -520,6 +516,9 @@ public class VoteCommand
                         server.getId() + "/" +
                         newVote.getTextChatId() + "/" +
                         newVote.getMessageId();
+
+                voteController.getMessage(server.getId(),
+                        newVote.getTextChatId(), newVote.getMessageId());
 
                 showInfoMessage("Vote created: " + voteUrl, channel);
             } catch (Exception err) {

@@ -29,7 +29,7 @@ public class UpgradeCommand
     private static final String DESCRIPTION = "Service command for bot upgrade";
     private static final String LIBRARY_PATH_NAME = "lib";
 
-    public UpgradeCommand() {
+    UpgradeCommand() {
         super(PREFIX, DESCRIPTION);
 
         Option mainJar = Option.builder("m")
@@ -174,7 +174,7 @@ public class UpgradeCommand
         TextChannel channel = event.getChannel();
         BroadCast.sendBroadcastUnsafeUsageCE("upgrade library jar file", event);
         List<MessageAttachment> attaches = event.getMessage().getAttachments();
-        if (attaches.size() == 0) {
+        if (attaches.isEmpty()) {
             showErrorMessage("One library jar file required.", channel);
             return;
         }

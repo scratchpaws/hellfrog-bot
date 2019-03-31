@@ -51,32 +51,11 @@ public class EventsListener
         ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener {
 
-    private static final String VERSION_STRING = "0.1.17b";
+    private static final String VERSION_STRING = "0.1.18b";
 
-    private ReactReaction reactReaction = new ReactReaction();
-    private VoteReactFilter asVoteReaction = new VoteReactFilter();
-    private MessageStats messageStats = new MessageStats();
-
-    private enum MemberEventCode {
-        JOIN, LEAVE, BAN, UNBAN;
-
-        @Override
-        public String toString() {
-            switch (this) {
-                case JOIN:
-                    return " joined to ";
-                case LEAVE:
-                    return " just left the server ";
-                case BAN:
-                    return " banned on the server ";
-                case UNBAN:
-                    return " unbanned on the server ";
-
-                default:
-                    return "";
-            }
-        }
-    }
+    private final ReactReaction reactReaction = new ReactReaction();
+    private final VoteReactFilter asVoteReaction = new VoteReactFilter();
+    private final MessageStats messageStats = new MessageStats();
 
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
@@ -113,7 +92,7 @@ public class EventsListener
         Optional<Server> mayBeServer = event.getServer();
 
         List<String> inputLines = Arrays.asList(cmdlineString.split("(\\r\\n|\\r|\\n)"));
-        if (inputLines.size() == 0) return;
+        if (inputLines.isEmpty()) return;
         ArrayList<String> anotherStrings = inputLines.size() > 1 ?
                 new ArrayList<>(inputLines.subList(1, inputLines.size())) : new ArrayList<>(0);
 
@@ -298,6 +277,27 @@ public class EventsListener
                                 .setColor(Color.BLUE))
                         .send(c);
             });
+        }
+    }
+
+    private enum MemberEventCode {
+        JOIN, LEAVE, BAN, UNBAN;
+
+        @Override
+        public String toString() {
+            switch (this) {
+                case JOIN:
+                    return " joined to ";
+                case LEAVE:
+                    return " just left the server ";
+                case BAN:
+                    return " banned on the server ";
+                case UNBAN:
+                    return " unbanned on the server ";
+
+                default:
+                    return "";
+            }
         }
     }
 }

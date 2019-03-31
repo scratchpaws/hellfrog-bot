@@ -11,21 +11,21 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class SmileStatistic {
 
+    @JsonIgnore
+    private final ReentrantLock creationLock = new ReentrantLock();
     private volatile AtomicLong usagesCount = new AtomicLong(0L);
     private volatile AtomicLong lastUsage = new AtomicLong(-1L);
-    @JsonIgnore
-    private ReentrantLock creationLock = new ReentrantLock();
 
     public AtomicLong getUsagesCount() {
         return usagesCount;
     }
 
-    public AtomicLong getLastUsage() {
-        return lastUsage;
-    }
-
     public void setUsagesCount(AtomicLong usagesCount) {
         this.usagesCount = usagesCount;
+    }
+
+    public AtomicLong getLastUsage() {
+        return lastUsage;
     }
 
     public void setLastUsage(AtomicLong lastUsage) {

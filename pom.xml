@@ -6,7 +6,7 @@
 
     <groupId>pub.funforge.scratchypaws</groupId>
     <artifactId>hellfrog-bot</artifactId>
-    <version>0.2a</version>
+    <version>0.1.18b</version>
     <packaging>jar</packaging>
     <name>hellfrog</name>
 

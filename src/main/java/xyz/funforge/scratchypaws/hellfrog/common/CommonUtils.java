@@ -1,6 +1,7 @@
 package xyz.funforge.scratchypaws.hellfrog.common;
 
 import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -115,5 +116,12 @@ public class CommonUtils {
     public static Calendar instantToCalendar(Instant instant) {
         ZonedDateTime zdt = ZonedDateTime.ofInstant(instant, ZoneId.of("UTC"));
         return GregorianCalendar.from(zdt);
+    }
+
+    public static <T> Optional<T> getFirstOrEmpty(@Nullable Collection<T> collection) {
+        if (collection == null || collection.isEmpty())
+            return Optional.empty();
+
+        return Optional.of(new ArrayList<>(collection).get(0));
     }
 }

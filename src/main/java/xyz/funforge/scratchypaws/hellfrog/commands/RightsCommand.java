@@ -30,7 +30,7 @@ public class RightsCommand
             "(such as: vote) also may require permission to manage channel, " +
             "designated for a poll.";
 
-    public RightsCommand() {
+    RightsCommand() {
         super(PREF, DESCRIPTION);
 
         Option userOption = Option.builder("u")
@@ -158,7 +158,7 @@ public class RightsCommand
 
             boolean channelsModify = cmdline.hasOption('t');
             List<String> channelsList = CommonUtils.nullableArrayToNonNullList(cmdline.getOptionValues('t'));
-            boolean modifyThisChannel = channelsList.size() == 0;
+            boolean modifyThisChannel = channelsList.isEmpty();
 
             if (!userModify && !rolesModify && !channelsModify && !modifyThisChannel) {
                 showErrorMessage("You must specify the role, user, or text channel for which you are setting rights.",
@@ -216,42 +216,39 @@ public class RightsCommand
             List<ServerTextChannel> channelsNoChanged = new ArrayList<>(channelsChanged.size());
 
             for (User user : parsedUsers.getFound()) {
-                for (CommandRights commandRights : commandRightsList) {
-                    boolean result = allowMode ?
-                            commandRights.addAllowUser(user.getId()) :
-                            commandRights.delAllowUser(user.getId());
+                commandRightsList.stream().map((commandRights) -> allowMode ?
+                        commandRights.addAllowUser(user.getId()) :
+                        commandRights.delAllowUser(user.getId())).forEachOrdered((result) -> {
                     if (result) {
                         usersChanged.add(user);
                     } else {
                         usersNoChanged.add(user);
                     }
-                }
+                });
             }
 
             for (Role role : parsedRoles.getFound()) {
-                for (CommandRights commandRights : commandRightsList) {
-                    boolean result = allowMode ?
-                            commandRights.addAllowRole(role.getId()) :
-                            commandRights.delAllowRole(role.getId());
+                commandRightsList.stream().map((commandRights) -> allowMode ?
+                        commandRights.addAllowRole(role.getId()) :
+                        commandRights.delAllowRole(role.getId())).forEachOrdered((result) -> {
                     if (result) {
                         rolesChanged.add(role);
                     } else {
                         rolesNoChanged.add(role);
                     }
-                }
+                });
             }
 
             for (ServerTextChannel rChannel : parsedChannels.getFound()) {
-                for (CommandRights commandRights : commandRightsList) {
-                    boolean result = allowMode ?
-                            commandRights.addAllowChannel(rChannel.getId()) :
-                            commandRights.delAllowChannel(rChannel.getId());
+                commandRightsList.stream().map((commandRights) -> allowMode ?
+                        commandRights.addAllowChannel(rChannel.getId()) :
+                        commandRights.delAllowChannel(rChannel.getId())).forEachOrdered((result) -> {
                     if (result) {
                         channelsChanged.add(rChannel);
                     } else {
                         channelsNoChanged.add(rChannel);
                     }
-                }
+                });
             }
 
             settingsController.saveServerSideParameters(server.getId());

@@ -11,6 +11,7 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.OptionalUtils;
 import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
 import xyz.funforge.scratchypaws.hellfrog.core.StatisticRebuilder;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
@@ -209,8 +210,8 @@ public class StatisticsCommand
                                     if (!found)
                                         return;
                                 }
-                                server.getCustomEmojiById(id)
-                                        .ifPresentOrElse(emoji -> {
+                                OptionalUtils.ifPresentOrElse(server.getCustomEmojiById(id),
+                                        emoji -> {
                                             MessageBuilder tmp = new MessageBuilder()
                                                     .append(String.valueOf(usagesCount))
                                                     .append(" - ")
@@ -232,7 +233,7 @@ public class StatisticsCommand
                             }
                         });
 
-                if (emojiStat.size() == 0 && userStats.size() == 0 && textChatStat.size() == 0) {
+                if (emojiStat.isEmpty() && userStats.isEmpty() && textChatStat.isEmpty()) {
                     new MessageBuilder()
                             .append("Message statistic is empty")
                             .send(channel);

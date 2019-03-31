@@ -55,15 +55,12 @@ public class ServerSideResolver {
                 return member;
         }
         // 4. Затем просто по name
-        for (User user : server.getMembersByName(rawValue)) {
-            return Optional.of(user);
+        Optional<User> member = CommonUtils.getFirstOrEmpty(server.getMembersByName(rawValue));
+        if (member.isPresent()) {
+            return member;
         }
         // 5. И наконец по нику
-        for (User user : server.getMembersByDisplayName(rawValue)) {
-            return Optional.of(user);
-        }
-        // ничего не нашлось
-        return Optional.empty();
+        return CommonUtils.getFirstOrEmpty(server.getMembersByDisplayName(rawValue));
     }
 
     public static Optional<Role> resolveRole(Server server, String rawValue) {
@@ -83,11 +80,7 @@ public class ServerSideResolver {
                 return role;
         }
         // 3. И наконец ищем по имени роли
-        for (Role role : server.getRolesByName(rawValue)) {
-            return Optional.of(role);
-        }
-        // ничего не нашли
-        return Optional.empty();
+        return CommonUtils.getFirstOrEmpty(server.getRolesByName(rawValue));
     }
 
     public static Optional<ServerTextChannel> resolveChannel(Server server, String rawValue) {
@@ -107,11 +100,7 @@ public class ServerSideResolver {
                 return textChannel;
         }
         // 4. И наконец просто по имени канала
-        for (ServerTextChannel channel : server.getTextChannelsByName(rawValue)) {
-            return Optional.of(channel);
-        }
-        // ничего не нашли
-        return Optional.empty();
+        return CommonUtils.getFirstOrEmpty(server.getTextChannelsByName(rawValue));
     }
 
     public static Optional<KnownCustomEmoji> resolveCustomEmoji(Server server, String rawText) {
@@ -149,14 +138,14 @@ public class ServerSideResolver {
         ParseResult<User> result = new ParseResult<>();
         List<User> resolvedUsers = new ArrayList<>(rawUserList.size());
         List<String> unresolvedUsers = new ArrayList<>(rawUserList.size());
-        for (String rawUser : rawUserList) {
+        rawUserList.forEach((rawUser) -> {
             Optional<User> mayBeUser = resolveUser(server, rawUser);
             if (mayBeUser.isPresent()) {
                 resolvedUsers.add(mayBeUser.get());
             } else {
                 unresolvedUsers.add(rawUser);
             }
-        }
+        });
         result.setFound(resolvedUsers);
         result.setNotFound(unresolvedUsers);
         return result;
@@ -166,14 +155,14 @@ public class ServerSideResolver {
         ParseResult<Role> result = new ParseResult<>();
         List<Role> resolvedRoles = new ArrayList<>(rawRolesList.size());
         List<String> unresolvedRoles = new ArrayList<>(rawRolesList.size());
-        for (String rawRole : rawRolesList) {
+        rawRolesList.forEach((rawRole) -> {
             Optional<Role> mayBeRole = ServerSideResolver.resolveRole(server, rawRole);
             if (mayBeRole.isPresent()) {
                 resolvedRoles.add(mayBeRole.get());
             } else {
                 unresolvedRoles.add(rawRole);
             }
-        }
+        });
         result.setFound(resolvedRoles);
         result.setNotFound(unresolvedRoles);
         return result;
@@ -183,14 +172,14 @@ public class ServerSideResolver {
         ParseResult<ServerTextChannel> result = new ParseResult<>();
         List<ServerTextChannel> resolvedChannels = new ArrayList<>(rawTextChannelList.size());
         List<String> unresolvedChannels = new ArrayList<>(rawTextChannelList.size());
-        for (String rawChannel : rawTextChannelList) {
+        rawTextChannelList.forEach((rawChannel) -> {
             Optional<ServerTextChannel> mayBeChannel = ServerSideResolver.resolveChannel(server, rawChannel);
             if (mayBeChannel.isPresent()) {
                 resolvedChannels.add(mayBeChannel.get());
             } else {
                 unresolvedChannels.add(rawChannel);
             }
-        }
+        });
         result.setFound(resolvedChannels);
         result.setNotFound(unresolvedChannels);
         return result;
@@ -200,17 +189,53 @@ public class ServerSideResolver {
         ParseResult<KnownCustomEmoji> result = new ParseResult<>();
         List<KnownCustomEmoji> resolvedEmoji = new ArrayList<>(rawEmojiList.size());
         List<String> unresolvedEmoji = new ArrayList<>(rawEmojiList.size());
-        for (String rawEmoji : rawEmojiList) {
+        rawEmojiList.forEach((rawEmoji) -> {
             Optional<KnownCustomEmoji> mayBeEmoji = ServerSideResolver.resolveCustomEmoji(server, rawEmoji);
             if (mayBeEmoji.isPresent()) {
                 resolvedEmoji.add(mayBeEmoji.get());
             } else {
                 unresolvedEmoji.add(rawEmoji);
             }
-        }
+        });
         result.setFound(resolvedEmoji);
         result.setNotFound(unresolvedEmoji);
         return result;
+    }
+
+    public static String resolveMentions(Server server, String message) {
+        Matcher userMentionMatcher = USER_TAG_SEARCH.matcher(message);
+        while (userMentionMatcher.find()) {
+            String userMention = userMentionMatcher.group();
+            Optional<User> resolvedUser = resolveUser(server, userMention);
+            if (resolvedUser.isPresent()) {
+                message = message.replace(userMention, "@" + server.getDisplayName(resolvedUser.get()));
+            }
+        }
+        Matcher roleMentionMatcher = ROLE_TAG_SEARCH.matcher(message);
+        while (roleMentionMatcher.find()) {
+            String roleMention = roleMentionMatcher.group();
+            Optional<Role> resulvedRole = resolveRole(server, roleMention);
+            if (resulvedRole.isPresent()) {
+                message = message.replace(roleMention, "@" + resulvedRole.get().getName());
+            }
+        }
+        Matcher textChannelMentionMatcher = CHANNEL_TAG_SEARCH.matcher(message);
+        while (textChannelMentionMatcher.find()) {
+            String textChannelMention = textChannelMentionMatcher.group();
+            Optional<ServerTextChannel> serverTextChannel = resolveChannel(server, textChannelMention);
+            if (serverTextChannel.isPresent()) {
+                message = message.replace(textChannelMention, "#" + serverTextChannel.get().getName());
+            }
+        }
+        return message;
+    }
+
+    public static String getGrants(Permissions permissions) {
+        Optional<String> value = Arrays.stream(PermissionType.values())
+                .filter(t -> !permissions.getState(t).equals(PermissionState.UNSET))
+                .map(t -> t + " - " + permissions.getState(t))
+                .reduce((s1, s2) -> s1 + ", " + s2);
+        return value.orElse("");
     }
 
     public static class ParseResult<T> {
@@ -252,41 +277,5 @@ public class ServerSideResolver {
 
             return "";
         }
-    }
-
-    public static String resolveMentions(Server server, String message) {
-        Matcher userMentionMatcher = USER_TAG_SEARCH.matcher(message);
-        while (userMentionMatcher.find()) {
-            String userMention = userMentionMatcher.group();
-            Optional<User> resolvedUser = resolveUser(server, userMention);
-            if (resolvedUser.isPresent()) {
-                message = message.replace(userMention, "@" + server.getDisplayName(resolvedUser.get()));
-            }
-        }
-        Matcher roleMentionMatcher = ROLE_TAG_SEARCH.matcher(message);
-        while (roleMentionMatcher.find()) {
-            String roleMention = roleMentionMatcher.group();
-            Optional<Role> resulvedRole = resolveRole(server, roleMention);
-            if (resulvedRole.isPresent()) {
-                message = message.replace(roleMention, "@" + resulvedRole.get().getName());
-            }
-        }
-        Matcher textChannelMentionMatcher = CHANNEL_TAG_SEARCH.matcher(message);
-        while (textChannelMentionMatcher.find()) {
-            String textChannelMention = textChannelMentionMatcher.group();
-            Optional<ServerTextChannel> serverTextChannel = resolveChannel(server, textChannelMention);
-            if (serverTextChannel.isPresent()) {
-                message = message.replace(textChannelMention, "#" + serverTextChannel.get().getName());
-            }
-        }
-        return message;
-    }
-
-    public static String getGrants(Permissions permissions) {
-        Optional<String> value = Arrays.stream(PermissionType.values())
-                .filter(t -> !permissions.getState(t).equals(PermissionState.UNSET))
-                .map(t -> t + " - " + permissions.getState(t))
-                .reduce((s1, s2) -> s1 + ", " + s2);
-        return value.orElse("");
     }
 }

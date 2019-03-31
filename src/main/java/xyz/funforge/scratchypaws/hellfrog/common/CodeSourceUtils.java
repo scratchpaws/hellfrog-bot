@@ -46,7 +46,7 @@ public final class CodeSourceUtils {
         return getCodeSourceParent().resolve(path);
     }
 
-    public static Path createTempFile() throws IOException {
+    static Path createTempFile() throws IOException {
         return Files.createTempFile(getCodeSourceParent(), "file_", "_.tmp");
     }
 

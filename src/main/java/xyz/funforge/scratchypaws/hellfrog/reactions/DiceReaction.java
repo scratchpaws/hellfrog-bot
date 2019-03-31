@@ -44,7 +44,7 @@ public class DiceReaction
     private static final String DESCRIPTION = "roll dices (use NdN or ll for roll, " +
             "sample: 1d20, ll. \"r\" prefix add pictures for low and high values.";
 
-    public DiceReaction() {
+    DiceReaction() {
         super.setCommandPrefix(PREFIX);
         super.setCommandDescription(DESCRIPTION);
         super.enableAccessControl();

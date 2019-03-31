@@ -8,23 +8,37 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ServerStatistic {
 
+    @JsonIgnore
+    private final ReentrantLock createSmileStatLock = new ReentrantLock();
+    @JsonIgnore
+    private final ReentrantLock createUserStatLock = new ReentrantLock();
+    @JsonIgnore
+    private final ReentrantLock createTextChatStatLock = new ReentrantLock();
     private volatile Boolean collectNonDefaultSmileStats = Boolean.FALSE;
     private volatile ConcurrentHashMap<Long, SmileStatistic> nonDefaultSmileStats = new ConcurrentHashMap<>();
     private volatile ConcurrentHashMap<Long, MessageStatistic> userMessagesStats = new ConcurrentHashMap<>();
     private volatile ConcurrentHashMap<Long, MessageStatistic> textChatStats = new ConcurrentHashMap<>();
 
     @JsonIgnore
-    private ReentrantLock createSmileStatLock = new ReentrantLock();
-    @JsonIgnore
-    private ReentrantLock createUserStatLock = new ReentrantLock();
-    @JsonIgnore
-    private ReentrantLock createTextChatStatLock = new ReentrantLock();
+    public static void appendResultStats(@NotNull MessageBuilder msg, @NotNull TreeMap<Long, List<String>> stats,
+                                         int innerLevel) {
+        stats.forEach((key, value) ->
+                value.forEach((item) -> {
+                    for (int i = 0; i < innerLevel; i++) {
+                        msg.append(".   ");
+                    }
+                    msg.append(item).appendNewLine();
+                }));
+    }
 
     public boolean isCollectNonDefaultSmileStats() {
         return collectNonDefaultSmileStats != null && collectNonDefaultSmileStats;
@@ -40,19 +54,6 @@ public class ServerStatistic {
 
     public void setNonDefaultSmileStats(ConcurrentHashMap<Long, SmileStatistic> nonDefaultSmileStats) {
         this.nonDefaultSmileStats = nonDefaultSmileStats;
-    }
-
-    @JsonIgnore
-    public static void appendResultStats(@NotNull MessageBuilder msg, @NotNull TreeMap<Long, List<String>> stats,
-                                         int innerLevel) {
-        for (Map.Entry<Long, List<String>> entry : stats.entrySet()) {
-            for (String item : entry.getValue()) {
-                for (int i = 0; i < innerLevel; i++) {
-                    msg.append(".   ");
-                }
-                msg.append(item).appendNewLine();
-            }
-        }
     }
 
     public ConcurrentHashMap<Long, MessageStatistic> getUserMessagesStats() {
@@ -155,7 +156,7 @@ public class ServerStatistic {
         if (statMap == null) return result;
 
         statMap.forEach((id, stat) -> {
-            boolean isUserStat = stat.getChildStatistic() == null || stat.getChildStatistic().size() == 0;
+            boolean isUserStat = stat.getChildStatistic() == null || stat.getChildStatistic().isEmpty();
 
             if (isUserStat && userList.size() > 0) {
                 boolean found = userList.stream()

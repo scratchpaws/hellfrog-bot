@@ -19,13 +19,13 @@ import java.util.Optional;
  * Логгирование присоединившихся и отсоединившихся участников сервера
  */
 public class JoinLogCommand
-    extends BotCommand {
+        extends BotCommand {
 
     private static final String BOT_PREFIX = "jlog";
     private static final String DESCRIPTION = "Join and left logging.";
     private static final String FOOTER = "Log join and left server members to server text channel.";
 
-    public JoinLogCommand() {
+    JoinLogCommand() {
         super(BOT_PREFIX, DESCRIPTION);
         super.enableOnlyServerCommandStrict();
 
@@ -120,7 +120,7 @@ public class JoinLogCommand
                 MessageBuilder msg = new MessageBuilder().append("Join/Leave logging enabled");
                 mayBeChannel.ifPresent(serverTextChannel ->
                         msg.append(" to channel ")
-                        .append(serverTextChannel));
+                                .append(serverTextChannel));
 
                 showInfoMessage(msg.getStringBuilder().toString(), channel);
             }
@@ -149,7 +149,7 @@ public class JoinLogCommand
                 }
                 showInfoMessage(msg.getStringBuilder().toString(), channel);
             }
-        } else if (!enableFlag && !disableFlag && !statusFlag) {
+        } else if (!enableFlag && !disableFlag) {
             showErrorMessage("Action required", channel);
         } else {
             showErrorMessage("Only one action may be execute", channel);

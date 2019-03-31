@@ -31,27 +31,29 @@ public class SettingsController {
     private static final Path COMMON_SETTINGS = SETTINGS_PATH.resolve("common.json");
     private static final String SERVER_SETTINGS_FILES_SUFFIX = "_server.json";
     private static final String SERVER_STATISTICS_FILES_SUFFIX = "_stat.json";
-
+    private static final SettingsController instance = new SettingsController();
+    private final ConcurrentHashMap<Long, ServerPreferences> prefByServer = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, ServerStatistic> statByServer = new ConcurrentHashMap<>();
+    private final ReentrantLock serverPrefCreateLock = new ReentrantLock();
+    private final ReentrantLock serverPrefSaveLock = new ReentrantLock();
+    private final ReentrantLock commonPrefSaveLock = new ReentrantLock();
+    private final ReentrantLock serverStatCreateLock = new ReentrantLock();
+    private final ReentrantLock serverStatSaveLock = new ReentrantLock();
+    private final VoteController voteController;
+    private final ServerStatisticTask serverStatisticTask;
     private CommonPreferences commonPreferences = new CommonPreferences();
-    private ConcurrentHashMap<Long, ServerPreferences> prefByServer = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<Long, ServerStatistic> statByServer = new ConcurrentHashMap<>();
-    private ReentrantLock serverPrefCreateLock = new ReentrantLock();
-    private ReentrantLock serverPrefSaveLock = new ReentrantLock();
-    private ReentrantLock commonPrefSaveLock = new ReentrantLock();
-    private ReentrantLock serverStatCreateLock = new ReentrantLock();
-    private ReentrantLock serverStatSaveLock = new ReentrantLock();
-    private VoteController voteController;
-    private ServerStatisticTask serverStatisticTask;
     private DiscordApi discordApi = null;
     private volatile Instant lastCommandUsage = null;
-
-    private static final SettingsController instance = new SettingsController();
 
     private SettingsController() {
         loadCommonSettings();
         loadServersSettings();
         voteController = new VoteController();
         serverStatisticTask = new ServerStatisticTask();
+    }
+
+    public static SettingsController getInstance() {
+        return instance;
     }
 
     private void loadCommonSettings() {
@@ -309,7 +311,6 @@ public class SettingsController {
             }
         } finally {
             serverStatSaveLock.unlock();
-            ;
         }
     }
 
@@ -341,10 +342,6 @@ public class SettingsController {
 
     public void setDiscordApi(DiscordApi discordApi) {
         this.discordApi = discordApi;
-    }
-
-    public static SettingsController getInstance() {
-        return instance;
     }
 
     public boolean isEnableRemoteDebug() {

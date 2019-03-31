@@ -26,7 +26,7 @@ public class ServerPreferencesTest {
 
         String serialized = objectMapper.writeValueAsString(serverPreferences);
         ServerPreferences restored = objectMapper.readValue(serialized, ServerPreferences.class);
-        Assertions.assertEquals(restored.getBotPrefix(), ">>");
+        Assertions.assertEquals(">>", restored.getBotPrefix());
         CommandRights restoredPrefRights = restored.getRightsForCommand("pref");
         Assertions.assertTrue(restoredPrefRights.isAllowRole(5L));
         Assertions.assertTrue(restoredPrefRights.isAllowUser(6L));

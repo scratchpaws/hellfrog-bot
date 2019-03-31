@@ -15,14 +15,13 @@ import java.util.concurrent.locks.ReentrantLock;
 public class MessageStatistic {
 
     private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
+    @JsonIgnore
+    private final ReentrantLock childCreationLock = new ReentrantLock();
     private volatile AtomicLong messagesCount = new AtomicLong(0L);
     private volatile AtomicLong lastMessageDate = new AtomicLong(-1L);
     private long entityId = 0L;
     private volatile String lastKnownName = "";
     private volatile ConcurrentHashMap<Long, MessageStatistic> childStatistic = null;
-
-    @JsonIgnore
-    private ReentrantLock childCreationLock = new ReentrantLock();
 
     public AtomicLong getMessagesCount() {
         return messagesCount;

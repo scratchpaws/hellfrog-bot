@@ -91,23 +91,23 @@ public class ActiveVote
     }
 
     public void setExceptionalVote(Boolean exceptionalVote) {
-        this.exceptionalVote = Objects.requireNonNullElse(exceptionalVote, false);
-    }
-
-    public void setWithDefaultPoint(boolean withDefaultPoint) {
-        this.withDefaultPoint = withDefaultPoint;
+        this.exceptionalVote = exceptionalVote != null ? exceptionalVote : false;
     }
 
     public boolean isWithDefaultPoint() {
         return withDefaultPoint != null && withDefaultPoint;
     }
 
-    public void setWinThreshold(long winThreshold) {
-        this.winThreshold = winThreshold;
+    public void setWithDefaultPoint(boolean withDefaultPoint) {
+        this.withDefaultPoint = withDefaultPoint;
     }
 
     public long getWinThreshold() {
         return this.winThreshold != null ? this.winThreshold : -1L;
+    }
+
+    public void setWinThreshold(long winThreshold) {
+        this.winThreshold = winThreshold;
     }
 
     @Override
