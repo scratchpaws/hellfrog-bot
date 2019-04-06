@@ -517,9 +517,6 @@ public class VoteCommand
                         newVote.getTextChatId() + "/" +
                         newVote.getMessageId();
 
-                voteController.getMessage(server.getId(),
-                        newVote.getTextChatId(), newVote.getMessageId());
-
                 showInfoMessage("Vote created: " + voteUrl, channel);
             } catch (Exception err) {
                 showErrorMessage("Unable to create vote: " + err.getMessage(), channel);

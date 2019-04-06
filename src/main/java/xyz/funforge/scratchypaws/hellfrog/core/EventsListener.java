@@ -217,6 +217,7 @@ public class EventsListener
     }
 
     void onReady() {
+        BotCommand.all(); // заранее инициируем поиск и инстантинацию классов команд
         DiscordApi api = SettingsController.getInstance().getDiscordApi();
         String invite = api != null ?
                 "Invite url: " + api.createBotInvite(new PermissionsImpl(1544940737))

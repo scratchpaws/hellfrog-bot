@@ -26,8 +26,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -165,24 +165,23 @@ public class ServiceCommand
                 long allocatedMemory =
                         (runtime.totalMemory() - runtime.freeMemory());
                 new MessageBuilder()
-                        .append("Free memory: ", MessageDecoration.BOLD)
-                        .append(String.valueOf(runtime.freeMemory()))
-                        .appendNewLine()
-                        .append("Max memory: ", MessageDecoration.BOLD)
-                        .append(String.valueOf(runtime.maxMemory()))
-                        .appendNewLine()
-                        .append("Total memory: ", MessageDecoration.BOLD)
-                        .append(String.valueOf(runtime.totalMemory()))
-                        .appendNewLine()
-                        .append("Allocated memory: ", MessageDecoration.BOLD)
-                        .append(String.valueOf(allocatedMemory))
+                        .setEmbed(new EmbedBuilder()
+                            .setTimestampToNow()
+                            .setTitle("Memory usage")
+                            .addField("Free memory:", String.valueOf(runtime.freeMemory()))
+                            .addField("Max memory:", String.valueOf(runtime.maxMemory()))
+                            .addField("Total memory:", String.valueOf(runtime.totalMemory()))
+                            .addField("Allocated memory:", String.valueOf(allocatedMemory))
+                            .setDescription(runGc ? "GC called" : ""))
                         .send(channel);
             }
 
             if (getDate) {
                 new MessageBuilder()
-                        .append("Current date and time: ", MessageDecoration.BOLD)
-                        .append(CommonUtils.getCurrentGmtTimeAsString())
+                        .setEmbed(new EmbedBuilder()
+                            .setTitle("Current date and time: ")
+                            .setDescription(CommonUtils.getCurrentGmtTimeAsString())
+                            .setTimestampToNow())
                         .send(channel);
             }
 
@@ -204,15 +203,25 @@ public class ServiceCommand
                 Instant lastCommandUsage = settingsController.getLastCommandUsage();
                 if (lastCommandUsage == null) {
                     new MessageBuilder()
-                            .append("No last usage found")
+                            .setEmbed(new EmbedBuilder()
+                                .setTimestampToNow()
+                                .setTitle("Last usage")
+                                .setDescription("No last usage found"))
                             .send(channel);
                 } else {
-                    Instant current = Instant.now();
-                    long lastUsageMinutes = ChronoUnit.MINUTES.between(lastCommandUsage, current);
+                    Duration duration = Duration.between(lastCommandUsage, Instant.now());
+                    long totalSeconds = duration.toSeconds();
+                    long hours = totalSeconds / 3600L;
+                    int minutes = (int)((totalSeconds % 3600L) / 60L);
+                    int seconds = (int)(totalSeconds % 60L);
+                    String res = (hours > 0 ? hours + " h. " : "")
+                            + (minutes > 0 ? minutes + " m. " : "")
+                            + seconds + " s. ago";
                     new MessageBuilder()
-                            .append("Last usage ")
-                            .append(String.valueOf(lastUsageMinutes))
-                            .append(" min. ago.")
+                            .setEmbed(new EmbedBuilder()
+                                .setTimestampToNow()
+                                .setTitle("Last usage")
+                                .setDescription(res))
                             .send(channel);
                 }
             }
