@@ -19,7 +19,7 @@ public class QuoteReaction
     extends MsgCreateReaction {
 
     private static final String PREFIX = "qt";
-    private static final String DESCRIPTION = "Quote message by link";
+    private static final String DESCRIPTION = "Quote message by link (use qt [link|message id] for quote)";
 
     private static final Pattern QUOTE_SEARCH = Pattern.compile("^[qQtTцЦтТ]{2}.*channels/\\d+/\\d+/\\d+", Pattern.MULTILINE);
     private static final Pattern SIMPLE_SEARCH = Pattern.compile("^[qQtTцЦтТ]{2}\\s*\\d+");

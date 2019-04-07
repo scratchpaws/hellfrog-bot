@@ -30,7 +30,7 @@ public class RightsCommand
             "(such as: vote) also may require permission to manage channel, " +
             "designated for a poll.";
 
-    RightsCommand() {
+    public RightsCommand() {
         super(PREF, DESCRIPTION);
 
         Option userOption = Option.builder("u")

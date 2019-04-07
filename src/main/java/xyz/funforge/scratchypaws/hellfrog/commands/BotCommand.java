@@ -1,9 +1,6 @@
 package xyz.funforge.scratchypaws.hellfrog.commands;
 
 import besus.utils.collection.Sequental;
-import io.github.classgraph.ClassGraph;
-import io.github.classgraph.ClassInfo;
-import io.github.classgraph.ScanResult;
 import org.apache.commons.cli.*;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
@@ -14,14 +11,17 @@ import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
+import xyz.funforge.scratchypaws.hellfrog.common.CodeSourceUtils;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
 import java.awt.*;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.*;
+import java.util.Optional;
 
 /**
  * Основные функции команд бота
@@ -38,7 +38,8 @@ public abstract class BotCommand {
     private boolean onlyServerCommand = false;
     private String footer = "";
     private boolean updateLastUsage = true;
-    BotCommand(String botPrefix, String description) {
+
+    public BotCommand(String botPrefix, String description) {
         this.prefix = botPrefix;
         this.description = description;
 
@@ -50,40 +51,8 @@ public abstract class BotCommand {
         control.addOption(helpOption);
     }
 
-    private static final List<BotCommand> ALL_COMMANDS = botCommandsClassCollector();
-
-    /**
-     * Сканирует весь classpath на наличие команд бота (наследующих данный класс).
-     * Для найденных классов создаёт экземпляры и помещает в список
-     *
-     * @return список экземпляров данного класса
-     */
-    @SuppressWarnings("unchecked")
-    private static List<BotCommand> botCommandsClassCollector() {
-        List<BotCommand> collectedCommandsList = new ArrayList<>();
-        try (ScanResult scanResult = new ClassGraph()
-                .enableAllInfo()
-                .scan()) {
-            scanResult.getAllClasses().stream()
-                    .filter(ci -> ci.extendsSuperclass(BotCommand.class.getName()))
-                    .filter(ClassInfo::isPublic)
-                    .map(ClassInfo::getName)
-                    .forEachOrdered(name -> {
-                        try {
-                            Class cmdClass = Class.forName(name);
-                            Object instance = cmdClass.getDeclaredConstructor()
-                                    .newInstance();
-                            if (instance instanceof BotCommand) {
-                                collectedCommandsList.add((BotCommand)instance);
-                                System.err.println("Created instance of bot command " + name);
-                            }
-                        } catch (Exception err) {
-                            System.err.println("Unable to create bot command of " + name + ": " + err);
-                        }
-                    });
-        }
-        return Collections.unmodifiableList(collectedCommandsList);
-    }
+    private static final List<BotCommand> ALL_COMMANDS =
+            CodeSourceUtils.childClassInstancesCollector(BotCommand.class);
 
     public static Sequental<BotCommand> all() {
         return Sequental.of(ALL_COMMANDS)

@@ -29,7 +29,7 @@ public class UpgradeCommand
     private static final String DESCRIPTION = "Service command for bot upgrade";
     private static final String LIBRARY_PATH_NAME = "lib";
 
-    UpgradeCommand() {
+    public UpgradeCommand() {
         super(PREFIX, DESCRIPTION);
 
         Option mainJar = Option.builder("m")

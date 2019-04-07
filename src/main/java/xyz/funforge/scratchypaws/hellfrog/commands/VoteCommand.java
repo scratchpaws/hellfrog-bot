@@ -39,7 +39,7 @@ public class VoteCommand
             "text after double dashes and spaces.";
     private final VoteController voteController;
 
-    VoteCommand() {
+    public VoteCommand() {
         super(BOT_PREFIX, DESCRIPTION);
         super.enableOnlyServerCommandStrict();
         super.enableStrictByChannels();

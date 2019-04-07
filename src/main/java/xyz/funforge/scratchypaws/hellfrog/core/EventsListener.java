@@ -56,6 +56,14 @@ public class EventsListener
 
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
+
+       /* // это дебаг всех сообщений его выключить перед коммитом,
+        // иначе лог разойдётся до космических величин
+        String content = event.getMessageContent();
+        System.out.println(content);
+        event.getMessage().getEmbeds().forEach(e ->
+                System.out.println(e.getDescription()));*/
+
         messageStats.onMessageCreate(event);
 
         String strMessage = event.getMessageContent();
@@ -215,6 +223,7 @@ public class EventsListener
 
     void onReady() {
         BotCommand.all(); // заранее инициируем поиск и инстантинацию классов команд
+        MsgCreateReaction.all();
         DiscordApi api = SettingsController.getInstance().getDiscordApi();
         String invite = api != null ?
                 "Invite url: " + api.createBotInvite(new PermissionsImpl(1544940737))

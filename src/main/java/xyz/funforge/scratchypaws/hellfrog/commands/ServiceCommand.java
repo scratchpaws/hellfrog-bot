@@ -42,7 +42,7 @@ public class ServiceCommand
     private static final String PREF = "srv";
     private static final String DESCRIPTIONS = "Common bot service commands";
 
-    ServiceCommand() {
+    public ServiceCommand() {
         super(PREF, DESCRIPTIONS);
 
         Option stopBot = Option.builder("s")

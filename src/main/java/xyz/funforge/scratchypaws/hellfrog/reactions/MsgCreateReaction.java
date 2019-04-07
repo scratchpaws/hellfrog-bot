@@ -8,10 +8,12 @@ import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.listener.message.MessageCreateListener;
 import org.jetbrains.annotations.Nullable;
+import xyz.funforge.scratchypaws.hellfrog.common.CodeSourceUtils;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 import xyz.funforge.scratchypaws.hellfrog.core.AccessControlCheck;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -23,10 +25,13 @@ public abstract class MsgCreateReaction
     private String commandPrefix = "";
     private String commandDescription = "";
 
+    private static final List<MsgCreateReaction> ALL_MESSAGE_REACTS =
+            CodeSourceUtils.childClassInstancesCollector(MsgCreateReaction.class);
+
     public static Sequental<MsgCreateReaction> all() {
         // todo: сюда тоже класс-сканнер добаить
         return Sequental
-                .all(new DiceReaction(), new CustomEmojiReaction(), new QuoteReaction())
+                .of(ALL_MESSAGE_REACTS)
                 .repeatable();
     }
 
