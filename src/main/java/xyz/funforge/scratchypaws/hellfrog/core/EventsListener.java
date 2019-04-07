@@ -1,5 +1,6 @@
 package xyz.funforge.scratchypaws.hellfrog.core;
 
+import anewlife.adolf.ExecInContext;
 import besus.utils.collection.Sequental;
 import org.apache.tools.ant.types.Commandline;
 import org.javacord.api.DiscordApi;
@@ -57,8 +58,10 @@ public class EventsListener
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
     private final MessageStats messageStats = new MessageStats();
 
+
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
+        ExecInContext.exec(event);
         messageStats.onMessageCreate(event);
 
         String strMessage = event.getMessageContent();

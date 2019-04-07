@@ -49,7 +49,7 @@ public abstract class BotCommand {
         control.addOption(helpOption);
     }
 
-    public static Sequental<BotCommand> all() {
+    public static Sequental<? extends BotCommand> all() {
         return Sequental.all(
                 new PrefixCommand(),
                 new VoteCommand(),
