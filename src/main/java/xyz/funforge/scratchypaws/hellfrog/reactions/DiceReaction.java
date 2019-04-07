@@ -2,6 +2,7 @@ package xyz.funforge.scratchypaws.hellfrog.reactions;
 
 import com.vdurmont.emoji.EmojiParser;
 import org.javacord.api.entity.channel.TextChannel;
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
@@ -44,7 +45,7 @@ public class DiceReaction
     private static final String DESCRIPTION = "roll dices (use NdN or ll for roll, " +
             "sample: 1d20, ll. \"r\" prefix add pictures for low and high values.";
 
-    DiceReaction() {
+    public DiceReaction() {
         super.setCommandPrefix(PREFIX);
         super.setCommandDescription(DESCRIPTION);
         super.enableAccessControl();
@@ -71,7 +72,7 @@ public class DiceReaction
     @Override
     void parallelExecuteReact(String strMessage, @Nullable Server server,
                               @Nullable User user, TextChannel textChannel,
-                              Instant messageCreateDate) {
+                              Instant messageCreateDate, Message sourceMessage) {
 
         SettingsController.getInstance().updateLastCommandUsage();
         List<String> lines = Arrays.asList(strMessage.split("\n"));

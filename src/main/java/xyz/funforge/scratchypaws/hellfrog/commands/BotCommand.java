@@ -11,6 +11,7 @@ import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
+import xyz.funforge.scratchypaws.hellfrog.common.CodeSourceUtils;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
@@ -37,7 +38,8 @@ public abstract class BotCommand {
     private boolean onlyServerCommand = false;
     private String footer = "";
     private boolean updateLastUsage = true;
-    BotCommand(String botPrefix, String description) {
+
+    public BotCommand(String botPrefix, String description) {
         this.prefix = botPrefix;
         this.description = description;
 
@@ -49,15 +51,11 @@ public abstract class BotCommand {
         control.addOption(helpOption);
     }
 
-    public static Sequental<? extends BotCommand> all() {
-        return Sequental.all(
-                new PrefixCommand(),
-                new VoteCommand(),
-                new RightsCommand(),
-                new ServiceCommand(),
-                new UpgradeCommand(),
-                new StatisticsCommand(),
-                new JoinLogCommand())
+    private static final List<BotCommand> ALL_COMMANDS =
+            CodeSourceUtils.childClassInstancesCollector(BotCommand.class);
+
+    public static Sequental<BotCommand> all() {
+        return Sequental.of(ALL_COMMANDS)
                 .repeatable();
     }
 

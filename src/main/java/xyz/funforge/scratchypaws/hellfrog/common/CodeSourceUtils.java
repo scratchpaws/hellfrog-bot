@@ -1,5 +1,8 @@
 package xyz.funforge.scratchypaws.hellfrog.common;
 
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ScanResult;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -9,6 +12,9 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public final class CodeSourceUtils {
 
@@ -54,5 +60,45 @@ public final class CodeSourceUtils {
     public static Path getCodeSourceJarPath() throws IOException {
         if (codeSourceJarPath == null) getCodeSourceParent();
         return codeSourceJarPath;
+    }
+
+    /**
+     * Сканирует весь classpath на дочерних классов от указанного суперкласса.
+     * Для найденных классов создаёт экземпляры и помещает в список.
+     *
+     * @return список экземпляров дочерних классов данного родительского класса
+     */
+    @NotNull
+    @SuppressWarnings("unchecked")
+    public static<T> List<T> childClassInstancesCollector(@NotNull final Class<T> superClassFQDN) {
+        List<T> collectedCommandsList = new ArrayList<>();
+        List<String> successList = new ArrayList<>();
+        List<String> failList = new ArrayList<>();
+        try (ScanResult scanResult = new ClassGraph()
+                .enableAllInfo()
+                .scan()) {
+            scanResult.getAllClasses().stream()
+                    .filter(ci -> ci.extendsSuperclass(superClassFQDN.getName()))
+                    .filter(ClassInfo::isPublic)
+                    .map(ClassInfo::getName)
+                    .forEachOrdered(name -> {
+                        try {
+                            Class childClass = Class.forName(name);
+                            Object instance = childClass.getDeclaredConstructor()
+                                    .newInstance();
+                            collectedCommandsList.add((T)instance);
+                            successList.add(childClass.getName());
+                        } catch (Exception err) {
+                            failList.add(name + ": " + err);
+                        }
+                    });
+        }
+        successList.stream()
+                .reduce((s1, s2) -> s1 + ", " + s2)
+                .ifPresent(s -> System.err.println("Created instances of: " + s));
+        failList.stream()
+                .reduce((s1, s2) -> s1 + '\n' + s2)
+                .ifPresent(s -> System.err.println("Unable to create instances of:\n" + s));
+        return Collections.unmodifiableList(collectedCommandsList);
     }
 }

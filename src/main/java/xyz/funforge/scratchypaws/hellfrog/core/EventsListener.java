@@ -33,10 +33,7 @@ import org.javacord.core.entity.permission.PermissionsImpl;
 import xyz.funforge.scratchypaws.hellfrog.commands.BotCommand;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
-import xyz.funforge.scratchypaws.hellfrog.reactions.MessageStats;
-import xyz.funforge.scratchypaws.hellfrog.reactions.MsgCreateReaction;
-import xyz.funforge.scratchypaws.hellfrog.reactions.ReactReaction;
-import xyz.funforge.scratchypaws.hellfrog.reactions.VoteReactFilter;
+import xyz.funforge.scratchypaws.hellfrog.reactions.*;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerPreferences;
 
@@ -62,6 +59,14 @@ public class EventsListener
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
         ExecInContext.exec(event);
+
+       /* // это дебаг всех сообщений его выключить перед коммитом,
+        // иначе лог разойдётся до космических величин
+        String content = event.getMessageContent();
+        System.out.println(content);
+        event.getMessage().getEmbeds().forEach(e ->
+                System.out.println(e.getDescription()));*/
+
         messageStats.onMessageCreate(event);
 
         String strMessage = event.getMessageContent();
@@ -220,6 +225,8 @@ public class EventsListener
     }
 
     void onReady() {
+        BotCommand.all(); // заранее инициируем поиск и инстантинацию классов команд
+        MsgCreateReaction.all();
         DiscordApi api = SettingsController.getInstance().getDiscordApi();
         String invite = api != null ?
                 "Invite url: " + api.createBotInvite(new PermissionsImpl(1544940737))

@@ -65,7 +65,7 @@ public class CustomEmojiReaction
 
     @Override
     void parallelExecuteReact(String strMessage, @Nullable Server server, @Nullable User user, TextChannel textChannel,
-                              Instant messageCreationDate) {
+                              Instant messageCreationDate, Message sourceMessage) {
         if (server == null) return;
 
         collectStat(strMessage, user, server, messageCreationDate);

@@ -39,7 +39,7 @@ public class VoteCommand
             "text after double dashes and spaces.";
     private final VoteController voteController;
 
-    VoteCommand() {
+    public VoteCommand() {
         super(BOT_PREFIX, DESCRIPTION);
         super.enableOnlyServerCommandStrict();
         super.enableStrictByChannels();
@@ -516,9 +516,6 @@ public class VoteCommand
                         server.getId() + "/" +
                         newVote.getTextChatId() + "/" +
                         newVote.getMessageId();
-
-                voteController.getMessage(server.getId(),
-                        newVote.getTextChatId(), newVote.getMessageId());
 
                 showInfoMessage("Vote created: " + voteUrl, channel);
             } catch (Exception err) {

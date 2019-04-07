@@ -25,7 +25,7 @@ public class StatisticsCommand
     private static final String PREFIX = "stat";
     private static final String DESCRIPTION = "Manage server statistics";
 
-    StatisticsCommand() {
+    public StatisticsCommand() {
         super(PREFIX, DESCRIPTION);
 
         Option enable = Option.builder("e")
@@ -134,6 +134,8 @@ public class StatisticsCommand
                     showErrorMessage("Statistic collection already enabled", channel);
                 } else {
                     serverStatistic.setCollectNonDefaultSmileStats(true);
+                    long startDate = Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTimeInMillis();
+                    serverStatistic.setStartDate(startDate);
                     settingsController.saveServerSideStatistic(serverId);
                     showInfoMessage("Statistic collection enabled", channel);
                 }
@@ -156,6 +158,8 @@ public class StatisticsCommand
 
             if (resetOption) {
                 serverStatistic.clear();
+                long startDate = Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTimeInMillis();
+                serverStatistic.setStartDate(startDate);
                 settingsController.saveServerSideStatistic(serverId);
                 showInfoMessage("Statistic will be reset.", channel);
             }
@@ -192,6 +196,14 @@ public class StatisticsCommand
                     showErrorMessage("Unable to find users: " +
                             parsedUsers.getNotFoundStringList(), channel);
                     return;
+                }
+
+
+                String sinceStr = "";
+                if (serverStatistic.getStartDate() > 0L) {
+                    Calendar since = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                    since.setTimeInMillis(serverStatistic.getStartDate());
+                    sinceStr = String.format(" (since %tF %<tT (UTC))", since);
                 }
 
                 TreeMap<Long, List<String>> emojiStat = new TreeMap<>(Comparator.reverseOrder());
@@ -240,7 +252,7 @@ public class StatisticsCommand
                 } else {
                     MessageBuilder resultMessage = new MessageBuilder();
 
-                    resultMessage.append("Collected statistic:", MessageDecoration.BOLD)
+                    resultMessage.append("Collected statistic" + sinceStr + ":", MessageDecoration.BOLD)
                             .appendNewLine();
 
                     if (emojiStat.size() > 0 && !textChatsFilter && !usersStatsFilter) {

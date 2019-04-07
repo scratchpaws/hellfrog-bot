@@ -16,7 +16,7 @@ public class PrefixCommand
     private static final String PREF = "pref";
     private static final String DESCRIPTION = "Show or change bot call prefix";
 
-    PrefixCommand() {
+    public PrefixCommand() {
         super(PREF, DESCRIPTION);
 
         Option set = Option.builder("s")

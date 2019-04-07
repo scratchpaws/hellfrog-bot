@@ -10,10 +10,7 @@ import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.Reaction;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.Role;
-import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
-import org.jetbrains.annotations.Nullable;
-import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.ActiveVote;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.VotePoint;
@@ -22,51 +19,12 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 public class VoteController
         implements Runnable {
 
     private ScheduledFuture<?> scheduledFuture;
-
-    private static final ConcurrentHashMap<Long, Message> votesCacheMap
-            = new ConcurrentHashMap<>();
-    private static final ReentrantLock cacheCreationLock = new ReentrantLock();
-
-    @Nullable
-    public Message getMessage(long serverId, long srvChatId, long messageId) {
-        if (!votesCacheMap.containsKey(messageId)) {
-            System.err.println(CommonUtils.getCurrentGmtTimeAsString()
-                    + " [get vote message - miss cache of " +
-                    messageId + "]");
-            try {
-                cacheCreationLock.lock();
-                if (!votesCacheMap.containsKey(messageId)) {
-                    Message msg = null;
-                    Optional<Server> mayBeSrv = SettingsController.getInstance().getDiscordApi()
-                            .getServerById(serverId);
-                    if (mayBeSrv.isPresent()) {
-                        Optional<ServerTextChannel> tch = mayBeSrv.get()
-                                .getTextChannelById(srvChatId);
-                        if (tch.isPresent()) {
-                            try {
-                                msg = tch.get().getMessageById(messageId)
-                                        .get(10L, TimeUnit.SECONDS);
-                            } catch (Exception ignore) {
-                                // сообщения больше не существует
-                            }
-                        }
-                    }
-                    if (msg == null) return null; // голосовалки уже нет
-                    votesCacheMap.put(messageId, msg);
-                }
-            } finally {
-                cacheCreationLock.unlock();
-            }
-        }
-        return votesCacheMap.get(messageId);
-    }
 
     public VoteController() {
         ScheduledExecutorService voiceService = Executors.newSingleThreadScheduledExecutor();
@@ -98,13 +56,6 @@ public class VoteController
                         }
                     }
                 }
-                if (activeVote.getTextChatId() != null
-                    && activeVote.getMessageId() != null) {
-                    Message msg = getMessage(knownServerId, activeVote.getTextChatId(), activeVote.getMessageId());
-                    if (msg == null) {
-                        interruptVote(knownServerId, activeVote.getId());
-                    }
-                }
             }
         }
     }
@@ -128,8 +79,6 @@ public class VoteController
                             activeVote.getMessageId() != null &&
                             activeVote.getVotePoints() != null &&
                             activeVote.getReadableVoteText() != null) {
-
-                        votesCacheMap.remove(activeVote.getMessageId());
 
                         Map<VotePoint, Integer> pointsLevel = new HashMap<>();
                         for (VotePoint point : activeVote.getVotePoints()) {

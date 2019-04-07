@@ -25,7 +25,7 @@ public class JoinLogCommand
     private static final String DESCRIPTION = "Join and left logging.";
     private static final String FOOTER = "Log join and left server members to server text channel.";
 
-    JoinLogCommand() {
+    public JoinLogCommand() {
         super(BOT_PREFIX, DESCRIPTION);
         super.enableOnlyServerCommandStrict();
 
