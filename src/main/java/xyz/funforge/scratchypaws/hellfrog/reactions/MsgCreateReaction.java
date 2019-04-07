@@ -2,6 +2,7 @@ package xyz.funforge.scratchypaws.hellfrog.reactions;
 
 import besus.utils.collection.Sequental;
 import org.javacord.api.entity.channel.TextChannel;
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
@@ -23,8 +24,9 @@ public abstract class MsgCreateReaction
     private String commandDescription = "";
 
     public static Sequental<MsgCreateReaction> all() {
+        // todo: сюда тоже класс-сканнер добаить
         return Sequental
-                .all(new DiceReaction(), new CustomEmojiReaction())
+                .all(new DiceReaction(), new CustomEmojiReaction(), new CitReaction())
                 .repeatable();
     }
 
@@ -62,17 +64,18 @@ public abstract class MsgCreateReaction
         Optional<Server> mayBeServer = event.getServer();
         Optional<User> mayBeUser = event.getMessageAuthor().asUser();
 
+        final Message sourceMessage = event.getMessage();
         final String strMessage = event.getMessageContent();
         final Server server = mayBeServer.orElse(null);
         final User user = mayBeUser.orElse(null);
         final TextChannel textChannel = event.getChannel();
         final Instant messageCreateDate = event.getMessage().getCreationTimestamp();
-        CompletableFuture.runAsync(() -> parallelExecuteReact(strMessage, server, user, textChannel, messageCreateDate));
+        CompletableFuture.runAsync(() -> parallelExecuteReact(strMessage, server, user, textChannel, messageCreateDate, sourceMessage));
     }
 
     abstract void parallelExecuteReact(String strMessage, @Nullable Server server,
                                        @Nullable User user, TextChannel textChannel,
-                                       Instant messageCreateDate);
+                                       Instant messageCreateDate, Message sourceMessage);
 
     public boolean isAccessControl() {
         return accessControl;

@@ -32,10 +32,7 @@ import org.javacord.core.entity.permission.PermissionsImpl;
 import xyz.funforge.scratchypaws.hellfrog.commands.BotCommand;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
-import xyz.funforge.scratchypaws.hellfrog.reactions.MessageStats;
-import xyz.funforge.scratchypaws.hellfrog.reactions.MsgCreateReaction;
-import xyz.funforge.scratchypaws.hellfrog.reactions.ReactReaction;
-import xyz.funforge.scratchypaws.hellfrog.reactions.VoteReactFilter;
+import xyz.funforge.scratchypaws.hellfrog.reactions.*;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerPreferences;
 
@@ -59,6 +56,9 @@ public class EventsListener
 
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
+
+        System.out.println(event.getMessage().getContent());
+
         messageStats.onMessageCreate(event);
 
         String strMessage = event.getMessageContent();

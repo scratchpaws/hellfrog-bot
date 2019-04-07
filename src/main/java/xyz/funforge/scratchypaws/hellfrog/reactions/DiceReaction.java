@@ -2,6 +2,7 @@ package xyz.funforge.scratchypaws.hellfrog.reactions;
 
 import com.vdurmont.emoji.EmojiParser;
 import org.javacord.api.entity.channel.TextChannel;
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
@@ -71,7 +72,7 @@ public class DiceReaction
     @Override
     void parallelExecuteReact(String strMessage, @Nullable Server server,
                               @Nullable User user, TextChannel textChannel,
-                              Instant messageCreateDate) {
+                              Instant messageCreateDate, Message sourceMessage) {
 
         SettingsController.getInstance().updateLastCommandUsage();
         List<String> lines = Arrays.asList(strMessage.split("\n"));
