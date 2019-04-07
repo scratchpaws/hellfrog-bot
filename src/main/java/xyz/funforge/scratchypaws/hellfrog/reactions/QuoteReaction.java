@@ -15,7 +15,7 @@ import java.time.Instant;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class CitReaction
+public class QuoteReaction
     extends MsgCreateReaction {
 
     private static final String PREFIX = "qt";
@@ -24,7 +24,7 @@ public class CitReaction
     private static final Pattern QUOTE_SEARCH = Pattern.compile("^[qQtTцЦтТ]{2}.*channels/\\d+/\\d+/\\d+", Pattern.MULTILINE);
     private static final Pattern SIMPLE_SEARCH = Pattern.compile("^[qQtTцЦтТ]{2}\\s*\\d+");
 
-    public CitReaction() {
+    public QuoteReaction() {
         super.setCommandPrefix(PREFIX);
         super.setCommandDescription(DESCRIPTION);
         super.enableAccessControl();

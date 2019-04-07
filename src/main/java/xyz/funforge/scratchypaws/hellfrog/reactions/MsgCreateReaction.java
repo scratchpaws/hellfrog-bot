@@ -26,7 +26,7 @@ public abstract class MsgCreateReaction
     public static Sequental<MsgCreateReaction> all() {
         // todo: сюда тоже класс-сканнер добаить
         return Sequental
-                .all(new DiceReaction(), new CustomEmojiReaction(), new CitReaction())
+                .all(new DiceReaction(), new CustomEmojiReaction(), new QuoteReaction())
                 .repeatable();
     }
 
