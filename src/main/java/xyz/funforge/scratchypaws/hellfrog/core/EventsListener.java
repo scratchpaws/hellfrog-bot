@@ -56,9 +56,6 @@ public class EventsListener
 
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
-
-        System.out.println(event.getMessage().getContent());
-
         messageStats.onMessageCreate(event);
 
         String strMessage = event.getMessageContent();
