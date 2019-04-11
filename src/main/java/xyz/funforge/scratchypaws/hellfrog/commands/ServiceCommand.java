@@ -168,10 +168,10 @@ public class ServiceCommand
                         .setEmbed(new EmbedBuilder()
                             .setTimestampToNow()
                             .setTitle("Memory usage")
-                            .addField("Free memory:", String.valueOf(runtime.freeMemory()))
-                            .addField("Max memory:", String.valueOf(runtime.maxMemory()))
-                            .addField("Total memory:", String.valueOf(runtime.totalMemory()))
-                            .addField("Allocated memory:", String.valueOf(allocatedMemory))
+                            .addField("Free memory:", CommonUtils.humanReadableByteCount(runtime.freeMemory(), false), true)
+                            .addField("Max memory:", CommonUtils.humanReadableByteCount(runtime.maxMemory(), false), true)
+                            .addField("Total memory:", CommonUtils.humanReadableByteCount(runtime.totalMemory(), false), true)
+                            .addField("Allocated memory:", CommonUtils.humanReadableByteCount(allocatedMemory, false), true)
                             .setDescription(runGc ? "GC called" : ""))
                         .send(channel);
             }

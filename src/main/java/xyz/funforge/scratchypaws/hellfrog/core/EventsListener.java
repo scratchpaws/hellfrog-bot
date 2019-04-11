@@ -3,6 +3,7 @@ package xyz.funforge.scratchypaws.hellfrog.core;
 import besus.utils.collection.Sequental;
 import org.apache.tools.ant.types.Commandline;
 import org.javacord.api.DiscordApi;
+import org.javacord.api.entity.Icon;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
@@ -29,18 +30,26 @@ import org.javacord.api.listener.server.member.ServerMemberJoinListener;
 import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
 import org.javacord.api.listener.server.member.ServerMemberUnbanListener;
 import org.javacord.core.entity.permission.PermissionsImpl;
+import org.javacord.core.event.server.member.ServerMemberJoinEventImpl;
 import xyz.funforge.scratchypaws.hellfrog.commands.BotCommand;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
-import xyz.funforge.scratchypaws.hellfrog.reactions.*;
+import xyz.funforge.scratchypaws.hellfrog.reactions.MessageStats;
+import xyz.funforge.scratchypaws.hellfrog.reactions.MsgCreateReaction;
+import xyz.funforge.scratchypaws.hellfrog.reactions.ReactReaction;
+import xyz.funforge.scratchypaws.hellfrog.reactions.VoteReactFilter;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerPreferences;
 
 import java.awt.*;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 public class EventsListener
         implements MessageCreateListener, MessageEditListener, MessageDeleteListener,
@@ -231,6 +240,21 @@ public class EventsListener
         String readyMsg = "Bot started. " + invite;
         System.err.println(readyMsg);
         BroadCast.sendBroadcastToAllBotOwners(readyMsg);
+
+        // todo: выключать в продуктиве. будет спамить
+        // нужно для отладки логгирования входов/выходов. см JoinLogCommand
+        /*Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
+            if (api != null)
+            api.getServerById(525287388818178048L) // test_ground.
+                    .ifPresent(s -> {
+                        List<User> memberList = new ArrayList<>(s.getMembers());
+                        if (memberList.size() == 0) return;
+                        User selected = memberList.get(ThreadLocalRandom.current()
+                            .nextInt(0, memberList.size()));
+                        ServerMemberJoinEvent je = new ServerMemberJoinEventImpl(s, selected);
+                        serverMemberStateDisplay(je, MemberEventCode.JOIN);
+                    });
+        }, 10L, 15L, TimeUnit.SECONDS);*/
     }
 
     @Override
@@ -261,27 +285,49 @@ public class EventsListener
             Optional<ServerTextChannel> mayBeChannel = event.getServer()
                     .getTextChannelById(preferences.getJoinLeaveChannel());
             mayBeChannel.ifPresent(c -> {
+                Instant currentStamp = Instant.now();
+                String stampAsString = CommonUtils.getCurrentGmtTimeAsString();
                 String displayUserName;
                 if (event.getServer().getMembers().contains(event.getUser())) {
                     displayUserName = event.getServer().getDisplayName(event.getUser());
                 } else {
                     displayUserName = event.getUser().getName();
                 }
-                String message = new MessageBuilder()
-                        .append(displayUserName, MessageDecoration.BOLD)
-                        .append(" (")
-                        .append(event.getUser().getDiscriminatedName())
-                        .append(")")
-                        .append(code)
-                        .append(event.getServer().getName(), MessageDecoration.BOLD)
-                        .append(" at ")
-                        .append(CommonUtils.getCurrentGmtTimeAsString())
-                        .getStringBuilder()
-                        .toString();
+                boolean hasAvatarData = false;
+                byte[] avatarBytes = new byte[0];
+                String avatarName;
+                String avatarExt = "";
+                try {
+                    Icon avatar = event.getUser().getAvatar();
+                    avatarName = avatar.getUrl().getFile();
+                    String[] nameEl = avatarName.split("\\.");
+                    if (nameEl.length > 0) {
+                        avatarExt = nameEl[nameEl.length - 1];
+                        avatarBytes = avatar.asByteArray().get(20, TimeUnit.SECONDS);
+                        if (avatarBytes.length > 0) {
+                            hasAvatarData = true;
+                        }
+                    }
+                } catch (Exception ignore) {}
+
+                String userName = displayUserName
+                        + " (" + event.getUser().getDiscriminatedName() + ")";
+                final int newlineBreak = 20;
+                EmbedBuilder embedBuilder = new EmbedBuilder()
+                        .setColor(Color.BLUE)
+                        .setTimestamp(currentStamp)
+                        .addField("User",
+                                CommonUtils.addLinebreaks(userName, newlineBreak), true)
+                        .addField("At",
+                                CommonUtils.addLinebreaks(stampAsString, newlineBreak), true)
+                        .addField("Action", code.toString(), true)
+                        .addField("Server",
+                                CommonUtils.addLinebreaks(event.getServer().getName(), newlineBreak), true);
+                if (hasAvatarData) {
+                    embedBuilder.setThumbnail(avatarBytes, avatarExt);
+                }
                 new MessageBuilder()
-                        .setEmbed(new EmbedBuilder()
-                                .setDescription(message)
-                                .setColor(Color.BLUE))
+                        .setEmbed(embedBuilder)
                         .send(c);
             });
         }
@@ -294,13 +340,13 @@ public class EventsListener
         public String toString() {
             switch (this) {
                 case JOIN:
-                    return " joined to ";
+                    return "Joined";
                 case LEAVE:
-                    return " just left the server ";
+                    return "Just left";
                 case BAN:
-                    return " banned on the server ";
+                    return "Banned";
                 case UNBAN:
-                    return " unbanned on the server ";
+                    return "Unbanned";
 
                 default:
                     return "";

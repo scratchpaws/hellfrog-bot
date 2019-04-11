@@ -63,6 +63,12 @@ public class CommonUtils {
         return String.format("%tF %<tT (UTC)", current);
     }
 
+    public static String getCurrentGmtTimeAsNewlineString() {
+        TimeZone tz = TimeZone.getTimeZone("GMT");
+        Calendar current = Calendar.getInstance(tz);
+        return String.format("%tF\n%<tT (UTC)", current);
+    }
+
     public static long getLowValue(long maxValue) {
         if (maxValue >= 2) {
             long lowValue = maxValue / 2;
@@ -90,6 +96,25 @@ public class CommonUtils {
             ret.add(text.substring(start, Math.min(text.length(), start + size)));
         }
         return ret;
+    }
+
+    public static String addLinebreaks(String input, int maxLineLength) {
+        StringTokenizer tok = new StringTokenizer(input, " ");
+        StringBuilder output = new StringBuilder(input.length());
+        int lineLen = 0;
+        while (tok.hasMoreTokens()) {
+            String word = tok.nextToken();
+
+            if (lineLen + 1 + word.length() > maxLineLength) {
+                output.append("\n");
+                lineLen = 0;
+            } else {
+                if (lineLen > 0) output.append(' ');
+            }
+            output.append(word);
+            lineLen += word.length();
+        }
+        return output.toString();
     }
 
     public static boolean safeEqualsTrimStr(String that, String then) {
@@ -123,5 +148,14 @@ public class CommonUtils {
             return Optional.empty();
 
         return Optional.of(new ArrayList<>(collection).get(0));
+    }
+
+    // https://stackoverflow.com/questions/3758606/how-to-convert-byte-size-into-human-readable-format-in-java
+    public static String humanReadableByteCount(long bytes, boolean si) {
+        int unit = si ? 1000 : 1024;
+        if (bytes < unit) return bytes + " B";
+        int exp = (int) (Math.log(bytes) / Math.log(unit));
+        String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp-1) + (si ? "" : "i");
+        return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
     }
 }
