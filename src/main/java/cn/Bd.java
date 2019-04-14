@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
@@ -14,6 +15,8 @@ import org.javacord.api.entity.user.User;
 import org.jetbrains.annotations.NotNull;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
 import xyz.funforge.scratchypaws.hellfrog.common.CodeSourceUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
 import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
@@ -335,5 +338,27 @@ public class Bd {
         });
 
         return "OK";
+    }
+
+    @MethodInfo("Delete this bot message by url.")
+    public static String rm(String url) {
+        DiscordApi api = SettingsController.getInstance().getDiscordApi();
+        if (api == null) return "API is null";
+
+        if (CommonUtils.isTrStringEmpty(url)) return "URL String is empty";
+
+        Message msg = MessageUtils.resolveByLink(url).orElse(null);
+        if (msg == null) return "Message not exists";
+
+        if (msg.getAuthor().isYourself()) {
+            if (msg.canYouDelete()) {
+                msg.delete();
+                return "OK";
+            } else {
+                return "Cannot delete this message";
+            }
+        } else {
+            return "It's not this bot message";
+        }
     }
 }
