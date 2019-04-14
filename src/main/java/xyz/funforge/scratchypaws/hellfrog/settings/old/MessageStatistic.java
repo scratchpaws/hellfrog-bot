@@ -19,8 +19,8 @@ public class MessageStatistic {
     private final ReentrantLock childCreationLock = new ReentrantLock();
     private volatile AtomicLong messagesCount = new AtomicLong(0L);
     private volatile AtomicLong lastMessageDate = new AtomicLong(-1L);
-    private volatile AtomicLong symbolsCount = new AtomicLong(0L);
-    private volatile AtomicLong bytesCount = new AtomicLong(0L);
+    private volatile AtomicLong totalSymbolsCount = new AtomicLong(0L);
+    private volatile AtomicLong totalBytesCount = new AtomicLong(0L);
     private long entityId = 0L;
     private volatile String lastKnownName = "";
     private volatile ConcurrentHashMap<Long, MessageStatistic> childStatistic = null;
@@ -41,20 +41,20 @@ public class MessageStatistic {
         this.lastMessageDate = lastMessageDate;
     }
 
-    public AtomicLong getSymbolsCount() {
-        return symbolsCount;
+    public AtomicLong getTotalSymbolsCount() {
+        return totalSymbolsCount;
     }
 
-    public void setSymbolsCount(AtomicLong symbolsCount) {
-        this.symbolsCount = symbolsCount;
+    public void setTotalSymbolsCount(AtomicLong totalSymbolsCount) {
+        this.totalSymbolsCount = totalSymbolsCount;
     }
 
-    public AtomicLong getBytesCount() {
-        return bytesCount;
+    public AtomicLong getTotalBytesCount() {
+        return totalBytesCount;
     }
 
-    public void setBytesCount(AtomicLong bytesCount) {
-        this.bytesCount = bytesCount;
+    public void setTotalBytesCount(AtomicLong totalBytesCount) {
+        this.totalBytesCount = totalBytesCount;
     }
 
     @JsonIgnore
@@ -66,21 +66,21 @@ public class MessageStatistic {
 
     @JsonIgnore
     public long getCountOfSymbols() {
-        if (symbolsCount != null)
-            return symbolsCount.get();
+        if (totalSymbolsCount != null)
+            return totalSymbolsCount.get();
         return 0L;
     }
 
     @JsonIgnore
     public long getCountOfBytes() {
-        if (bytesCount != null)
-            return bytesCount.get();
+        if (totalBytesCount != null)
+            return totalBytesCount.get();
         return 0L;
     }
 
     @JsonIgnore
     public long getSummaryCount() {
-        long messages = getOneIfZero(this.getCountOfMessages());
+        long messages = this.getCountOfMessages(); // при нуле сообщений не учитываем остальное
         long symbols = getOneIfZero(this.getCountOfSymbols());
         long bytes = getOneIfZero(this.getCountOfBytes());
         return messages * symbols * bytes;
@@ -108,19 +108,29 @@ public class MessageStatistic {
         return getLastDate(UTC);
     }
 
-    public void increment() {
+    public void increment(int messageLength, long bytesCount) {
         updateLastMessage();
         messagesCount.incrementAndGet();
+        totalSymbolsCount.addAndGet(messageLength);
+        totalBytesCount.addAndGet(bytesCount);
     }
 
-    public void incrementWithLastDate(Instant lastDate) {
+    public void incrementWithLastDate(Instant lastDate, int messageLength, long bytesCount) {
         messagesCount.incrementAndGet();
+        totalSymbolsCount.addAndGet(messageLength);
+        totalBytesCount.addAndGet(bytesCount);
         lastMessageDate.set(CommonUtils.getLatestDate(lastDate, lastMessageDate.get()));
     }
 
-    public void decrement() {
+    public void decrement(int messageLength, long bytesCount) {
         if (messagesCount.get() > 0L) {
             messagesCount.decrementAndGet();
+        }
+        if (totalSymbolsCount.get() >= messageLength) {
+            totalSymbolsCount.addAndGet(messageLength * (-1));
+        }
+        if (totalBytesCount.get() >= bytesCount) {
+            totalBytesCount.addAndGet(bytesCount * (-1));
         }
     }
 
