@@ -21,6 +21,10 @@ public class CommonPreferences
     private volatile String botName = "HellFrog";
 
     private volatile String apiKey = "";
+    
+    private volatile Long serverTransfer = null;
+    
+    private volatile Long serverTextChatTransfer = null;
 
     /**
      * Отладка, по-умолчанию выключена и требует явной активации
@@ -88,5 +92,21 @@ public class CommonPreferences
 
     public void setEnableRemoteDebug(boolean enableRemoteDebug) {
         this.enableRemoteDebug = enableRemoteDebug;
+    }
+
+    public Long getServerTransfer() {
+        return serverTransfer;
+    }
+
+    public void setServerTransfer(Long serverTransfer) {
+        this.serverTransfer = serverTransfer;
+    }
+
+    public Long getServerTextChatTransfer() {
+        return serverTextChatTransfer;
+    }
+
+    public void setServerTextChatTransfer(Long serverTextChatTransfer) {
+        this.serverTextChatTransfer = serverTextChatTransfer;
     }
 }

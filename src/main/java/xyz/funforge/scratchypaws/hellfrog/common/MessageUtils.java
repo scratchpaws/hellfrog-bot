@@ -134,4 +134,10 @@ public class MessageUtils {
                 .replace("~", "\\~")
                 .replace("|", "\\|");
     }
+
+    public static void deleteMessageIfCan(@Nullable Message msg) {
+        if (msg == null) return;
+        if (msg.canYouDelete())
+            msg.delete();
+    }
 }

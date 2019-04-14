@@ -5,6 +5,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.javacord.api.DiscordApi;
+import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageBuilder;
@@ -16,7 +17,9 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.core.entity.permission.PermissionsImpl;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
 import xyz.funforge.scratchypaws.hellfrog.common.OptionalUtils;
+import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
 import xyz.funforge.scratchypaws.hellfrog.reactions.DiceReaction;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
@@ -90,8 +93,14 @@ public class ServiceCommand
                 .desc("Upload high dice level rofl file")
                 .build();
 
+        Option secureTransfer = Option.builder("sec")
+                .desc("Enable two-phase transfer from bot private")
+                .hasArg()
+                .argName("text chat")
+                .build();
+
         super.addCmdlineOption(stopBot, memInfo, botDate, inviteUrl, runGc, runtimeShell, lastUsage,
-                uploadFailRofl, uploadWinRofl);
+                uploadFailRofl, uploadWinRofl, secureTransfer);
 
         super.disableUpdateLastCommandUsage();
     }
@@ -147,9 +156,11 @@ public class ServiceCommand
         boolean lastUsageAction = cmdline.hasOption('l');
         boolean uploadFailRofl = cmdline.hasOption('f');
         boolean uploadWinRofl = cmdline.hasOption('w');
+        boolean secureTransfer = cmdline.hasOption("sec");
+        String transferChat = cmdline.getOptionValue("sec", "");
 
         if (stopAction ^ memInfo ^ getDate ^ getInvite ^ runGc ^ runtimeShell ^ lastUsageAction ^
-                uploadWinRofl ^ uploadFailRofl) {
+                uploadWinRofl ^ uploadFailRofl ^ secureTransfer) {
 
             if (stopAction) {
                 doStopAction(event);
@@ -228,6 +239,46 @@ public class ServiceCommand
 
             if (uploadWinRofl || uploadFailRofl) {
                 uploadRoflAction(event, uploadWinRofl);
+            }
+
+            if (secureTransfer) {
+                MessageUtils.deleteMessageIfCan(event.getMessage());
+                event.getServer().ifPresent(s -> {
+                    Optional<ServerTextChannel> mayBeChannel =
+                            ServerSideResolver.resolveChannel(s, transferChat);
+                    OptionalUtils.ifPresentOrElse(mayBeChannel, ch -> {
+                        settingsController.setServerTransfer(s.getId());
+                        settingsController.setServerTextChatTransfer(ch.getId());
+                        settingsController.saveCommonPreferences();
+                        new MessageBuilder()
+                                .setEmbed(new EmbedBuilder()
+                                .setDescription("Enabled two-phase transfer from bot private" +
+                                        " to text channel " + ch.getMentionTag())
+                                .setFooter("This message will be removed after 3 sec.")
+                                .setTimestampToNow())
+                                .send(channel).thenAccept(msg1 -> {
+                                    try {
+                                        Thread.sleep(3_000L);
+                                    } catch (InterruptedException ignore) {}
+                                    msg1.delete();
+                        });
+                    }, () -> {
+                        settingsController.setServerTransfer(null);
+                        settingsController.setServerTextChatTransfer(null);
+                        settingsController.saveCommonPreferences();
+                        new MessageBuilder()
+                                .setEmbed(new EmbedBuilder()
+                                        .setDescription("Two-phase transfer disabled")
+                                        .setFooter("This message will be removed after 3 sec.")
+                                        .setTimestampToNow())
+                                .send(channel).thenAccept(msg1 -> {
+                            try {
+                                Thread.sleep(3_000L);
+                            } catch (InterruptedException ignore) {}
+                            msg1.delete();
+                        });
+                    });
+                });
             }
         } else {
             showErrorMessage("Only one service command may be execute", channel);

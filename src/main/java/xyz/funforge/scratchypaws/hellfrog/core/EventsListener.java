@@ -5,6 +5,7 @@ import org.apache.tools.ant.types.Commandline;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.Icon;
 import org.javacord.api.entity.channel.ServerTextChannel;
+import org.javacord.api.entity.message.MessageAuthor;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
@@ -30,7 +31,6 @@ import org.javacord.api.listener.server.member.ServerMemberJoinListener;
 import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
 import org.javacord.api.listener.server.member.ServerMemberUnbanListener;
 import org.javacord.core.entity.permission.PermissionsImpl;
-import org.javacord.core.event.server.member.ServerMemberJoinEventImpl;
 import xyz.funforge.scratchypaws.hellfrog.commands.BotCommand;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
@@ -47,8 +47,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 public class EventsListener
@@ -57,7 +55,10 @@ public class EventsListener
         ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener {
 
-    private static final String VERSION_STRING = "0.1.18b";
+    private static final String VERSION_STRING = "0.1.19b";
+
+    private static final String TWO_PHASE_MESSAGE =
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAA".repeat(10);
 
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
@@ -98,6 +99,8 @@ public class EventsListener
         MsgCreateReaction.all().stream()
                 .filter(r -> r.canReact(event))
                 .forEach(r -> r.onMessageCreate(event));
+
+        twoPhaseTransfer(event);
     }
 
     private void parseCmdLine(MessageCreateEvent event) {
@@ -307,7 +310,8 @@ public class EventsListener
                             hasAvatarData = true;
                         }
                     }
-                } catch (Exception ignore) {}
+                } catch (Exception ignore) {
+                }
 
                 String userName = displayUserName
                         + " (" + event.getUser().getDiscriminatedName() + ")";
@@ -331,6 +335,49 @@ public class EventsListener
             });
         }
     }
+
+    private void twoPhaseTransfer(MessageCreateEvent event) {
+        if (event.getServer().isPresent()) return;
+        if (event.getMessageAuthor().isYourself()) return;
+        SettingsController settingsController = SettingsController.getInstance();
+        Long serverTransfer = settingsController.getServerTransfer();
+        Long textChannelTransfer = settingsController.getServerTextChatTransfer();
+
+        if (serverTransfer != null && textChannelTransfer != null) {
+            event.getApi().getServerById(serverTransfer).ifPresent(server ->
+                    server.getTextChannelById(textChannelTransfer).ifPresent(ch -> {
+
+                MessageAuthor author = event.getMessageAuthor();
+                String rawMessage = event.getMessageContent();
+
+                new MessageBuilder()
+                        .setEmbed(new EmbedBuilder()
+                                .setDescription(TWO_PHASE_MESSAGE))
+                        .send(ch).thenAccept(ph1 -> ph1.edit(new EmbedBuilder()
+                                .setDescription(TWO_PHASE_MESSAGE)
+                                .setTimestampToNow())
+                                .thenAccept(v1 -> {
+
+                                    ph1.edit(new EmbedBuilder()
+                                            .setAuthor(author)
+                                            .setDescription(rawMessage)
+                                            .setTimestampToNow()
+                                            .setFooter("Wait 5 sec...")).thenAccept(v2 -> {
+
+                                        try {
+                                            Thread.sleep(5_000L);
+                                        } catch (InterruptedException ignore) {
+                                        }
+                                        ph1.edit(new EmbedBuilder()
+                                                .setAuthor("<anonymous>")
+                                                .setDescription(rawMessage)
+                                                .setTimestamp(ph1.getCreationTimestamp()));
+                                    });
+                                }));
+            }));
+        }
+    }
+
 
     private enum MemberEventCode {
         JOIN, LEAVE, BAN, UNBAN;

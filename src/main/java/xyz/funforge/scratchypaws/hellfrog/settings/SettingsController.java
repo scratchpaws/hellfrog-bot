@@ -359,4 +359,20 @@ public class SettingsController {
     public Instant getLastCommandUsage() {
         return this.lastCommandUsage;
     }
+
+    public Long getServerTransfer() {
+        return commonPreferences.getServerTransfer();
+    }
+
+    public void setServerTransfer(Long serverTransfer) {
+        commonPreferences.setServerTransfer(serverTransfer);
+    }
+
+    public Long getServerTextChatTransfer() {
+        return commonPreferences.getServerTextChatTransfer();
+    }
+
+    public void setServerTextChatTransfer(Long serverTextChatTransfer) {
+        commonPreferences.setServerTextChatTransfer(serverTextChatTransfer);
+    }
 }
