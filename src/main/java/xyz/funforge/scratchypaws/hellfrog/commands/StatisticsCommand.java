@@ -13,7 +13,6 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
 import xyz.funforge.scratchypaws.hellfrog.common.OptionalUtils;
 import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
-import xyz.funforge.scratchypaws.hellfrog.core.StatisticRebuilder;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerStatistic;
 
@@ -77,10 +76,6 @@ public class StatisticsCommand
                 .desc("Show user messages statistic only")
                 .build();
 
-        /*Option rebuild = Option.builder("b")
-                .desc("Full scan and rebuild statistic")
-                .build();*/
-
         super.enableOnlyServerCommandStrict();
         super.addCmdlineOption(enable, disable, show, reset, status, smilesOnly, textChat, userStats);
     }
@@ -105,14 +100,13 @@ public class StatisticsCommand
         boolean smilesOnly = cmdline.hasOption('m');
         boolean textChatsFilter = cmdline.hasOption('c');
         boolean usersStatsFilter = cmdline.hasOption('u');
-        boolean rebuildOption = cmdline.hasOption('b');
 
         List<String> smileList = getOptionalArgsList(cmdline, 'm');
         List<String> textChats = getOptionalArgsList(cmdline, 'c');
         List<String> usersList = getOptionalArgsList(cmdline, 'u');
 
         if ((smilesOnly || textChatsFilter || usersStatsFilter)
-                && (enableOption || disableOption || resetOption || rebuildOption)) {
+                && (enableOption || disableOption || resetOption)) {
             showErrorMessage("Display options (-m/-c) are set only when displaying statistics", channel);
             return;
         }
@@ -122,12 +116,10 @@ public class StatisticsCommand
             return;
         }
 
-        if (enableOption ^ disableOption ^ showOption ^ resetOption ^ statusOption ^ rebuildOption) {
+        if (enableOption ^ disableOption ^ showOption ^ resetOption ^ statusOption) {
             long serverId = server.getId();
             SettingsController settingsController = SettingsController.getInstance();
             ServerStatistic serverStatistic = settingsController.getServerStatistic(serverId);
-
-            StatisticRebuilder statisticRebuilder = StatisticRebuilder.getInstance();
 
             if (enableOption) {
                 if (serverStatistic.isCollectNonDefaultSmileStats()) {
@@ -149,11 +141,6 @@ public class StatisticsCommand
                     settingsController.saveServerSideStatistic(serverId);
                     showInfoMessage("Statistic collection disabled", channel);
                 }
-            }
-
-            if (rebuildOption && statisticRebuilder.isRebuildInProgress(serverId)) {
-                showErrorMessage("Statistic rebuild already in progress", channel);
-                return;
             }
 
             if (resetOption) {
@@ -278,10 +265,6 @@ public class StatisticsCommand
 
                     MessageUtils.sendLongMessage(resultMessage, channel);
                 }
-            }
-
-            if (rebuildOption) {
-                statisticRebuilder.rebuild(event, channel);
             }
         } else {
             showErrorMessage("Only one option may be use.", channel);

@@ -183,12 +183,12 @@ public class ServerStatistic {
 
             if (userList.size() > 0 && !isUserStat) {
                 boolean hasThisUsersStat = userList.stream()
-                        .anyMatch(u -> stat.getChildItemStatistic(u.getId()).getCount() > 0);
+                        .anyMatch(u -> stat.getChildItemStatistic(u.getId()).getCountOfMessages() > 0);
                 if (!hasThisUsersStat)
                     return;
             }
 
-            long messagesCount = stat.getCount();
+            long messagesCount = stat.getCountOfMessages();
             if (messagesCount > 0L) {
                 MessageBuilder tmp = new MessageBuilder()
                         .append(String.valueOf(messagesCount))

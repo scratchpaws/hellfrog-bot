@@ -210,7 +210,6 @@ public class EventsListener
     public void onReactionAdd(ReactionAddEvent event) {
         reactReaction.parseReaction(event, true);
         asVoteReaction.parseAction(event);
-        StatisticRebuilder.getInstance().onReact(event);
     }
 
     @Override
