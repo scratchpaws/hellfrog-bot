@@ -66,15 +66,19 @@ public class MessageStatistic {
 
     @JsonIgnore
     public long getCountOfSymbols() {
-        if (totalSymbolsCount != null)
-            return totalSymbolsCount.get();
+        if (totalSymbolsCount != null) {
+            long _totalSymbs = totalSymbolsCount.get();
+            return _totalSymbs >= 0 ? _totalSymbs : 0L;
+        }
         return 0L;
     }
 
     @JsonIgnore
     public long getCountOfBytes() {
-        if (totalBytesCount != null)
-            return totalBytesCount.get();
+        if (totalBytesCount != null) {
+            long _totalBytes = totalBytesCount.get();
+            return _totalBytes >= 0 ? _totalBytes : 0L;
+        }
         return 0L;
     }
 
@@ -82,13 +86,13 @@ public class MessageStatistic {
     public long getSummaryCount() {
         long messages = this.getCountOfMessages(); // при нуле сообщений не учитываем остальное
         long symbols = getOneIfZero(this.getCountOfSymbols());
-        long bytes = getOneIfZero(this.getCountOfBytes());
+        long bytes = getOneIfZero(this.getCountOfBytes() / 1048576L); // 1 Мб
         return messages * symbols * bytes;
     }
 
     @JsonIgnore
     private long getOneIfZero(long value) {
-        return value > 0 ? value : 1;
+        return value > 0 ? value : 1L;
     }
 
     @JsonIgnore

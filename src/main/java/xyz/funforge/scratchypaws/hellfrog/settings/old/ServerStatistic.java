@@ -7,6 +7,7 @@ import org.javacord.api.entity.user.User;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -188,12 +189,19 @@ public class ServerStatistic {
                     return;
             }
 
+            long summaryCount = stat.getSummaryCount();
             long messagesCount = stat.getCountOfMessages();
-            if (messagesCount > 0L) {
+            long totalSymbolsCount = stat.getCountOfSymbols();
+            long totalBytesCount = stat.getCountOfBytes();
+
+            if (summaryCount > 0L) {
                 MessageBuilder tmp = new MessageBuilder()
                         .append(String.valueOf(messagesCount))
                         .append(" - ")
-                        .append(stat.getLastKnownName())
+                        .append(MessageUtils.escapeSpecialSymbols(stat.getLastKnownName()))
+                        .append(", total symbols: ").append(totalSymbolsCount)
+                        .append(", total attaches: ")
+                        .append(CommonUtils.humanReadableByteCount(totalBytesCount, false))
                         .append(", last message: ");
                 String lastMessageDate = stat.getLastDate();
                 if (!CommonUtils.isTrStringEmpty(lastMessageDate)) {
@@ -209,11 +217,11 @@ public class ServerStatistic {
                     appendResultStats(tmp, innerResult, innerLevel + 1);
                 }
 
-                if (!result.containsKey(messagesCount)) {
-                    result.put(messagesCount, new ArrayList<>());
+                if (!result.containsKey(summaryCount)) {
+                    result.put(summaryCount, new ArrayList<>());
                 }
 
-                result.get(messagesCount).add(tmp.getStringBuilder().toString());
+                result.get(summaryCount).add(tmp.getStringBuilder().toString());
             }
         });
 

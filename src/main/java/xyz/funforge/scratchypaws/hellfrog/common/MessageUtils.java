@@ -8,6 +8,7 @@ import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.server.Server;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
 import java.util.ArrayList;
@@ -122,5 +123,15 @@ public class MessageUtils {
         }
 
         return Optional.empty();
+    }
+
+    @NotNull
+    public static String escapeSpecialSymbols(@Nullable String value) {
+        if (CommonUtils.isTrStringEmpty(value)) return "";
+        return value.replace("`", "\\`")
+                .replace("*", "\\*")
+                .replace("_", "\\_")
+                .replace("~", "\\~")
+                .replace("|", "\\|");
     }
 }
