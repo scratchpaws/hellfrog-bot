@@ -20,13 +20,12 @@ import java.util.concurrent.CompletableFuture;
 public abstract class MsgCreateReaction
         implements MessageCreateListener {
 
+    private static final List<MsgCreateReaction> ALL_MESSAGE_REACTS =
+            CodeSourceUtils.childClassInstancesCollector(MsgCreateReaction.class);
     private boolean accessControl = false;
     private boolean strictByChannel = false;
     private String commandPrefix = "";
     private String commandDescription = "";
-
-    private static final List<MsgCreateReaction> ALL_MESSAGE_REACTS =
-            CodeSourceUtils.childClassInstancesCollector(MsgCreateReaction.class);
 
     public static Sequental<MsgCreateReaction> all() {
         // todo: сюда тоже класс-сканнер добаить

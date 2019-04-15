@@ -29,6 +29,8 @@ public class ServerSideResolver {
     private static final Pattern CHANNEL_TAG_REGEXP = Pattern.compile("^<#[0-9]+>$"); // <#525287388818178050>
     private static final Pattern CHANNEL_TAG_SEARCH = Pattern.compile("<#[0-9]+>", Pattern.MULTILINE);
     private static final Pattern EMOJI_TAG_REGEXP = Pattern.compile("^<a?:.+?:\\d+>$"); // <:swiborg:530385828157980694>
+    private static final String EMOJI_SHORT_REGEXP = ":[A-z_0-9]+:";
+    private static final Pattern CUSTOM_EMOJI_SHORT = Pattern.compile(EMOJI_SHORT_REGEXP, Pattern.MULTILINE);
 
     public static Optional<User> resolveUser(Server server, String rawValue) {
         // 1. вначале ищем по явному id
@@ -236,6 +238,24 @@ public class ServerSideResolver {
                 .map(t -> t + " - " + permissions.getState(t))
                 .reduce((s1, s2) -> s1 + ", " + s2);
         return value.orElse("");
+    }
+
+    @NotNull
+    public static String findReplaceSimpleEmoji(String rawMessage, Server server) {
+        StringBuilder result = new StringBuilder(rawMessage);
+        Matcher finder = CUSTOM_EMOJI_SHORT.matcher(rawMessage);
+        while (finder.find()) {
+            String found = finder.group();
+            server.getCustomEmojis().stream()
+                    .filter(n -> (":" + n.getName() + ":").equalsIgnoreCase(found))
+                    .findFirst().ifPresent(kke -> {
+                        int beginIndex = result.indexOf(found);
+                        int endIndex = beginIndex + found.length();
+                        result.replace(beginIndex, endIndex, kke.getMentionTag());
+                    }
+            );
+        }
+        return result.toString();
     }
 
     public static class ParseResult<T> {

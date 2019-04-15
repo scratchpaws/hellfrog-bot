@@ -97,7 +97,7 @@ public class MessageStats
                            int messageLength, long bytesCount) {
         event.getServer().ifPresent(s ->
                 event.getServerTextChannel().ifPresent(ch ->
-                            collectStat(s, ch, author, messageDate, isCreate, messageLength, bytesCount)
+                        collectStat(s, ch, author, messageDate, isCreate, messageLength, bytesCount)
                 )
         );
     }

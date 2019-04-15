@@ -16,7 +16,7 @@ import static besus.utils.MiscUtils.coalesceBy;
  * Created by besus on 12.09.17.
  */
 @SuppressWarnings("unchecked")
-public class Sequental<T> implements Iterable<T>{
+public class Sequental<T> implements Iterable<T> {
     private static final VoidIterator voiḏ = new VoidIterator<>();
     private Iterator<T> its = voiḏ;
 
@@ -32,12 +32,16 @@ public class Sequental<T> implements Iterable<T>{
         return new Sequental<S>().with(iterable);
     }
 
-    public static <S> Sequental<S> all(S...values) {
+    public static <S> Sequental<S> all(S... values) {
         return new Sequental<S>().with(values);
     }
 
     public static <S> Sequental<S> of(S[] array) {
         return new Sequental<S>().with(array);
+    }
+
+    public static <T> Sequental<T> infinite(Func0<T> generator) {
+        return of(new InfiniteGeneratorIterator<>(generator));
     }
 
     public Sequental<T> with(Iterator<T> iterator) {
@@ -55,10 +59,6 @@ public class Sequental<T> implements Iterable<T>{
 
     public Sequental<T> with(T[] array) {
         return with(Spliterators.iterator(Arrays.spliterator(array)));
-    }
-
-    public static <T> Sequental<T> infinite(Func0<T> generator) {
-        return of(new InfiniteGeneratorIterator<>(generator));
     }
 
     public Stream<T> stream() {
@@ -124,7 +124,7 @@ public class Sequental<T> implements Iterable<T>{
 
         @Override
         public T next() {
-            return coalesce(coalesceBy(Iterator::hasNext, is), (Iterator<T>)voiḏ).next();
+            return coalesce(coalesceBy(Iterator::hasNext, is), (Iterator<T>) voiḏ).next();
         }
     }
 

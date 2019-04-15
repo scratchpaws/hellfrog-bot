@@ -177,22 +177,22 @@ public class ServiceCommand
                         (runtime.totalMemory() - runtime.freeMemory());
                 new MessageBuilder()
                         .setEmbed(new EmbedBuilder()
-                            .setTimestampToNow()
-                            .setTitle("Memory usage")
-                            .addField("Free memory:", CommonUtils.humanReadableByteCount(runtime.freeMemory(), false), true)
-                            .addField("Max memory:", CommonUtils.humanReadableByteCount(runtime.maxMemory(), false), true)
-                            .addField("Total memory:", CommonUtils.humanReadableByteCount(runtime.totalMemory(), false), true)
-                            .addField("Allocated memory:", CommonUtils.humanReadableByteCount(allocatedMemory, false), true)
-                            .setDescription(runGc ? "GC called" : ""))
+                                .setTimestampToNow()
+                                .setTitle("Memory usage")
+                                .addField("Free memory:", CommonUtils.humanReadableByteCount(runtime.freeMemory(), false), true)
+                                .addField("Max memory:", CommonUtils.humanReadableByteCount(runtime.maxMemory(), false), true)
+                                .addField("Total memory:", CommonUtils.humanReadableByteCount(runtime.totalMemory(), false), true)
+                                .addField("Allocated memory:", CommonUtils.humanReadableByteCount(allocatedMemory, false), true)
+                                .setDescription(runGc ? "GC called" : ""))
                         .send(channel);
             }
 
             if (getDate) {
                 new MessageBuilder()
                         .setEmbed(new EmbedBuilder()
-                            .setTitle("Current date and time: ")
-                            .setDescription(CommonUtils.getCurrentGmtTimeAsString())
-                            .setTimestampToNow())
+                                .setTitle("Current date and time: ")
+                                .setDescription(CommonUtils.getCurrentGmtTimeAsString())
+                                .setTimestampToNow())
                         .send(channel);
             }
 
@@ -215,24 +215,24 @@ public class ServiceCommand
                 if (lastCommandUsage == null) {
                     new MessageBuilder()
                             .setEmbed(new EmbedBuilder()
-                                .setTimestampToNow()
-                                .setTitle("Last usage")
-                                .setDescription("No last usage found"))
+                                    .setTimestampToNow()
+                                    .setTitle("Last usage")
+                                    .setDescription("No last usage found"))
                             .send(channel);
                 } else {
                     Duration duration = Duration.between(lastCommandUsage, Instant.now());
                     long totalSeconds = duration.toSeconds();
                     long hours = totalSeconds / 3600L;
-                    int minutes = (int)((totalSeconds % 3600L) / 60L);
-                    int seconds = (int)(totalSeconds % 60L);
+                    int minutes = (int) ((totalSeconds % 3600L) / 60L);
+                    int seconds = (int) (totalSeconds % 60L);
                     String res = (hours > 0 ? hours + " h. " : "")
                             + (minutes > 0 ? minutes + " m. " : "")
                             + seconds + " s. ago";
                     new MessageBuilder()
                             .setEmbed(new EmbedBuilder()
-                                .setTimestampToNow()
-                                .setTitle("Last usage")
-                                .setDescription(res))
+                                    .setTimestampToNow()
+                                    .setTitle("Last usage")
+                                    .setDescription(res))
                             .send(channel);
                 }
             }
@@ -252,15 +252,16 @@ public class ServiceCommand
                         settingsController.saveCommonPreferences();
                         new MessageBuilder()
                                 .setEmbed(new EmbedBuilder()
-                                .setDescription("Enabled two-phase transfer from bot private" +
-                                        " to text channel " + ch.getMentionTag())
-                                .setFooter("This message will be removed after 3 sec.")
-                                .setTimestampToNow())
+                                        .setDescription("Enabled two-phase transfer from bot private" +
+                                                " to text channel " + ch.getMentionTag())
+                                        .setFooter("This message will be removed after 3 sec.")
+                                        .setTimestampToNow())
                                 .send(channel).thenAccept(msg1 -> {
-                                    try {
-                                        Thread.sleep(3_000L);
-                                    } catch (InterruptedException ignore) {}
-                                    msg1.delete();
+                            try {
+                                Thread.sleep(3_000L);
+                            } catch (InterruptedException ignore) {
+                            }
+                            msg1.delete();
                         });
                     }, () -> {
                         settingsController.setServerTransfer(null);
@@ -274,7 +275,8 @@ public class ServiceCommand
                                 .send(channel).thenAccept(msg1 -> {
                             try {
                                 Thread.sleep(3_000L);
-                            } catch (InterruptedException ignore) {}
+                            } catch (InterruptedException ignore) {
+                            }
                             msg1.delete();
                         });
                     });

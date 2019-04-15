@@ -17,7 +17,45 @@ import java.util.stream.StreamSupport;
  * Created by besus on 27.05.17.
  */
 @SuppressWarnings("unchecked")
-public interface PredicateEx<THIS extends PredicateEx<THIS, OBJ>, OBJ> extends Predicate<OBJ>, Func.AnyFunc<OBJ, Boolean>, WithDefaultsMixin<Boolean>  {
+public interface PredicateEx<THIS extends PredicateEx<THIS, OBJ>, OBJ> extends Predicate<OBJ>, Func.AnyFunc<OBJ, Boolean>, WithDefaultsMixin<Boolean> {
+
+    SimplePredicateEx<Number> isZero = number -> number.longValue() == 0;
+    SimplePredicateEx<? super Object> isNull = Objects::isNull;
+    SimplePredicateEx<CharSequence> ifStrEmpty = StringUtils::isEmpty;
+    SimplePredicateEx<Iterable> ifEmpty = iterable -> !iterable.iterator().hasNext();
+
+    // compiler fuckup
+    static <THIS extends PredicateEx<THIS, OBJ>, OBJ> PredicateEx<THIS, OBJ> of(PredicateEx<THIS, OBJ> src) {
+        return src;
+    }
+
+    static <T> SimplePredicateEx<Iterable> contains(T val) {
+        return data -> StreamSupport.stream(data.spliterator(), false).anyMatch(val::equals);
+    }
+
+    static <T extends String> SimplePredicateEx<T> startsWith(T prefix) {
+        return s -> s.startsWith(prefix);
+    }
+
+    static <T> SimplePredicateEx<T> check(PredicateEx what) {
+        return what::test;
+    }
+
+    static <T> SimplePredicateEx<T> in(T... variants) {
+        return v -> Sequental.of(variants).stream().anyMatch(eq(v));
+    }
+
+    static <T> SimplePredicateEx<T> eq(T to) {
+        return v -> Objects.equals(v, to);
+    }
+
+    static <T> SimplePredicateEx<T> not(Func1<T, Boolean> predicate) {
+        return t -> !predicate.call(t);
+    }
+
+    static SimplePredicateEx<Object> ifInstance(Class<?> clazz) {
+        return obj -> obj != null && obj.getClass().isAssignableFrom(clazz);
+    }
 
     // need to create subclass instance from lambda;
     THIS of(Predicate<OBJ> func);
@@ -28,12 +66,13 @@ public interface PredicateEx<THIS extends PredicateEx<THIS, OBJ>, OBJ> extends P
         return test(obj);
     }
 
+    ;
+
     // need to Function compatibility
     @Override
     default Boolean apply(OBJ obj) {
         return test(obj);
     }
-
 
     @Override
     default THIS and(Predicate<? super OBJ> other) {
@@ -85,52 +124,15 @@ public interface PredicateEx<THIS extends PredicateEx<THIS, OBJ>, OBJ> extends P
         return test(obj) ? Optional.ofNullable(ftrue.call(obj)) : Optional.ofNullable(ffalse.call(obj));
     }
 
-    // compiler fuckup
-    static <THIS extends PredicateEx<THIS, OBJ>, OBJ> PredicateEx<THIS, OBJ> of(PredicateEx<THIS, OBJ> src) {
-        return src;
-    }
-
     @Override
     default Boolean invoke(OBJ obj) {
         return test(obj);
-    };
+    }
 
     interface SimplePredicateEx<T> extends PredicateEx<SimplePredicateEx<T>, T> {
         @Override
         default SimplePredicateEx<T> of(Predicate<T> func) {
             return func::test;
         }
-    }
-
-    SimplePredicateEx<Number> isZero = number -> number.longValue() == 0;
-    SimplePredicateEx<? super Object> isNull = Objects::isNull;
-    SimplePredicateEx<CharSequence> ifStrEmpty = StringUtils::isEmpty;
-    SimplePredicateEx<Iterable> ifEmpty = iterable -> !iterable.iterator().hasNext();
-    static <T> SimplePredicateEx<Iterable> contains(T val) {
-        return data -> StreamSupport.stream(data.spliterator(), false).anyMatch(val::equals);
-    }
-
-    static <T extends String> SimplePredicateEx<T> startsWith(T prefix) {
-        return s -> s.startsWith(prefix);
-    }
-
-    static <T> SimplePredicateEx<T> check(PredicateEx what) {
-        return what::test;
-    }
-
-    static <T> SimplePredicateEx<T> in(T...variants) {
-        return v -> Sequental.of(variants).stream().anyMatch(eq(v));
-    }
-
-    static <T> SimplePredicateEx<T> eq(T to) {
-        return v -> Objects.equals(v, to);
-    }
-
-    static <T> SimplePredicateEx<T> not(Func1<T, Boolean> predicate) {
-        return t -> !predicate.call(t);
-    }
-
-    static SimplePredicateEx<Object> ifInstance(Class<?> clazz) {
-        return obj -> obj != null && obj.getClass().isAssignableFrom(clazz);
     }
 }

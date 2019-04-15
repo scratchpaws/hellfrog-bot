@@ -5,7 +5,6 @@ import org.apache.tools.ant.types.Commandline;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.Icon;
 import org.javacord.api.entity.channel.ServerTextChannel;
-import org.javacord.api.entity.message.MessageAuthor;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
@@ -57,15 +56,15 @@ public class EventsListener
 
     private static final String VERSION_STRING = "0.1.19b";
 
-    private static final String TWO_PHASE_MESSAGE =
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAA".repeat(10);
-
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
     private final MessageStats messageStats = new MessageStats();
+    private final TwoPhaseTransfer twoPhaseTransfer = new TwoPhaseTransfer();
 
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
+
+        boolean isPlainMessage = true;
 
        /* // это дебаг всех сообщений его выключить перед коммитом,
         // иначе лог разойдётся до космических величин
@@ -86,6 +85,7 @@ public class EventsListener
                     .getBotPrefix(server.getId());
             if (strMessage.startsWith(serverBotPrefixNoSep)) {
                 parseCmdLine(event);
+                isPlainMessage = false;
             }
         } else {
             String globalBotPrefixNoSep = SettingsController
@@ -93,14 +93,19 @@ public class EventsListener
                     .getGlobalCommonPrefix();
             if (strMessage.startsWith(globalBotPrefixNoSep)) {
                 parseCmdLine(event);
+                isPlainMessage = false;
             }
         }
+
+        isPlainMessage &= MsgCreateReaction.all().stream()
+                .noneMatch(r -> r.canReact(event));
 
         MsgCreateReaction.all().stream()
                 .filter(r -> r.canReact(event))
                 .forEach(r -> r.onMessageCreate(event));
 
-        twoPhaseTransfer(event);
+        if (isPlainMessage)
+            twoPhaseTransfer.transferAction(event);
     }
 
     private void parseCmdLine(MessageCreateEvent event) {
@@ -243,7 +248,7 @@ public class EventsListener
         System.err.println(readyMsg);
         BroadCast.sendBroadcastToAllBotOwners(readyMsg);
 
-        // todo: выключать в продуктиве. будет спамить
+        // выключать в продуктиве. будет спамить
         // нужно для отладки логгирования входов/выходов. см JoinLogCommand
         /*Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
             if (api != null)
@@ -335,49 +340,6 @@ public class EventsListener
             });
         }
     }
-
-    private void twoPhaseTransfer(MessageCreateEvent event) {
-        if (event.getServer().isPresent()) return;
-        if (event.getMessageAuthor().isYourself()) return;
-        SettingsController settingsController = SettingsController.getInstance();
-        Long serverTransfer = settingsController.getServerTransfer();
-        Long textChannelTransfer = settingsController.getServerTextChatTransfer();
-
-        if (serverTransfer != null && textChannelTransfer != null) {
-            event.getApi().getServerById(serverTransfer).ifPresent(server ->
-                    server.getTextChannelById(textChannelTransfer).ifPresent(ch -> {
-
-                MessageAuthor author = event.getMessageAuthor();
-                String rawMessage = event.getMessageContent();
-
-                new MessageBuilder()
-                        .setEmbed(new EmbedBuilder()
-                                .setDescription(TWO_PHASE_MESSAGE))
-                        .send(ch).thenAccept(ph1 -> ph1.edit(new EmbedBuilder()
-                                .setDescription(TWO_PHASE_MESSAGE)
-                                .setTimestampToNow())
-                                .thenAccept(v1 -> {
-
-                                    ph1.edit(new EmbedBuilder()
-                                            .setAuthor(author)
-                                            .setDescription(rawMessage)
-                                            .setTimestampToNow()
-                                            .setFooter("Wait 5 sec...")).thenAccept(v2 -> {
-
-                                        try {
-                                            Thread.sleep(5_000L);
-                                        } catch (InterruptedException ignore) {
-                                        }
-                                        ph1.edit(new EmbedBuilder()
-                                                .setAuthor("<anonymous>")
-                                                .setDescription(rawMessage)
-                                                .setTimestamp(ph1.getCreationTimestamp()));
-                                    });
-                                }));
-            }));
-        }
-    }
-
 
     private enum MemberEventCode {
         JOIN, LEAVE, BAN, UNBAN;

@@ -27,20 +27,20 @@ public class MessageUtils {
 
         String url = findMessageUrl(messageWithLink);
         if (url != null && url.contains("channels")) {
-                String[] rawIds = url.split("channels");
-                if (rawIds.length >= 2) {
-                    String idsLine = rawIds[1];
-                    String[] ids = idsLine.split("/");
-                    if (ids.length >= 4) {
-                        // первая / после channels и пустая
-                        long serverId = CommonUtils.onlyNumbersToLong(ids[1]);
-                        long textChatId = CommonUtils.onlyNumbersToLong(ids[2]);
-                        long messageId = CommonUtils.onlyNumbersToLong(ids[3]);
+            String[] rawIds = url.split("channels");
+            if (rawIds.length >= 2) {
+                String idsLine = rawIds[1];
+                String[] ids = idsLine.split("/");
+                if (ids.length >= 4) {
+                    // первая / после channels и пустая
+                    long serverId = CommonUtils.onlyNumbersToLong(ids[1]);
+                    long textChatId = CommonUtils.onlyNumbersToLong(ids[2]);
+                    long messageId = CommonUtils.onlyNumbersToLong(ids[3]);
 
-                        return MessageUtils.findByIds(serverId, textChatId, messageId);
-                    }
+                    return MessageUtils.findByIds(serverId, textChatId, messageId);
                 }
             }
+        }
 
         return Optional.empty();
     }
@@ -118,7 +118,8 @@ public class MessageUtils {
 
                 try {
                     return Optional.ofNullable(tch.getMessageById(messageId).get(10L, TimeUnit.SECONDS));
-                } catch (Exception ignore) {}
+                } catch (Exception ignore) {
+                }
             }
         }
 

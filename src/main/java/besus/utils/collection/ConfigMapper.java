@@ -11,11 +11,12 @@ import static besus.utils.MiscUtils.coalesce;
  */
 public class ConfigMapper<V> implements Mapper<String, V> {
 
+    Mapper<String, V> chain = k -> null;
+
     private ConfigMapper(Mapper<String, V> base) {
         chain = base::apply;
     }
 
-    Mapper<String, V> chain = k -> null;
     public ConfigMapper append(String k, V v) {
         Mapper<String, V> prev = chain;
         chain = s -> Objects.equals(s, k) ? v : prev.get(k);

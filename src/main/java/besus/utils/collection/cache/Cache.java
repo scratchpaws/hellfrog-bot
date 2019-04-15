@@ -10,15 +10,54 @@ import java.util.*;
 /**
  * Simple cache for objects with costly initialization
  */
-public abstract class Cache <K, V> {
+public abstract class Cache<K, V> {
 //    private static Logger logger = LogFactory.getLogger(Cache.class);
+
+    private final Map<K, V> container;
 
     protected Cache(Map<K, V> container) {
         this.container = container;
     }
 
+    public V get(K key, Func.AnyFunc<K, V> initializer) {
+        return container.computeIfAbsent(key, initializer);
+    }
+
+    public V get(K key) {
+//        logger.trace(toString() + " get key " + key);
+        return container.get(key);
+    }
+
+    public V get(K key, Func0<V> initializer) {
+        return container.computeIfAbsent(key, k -> initializer.call());
+    }
+
+    public V put(K key, V value) {
+//        logger.trace(toString() + " put key " + key);
+        container.put(key, value);
+        return value;
+    }
+
+    public void clear() {
+        container.clear();
+    }
+
+    public int size() {
+        return container.size();
+    }
+
+    public abstract String type();
+
+    public V any() {
+        if (container.size() == 0) {
+            return null;
+        }
+        return container.values().iterator().next();
+    }
+
     /**
      * use this class carefully: may cause OOM
+     *
      * @param <K>
      * @param <V>
      */
@@ -35,6 +74,7 @@ public abstract class Cache <K, V> {
 
     /**
      * use this class carefully: may cause OOM
+     *
      * @param <K>
      * @param <V>
      */
@@ -51,7 +91,7 @@ public abstract class Cache <K, V> {
 
     public static class ZeroCache<K, V> extends Cache<K, V> {
         public ZeroCache() {
-            super(new Map<K, V>(){
+            super(new Map<K, V>() {
                 @Override
                 public int size() {
                     return 0;
@@ -116,44 +156,6 @@ public abstract class Cache <K, V> {
         public String type() {
             return "Zero cache";
         }
-    }
-
-    private final Map<K, V> container;
-
-    public V get(K key, Func.AnyFunc<K, V> initializer) {
-        return container.computeIfAbsent(key, initializer);
-    }
-
-    public V get(K key) {
-//        logger.trace(toString() + " get key " + key);
-        return container.get(key);
-    }
-
-    public V get(K key, Func0<V> initializer) {
-        return container.computeIfAbsent(key, k -> initializer.call());
-    }
-
-    public V put(K key, V value) {
-//        logger.trace(toString() + " put key " + key);
-        container.put(key, value);
-        return value;
-    }
-
-    public void clear() {
-        container.clear();
-    }
-
-    public int size() {
-        return container.size();
-    }
-
-    public abstract String type();
-
-    public V any() {
-        if (container.size() == 0) {
-            return null;
-        }
-        return container.values().iterator().next();
     }
 
     public static class TimeoutCache<K, V> extends Cache<K, V> {

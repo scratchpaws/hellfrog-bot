@@ -101,6 +101,12 @@
             <artifactId>classgraph</artifactId>
             <version>4.8.24</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.nibor.autolink</groupId>
+            <artifactId>autolink</artifactId>
+            <version>0.10.0</version>
+        </dependency>
     </dependencies>
 
     <build>

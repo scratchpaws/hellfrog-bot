@@ -112,15 +112,15 @@ public class MiscUtils {
             return 0;
         }
         return ifInstance(Number.class).select(from,
-                        num -> (Number) num,
-                        notNum -> ifInstance(Boolean.class).select(notNum,
-                                bool -> ((Boolean)bool) ? 1 : 0,
-                                other -> NumberUtils.createNumber(String.valueOf(Optional.ofNullable(other).map(Objects::toString).filter(NumberUtils::isCreatable).orElse("0")))).get())
+                num -> (Number) num,
+                notNum -> ifInstance(Boolean.class).select(notNum,
+                        bool -> ((Boolean) bool) ? 1 : 0,
+                        other -> NumberUtils.createNumber(String.valueOf(Optional.ofNullable(other).map(Objects::toString).filter(NumberUtils::isCreatable).orElse("0")))).get())
                 .orElse(0);
     }
 
     @SafeVarargs
-    public static <T> T coalesceBy(Predicate<? super T> accept, T ...items) {
+    public static <T> T coalesceBy(Predicate<? super T> accept, T... items) {
         for (T item : items) {
             if (accept.test(item)) return item;
         }
@@ -153,8 +153,8 @@ public class MiscUtils {
     }
 
     @SafeVarargs
-    public static <T> T coalesceByf(Predicate<? super T> accept, Func0<T> ...items) {
-        for(Func0<T> item : items) {
+    public static <T> T coalesceByf(Predicate<? super T> accept, Func0<T>... items) {
+        for (Func0<T> item : items) {
             T val = item.call();
             if (accept.test(val)) {
                 return val;
@@ -168,17 +168,17 @@ public class MiscUtils {
     }
 
     @SafeVarargs
-    public static <T> T coalesce(T ...items) {
+    public static <T> T coalesce(T... items) {
         return coalesceBy(PredicateEx.not(isNull), items);
     }
 
     @SafeVarargs
-    public static <T> T coalescef(Func0<T>...items) {
+    public static <T> T coalescef(Func0<T>... items) {
         return coalesceByf(PredicateEx.not(isNull), items);
     }
 
     public static String underline(CharSequence source) {
-        return source.chars().collect(StringBuilder::new, (b, n) -> b.append((char)n).append((char)0x332), StringBuilder::append).toString();
+        return source.chars().collect(StringBuilder::new, (b, n) -> b.append((char) n).append((char) 0x332), StringBuilder::append).toString();
     }
 
     public static boolean contains(String s, String regex) {
@@ -193,7 +193,7 @@ public class MiscUtils {
 
     public static String dashToCamelCase(String cc, boolean firstCap) {
         StringBuilder ret = new StringBuilder();
-        for(int i = 0; i < cc.length(); i++) {
+        for (int i = 0; i < cc.length(); i++) {
             char ch = cc.charAt(i);
             if (i == 0 && ch != '-' && firstCap) {
                 ret.append(Character.toUpperCase(ch));
@@ -210,7 +210,7 @@ public class MiscUtils {
 
     public static String camelCaseToDash(String cc) {
         StringBuilder ret = new StringBuilder();
-        for(int i = 0; i < cc.length(); i++) {
+        for (int i = 0; i < cc.length(); i++) {
             char ch = cc.charAt(i);
             if (i == 0) {
                 ret.append(Character.toLowerCase(ch));

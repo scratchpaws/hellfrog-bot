@@ -16,7 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class QuoteReaction
-    extends MsgCreateReaction {
+        extends MsgCreateReaction {
 
     private static final String PREFIX = "qt";
     private static final String DESCRIPTION = "Quote message by link (use qt [link|message id] for quote)";

@@ -30,6 +30,8 @@ public abstract class BotCommand {
     private static final int ERROR_MESSAGE = 0;
     private static final int INFO_MESSAGE = 1;
     private static final int HELP_USAGE_WIDTH = 512;
+    private static final List<BotCommand> ALL_COMMANDS =
+            CodeSourceUtils.childClassInstancesCollector(BotCommand.class);
     private final String prefix;
     private final String description;
     final private Options control = new Options();
@@ -50,9 +52,6 @@ public abstract class BotCommand {
 
         control.addOption(helpOption);
     }
-
-    private static final List<BotCommand> ALL_COMMANDS =
-            CodeSourceUtils.childClassInstancesCollector(BotCommand.class);
 
     public static Sequental<BotCommand> all() {
         return Sequental.of(ALL_COMMANDS)

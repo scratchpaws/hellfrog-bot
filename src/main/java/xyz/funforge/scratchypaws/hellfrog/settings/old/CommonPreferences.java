@@ -21,9 +21,9 @@ public class CommonPreferences
     private volatile String botName = "HellFrog";
 
     private volatile String apiKey = "";
-    
+
     private volatile Long serverTransfer = null;
-    
+
     private volatile Long serverTextChatTransfer = null;
 
     /**

@@ -1,7 +1,6 @@
 package xyz.funforge.scratchypaws.hellfrog.common;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.function.Consumer;

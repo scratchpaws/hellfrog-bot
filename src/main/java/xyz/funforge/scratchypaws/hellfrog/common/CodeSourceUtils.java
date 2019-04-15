@@ -70,7 +70,7 @@ public final class CodeSourceUtils {
      */
     @NotNull
     @SuppressWarnings("unchecked")
-    public static<T> List<T> childClassInstancesCollector(@NotNull final Class<T> superClassFQDN) {
+    public static <T> List<T> childClassInstancesCollector(@NotNull final Class<T> superClassFQDN) {
         List<T> collectedCommandsList = new ArrayList<>();
         List<String> successList = new ArrayList<>();
         List<String> failList = new ArrayList<>();
@@ -86,7 +86,7 @@ public final class CodeSourceUtils {
                             Class childClass = Class.forName(name);
                             Object instance = childClass.getDeclaredConstructor()
                                     .newInstance();
-                            collectedCommandsList.add((T)instance);
+                            collectedCommandsList.add((T) instance);
                             successList.add(childClass.getName());
                         } catch (Exception err) {
                             failList.add(name + ": " + err);

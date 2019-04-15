@@ -23,28 +23,34 @@ public class AlterMap<K, V> implements Map<K, V>, Mapper<K, V> {
     private List<K> alterKeys = new LinkedList<K>();
     private Mapper<? super Map<K, V>, V> alterMapper = m -> null;
 
-    public static <M extends Map<K, V>, K, V> Mapper<M, V> getAny() {
-        return m -> m.values().iterator().next();
-    }
-
     public AlterMap(Map<K, V> source, Mapper<? super Map<K, V>, V> alterMapper) {
         this.source = source;
         this.alterKeys = alterKeys;
         this.alterMapper = alterMapper;
     }
 
-    public AlterMap(Map<K, V> source, Mapper<? super Map<K, V>, V> alterMapper, K...alterKeysDefault) {
+    public AlterMap(Map<K, V> source, Mapper<? super Map<K, V>, V> alterMapper, K... alterKeysDefault) {
         this.source = source;
         this.alterKeys.addAll(Arrays.asList(alterKeysDefault));
         this.alterMapper = alterMapper;
     }
 
-    public AlterMap(Mapper<K, V> source, Mapper<? super Map<K, V>, V> alterMapper, K...alterKeysDefault) {
+    public AlterMap(Mapper<K, V> source, Mapper<? super Map<K, V>, V> alterMapper, K... alterKeysDefault) {
         this(source.asMap(), alterMapper, alterKeysDefault);
     }
 
     public AlterMap(Map<K, V> source) {
         this.source = source;
+    }
+
+    @SafeVarargs
+    public AlterMap(Map<K, V> source, K... alterKeysDefault) {
+        this.source = source;
+        this.alterKeys.addAll(Arrays.asList(alterKeysDefault));
+    }
+
+    public static <M extends Map<K, V>, K, V> Mapper<M, V> getAny() {
+        return m -> m.values().iterator().next();
     }
 
     @Override
@@ -62,12 +68,6 @@ public class AlterMap<K, V> implements Map<K, V>, Mapper<K, V> {
         return source.containsValue(value);
     }
 
-    @SafeVarargs
-    public AlterMap(Map<K, V> source, K...alterKeysDefault) {
-        this.source = source;
-        this.alterKeys.addAll(Arrays.asList(alterKeysDefault));
-    }
-
     @Override
     public Set<K> keySet() {
         return source.keySet();
@@ -80,7 +80,7 @@ public class AlterMap<K, V> implements Map<K, V>, Mapper<K, V> {
 
     @Override
     public V get(Object key) {
-        return this.getAny((K)key);
+        return this.getAny((K) key);
     }
 
     public V getOrNew(K key) {

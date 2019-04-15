@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * A HashMap which entries expires after the specified life time.
- * The life-time can be defined on a per-key basis, or using a default one, that is passed to the 
+ * The life-time can be defined on a per-key basis, or using a default one, that is passed to the
  * constructor.
  *
  * @param <K> the Key type
@@ -33,7 +33,6 @@ public class SelfExpiringHashMap<K, V> implements SelfExpiringMap<K, V> {
      * The default max life time in milliseconds.
      */
     private final long maxLifeTimeMillis;
-
 
 
     public SelfExpiringHashMap(long defaultMaxLifeTimeMillis, Map<K, ExpiringKey<K>> storage, boolean renewOnGet) {
@@ -87,7 +86,7 @@ public class SelfExpiringHashMap<K, V> implements SelfExpiringMap<K, V> {
         cleanup();
         ExpiringKey<K> delayedKey = new ExpiringKey<>(key, lifeTimeMillis);
         ExpiringKey<K> oldKey = expiringKeys.put(key, delayedKey);
-        if(oldKey != null) {
+        if (oldKey != null) {
             expireKey(oldKey);
             expiringKeys.put(key, delayedKey);
         }
@@ -158,9 +157,9 @@ public class SelfExpiringHashMap<K, V> implements SelfExpiringMap<K, V> {
 
     public class ExpiringKey<KK> implements Delayed {
 
-        private long startTime = System.currentTimeMillis();
         private final long maxLifeTimeMillis;
         private final KK key;
+        private long startTime = System.currentTimeMillis();
 
         public ExpiringKey(KK key, long maxLifeTimeMillis) {
             this.maxLifeTimeMillis = maxLifeTimeMillis;

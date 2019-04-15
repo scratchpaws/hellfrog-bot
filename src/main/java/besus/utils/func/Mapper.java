@@ -10,10 +10,42 @@ import static besus.utils.MiscUtils.coalesce;
 /**
  * Alias for using in class's implement clause
  * Any instances of Mapper instances can be used directly in Stream.map(), Observable.map() etc.
+ *
  * @param <T> Type of value to map
  * @param <R> Type of mapping result
  */
 public interface Mapper<T, R> extends Func.AnyFunc<T, R> {
+    static <K, V> Mapper<K, V> mapper(Map<K, V> m) {
+        return m::get;
+    }
+
+    static <K, V> Mapper<K, V> mapper(Mapper<K, V> src) {
+        return src;
+    }
+
+    static <K, V> Mapper<K, V> mapper(K k, V v) {
+        return some -> Objects.equals(some, k) ? v : null;
+    }
+
+    static void main(String[] args) {
+        Mapper<Integer, String> nums =
+                mapper(1, "one")
+                        .with(2, "two")
+                        .with(3, "three");
+        System.err.println(nums.get(1));
+        System.err.println(nums.get(3));
+        System.err.println(nums.get(2));
+        System.err.println(nums.get(4));
+        System.err.println(nums.get(4, "4 undefined"));
+        Map<Integer, String> numsMap = nums.asMap();
+        System.err.println(numsMap.get(1));
+        System.err.println(numsMap.get(3));
+        System.err.println(numsMap.get(2));
+        System.err.println(numsMap.get(4));
+        System.err.println(numsMap.getOrDefault(4, "4 undefined"));
+
+    }
+
     @Override
     default R invoke(T t) {
         return get(t);
@@ -29,23 +61,26 @@ public interface Mapper<T, R> extends Func.AnyFunc<T, R> {
         return andPerform.apply(get(from));
     }
 
+//    static <T> Mapper<String, T> mapper(JsonObject o) {
+//        return key -> (T) o.getValue(key);
+//    }
+
     default <A> A getChained(Object... keys) {
         return getChained(Sequental.of(keys).iterator());
     }
 
     @SuppressWarnings("unchecked")
     default <A> A getChained(Iterator keyPointer) {
-        if (! keyPointer.hasNext()) {
+        if (!keyPointer.hasNext()) {
             return (A) this;
         }
         R nextVal = get((T) keyPointer.next());
         if (keyPointer.hasNext() && nextVal instanceof Mapper) {
-            return  ((Mapper<?, A>) nextVal).getChained(keyPointer);
+            return ((Mapper<?, A>) nextVal).getChained(keyPointer);
         } else {
             return (A) nextVal;
         }
     }
-
 
     default Mapper<T, R> with(Mapper<T, R> ifNullFunc) {
         return Func.AnyFunc.super.orElse(ifNullFunc)::apply;
@@ -55,26 +90,7 @@ public interface Mapper<T, R> extends Func.AnyFunc<T, R> {
         return with(mapper(k, v));
     }
 
-//    static <T> Mapper<String, T> mapper(JsonObject o) {
-//        return key -> (T) o.getValue(key);
-//    }
-
-    static <K, V> Mapper<K, V> mapper(Map<K, V> m) {
-        return m::get;
-    }
-
-    static <K, V> Mapper<K, V> mapper(Mapper<K, V> src) {
-        return src;
-    }
-
-    static <K, V> Mapper<K, V> mapper(K k, V v) {
-        return some -> Objects.equals(some, k) ? v : null;
-    }
-
-
-
     /**
-     *
      * @return readonly map to able to use mappers as maps in any api
      */
     @SuppressWarnings("unchecked")
@@ -102,7 +118,7 @@ public interface Mapper<T, R> extends Func.AnyFunc<T, R> {
 
             @Override
             public R get(Object key) {
-                return  Mapper.this.get((T) key);
+                return Mapper.this.get((T) key);
             }
 
             @Override
@@ -138,25 +154,6 @@ public interface Mapper<T, R> extends Func.AnyFunc<T, R> {
                 return Collections.EMPTY_SET;
             }
         };
-    }
-
-    static void main(String[] args) {
-        Mapper<Integer, String> nums =
-                mapper(1, "one")
-                .with(2, "two")
-                .with(3, "three");
-        System.err.println(nums.get(1));
-        System.err.println(nums.get(3));
-        System.err.println(nums.get(2));
-        System.err.println(nums.get(4));
-        System.err.println(nums.get(4, "4 undefined"));
-        Map<Integer, String> numsMap = nums.asMap();
-        System.err.println(numsMap.get(1));
-        System.err.println(numsMap.get(3));
-        System.err.println(numsMap.get(2));
-        System.err.println(numsMap.get(4));
-        System.err.println(numsMap.getOrDefault(4, "4 undefined"));
-
     }
 
 }

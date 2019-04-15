@@ -20,26 +20,11 @@ import static besus.utils.PredicateEx.isNull;
 public interface Func {
 
 
-    interface AnySupplier<T> extends Supplier<T>, Func0<T>{
-
-        // convert to func that ignores incoming arg
-        default <A> AnyFunc<A, T> onAny() {
-            return some -> get();
-        }
-
-        @Override
-        default T call() {
-            return get();
-        };
-
-        default <R> AnySupplier<R> then(AnyFunc <? super T, R> after) {
-            return after.on(this);
-        }
-
-        default <R, A1> AnySupplier<R> then(Func2<? super T, A1, ? extends R> after, A1 arg1) {
-            return then(some -> after.call(some, arg1));
-        }
-    }
+    AnyFunc<Object, String> asStr = String::valueOf;
+    AnyFunc<Object, Boolean> asBool = asStr.then(Boolean::valueOf);
+    AnyFunc<Object, Integer> asInt = self().then(MiscUtils::anyToNum).then(Number::intValue);
+    AnyFunc<Object, Long> asLong = self().then(MiscUtils::anyToNum).then(Number::longValue);
+    AnyFunc<Object, Double> asDouble = self().then(MiscUtils::anyToNum).then(Number::doubleValue);
 
     static <S, T> AnySupplier<T> statefulSupplier(S state, AnyFunc<Ref<S>, T> next) {
         return new AnySupplier<T>() {
@@ -52,16 +37,132 @@ public interface Func {
         };
     }
 
+    static <R> AnyAction<R> conditional(AnyFunc<? super R, Boolean> condition, Action1<? super R> action) {
+        return arg -> {
+            if (condition.apply(arg)) {
+                action.call(arg);
+            }
+        };
+    }
+
+    static <R> AnyAction<R> conditional(Boolean condition, Action1<? super R> action) {
+        return arg -> {
+            if (condition) {
+                action.call(arg);
+            }
+        };
+    }
+
+    @SafeVarargs
+    static <R> AnyAction<R> compose(AnyAction<R>... actions) {
+        return Arrays.stream(actions).reduce(AnyAction::then).orElse(r -> {
+        });
+    }
+
+    static <R> AnyFunc<?, R> NULL() {
+        return any -> null;
+    }
+
+    static <T, R> AnyFunc<T, R> exact(R r) {
+        return any -> r;
+    }
+
+    static <S> AnyFunc<S, S> self() {
+        return t -> t;
+    }
+
+    static <T, R> AnyFunc<T, R> do̱(Func1<T, R> ref) {
+        return ref::call;
+    }
+
+    static <T, R, A1> AnyFunc<T, R> do̱(Func2<T, A1, R> f2, A1 arg1) {
+        return t -> f2.call(t, arg1);
+    }
+
+    static <T, R, A1, A2> AnyFunc<T, R> do̱(Func3<T, A1, A2, R> f3, A1 arg1, A2 arg2) {
+        return t -> f3.call(t, arg1, arg2);
+    }
+
+    static AnyFunc<String, String> first(int n) {
+        return Func.<String>self().then(s -> StringUtils.substring(s, 0, n));
+    }
+
+    static <C> AnyFunc<Object, C> cast(Class<C> clazz) {
+        return clazz::cast;
+    }
+
+    static <C> AnyFunc<Object, C> cast(Class<C> clazz, AnyFunc<Object, C> orAnother) {
+        return select(clazz::isInstance, clazz::cast, orAnother);
+    }
+
+    static <T, C> AnyFunc<T, C> select(Predicate<T> cond, AnyFunc<T, C> ftrue, AnyFunc<T, C> ffalse) {
+        return some -> cond.test(some) ? ftrue.apply(some) : ffalse.apply(some);
+    }
+//    AnyFunc<Object, JsonExtend> asJson = self().then(JsonExtend::extend);
+//    AnyFunc<Object, Integer> asJsCount = self().then(cast(JsonArray.class, JsonArray::size, cast(JsonObject.class, JsonObject::size, notJson -> -1)));
+
+    static <T, C> AnyFunc<T, C> mapNull(AnySupplier<C> ifnull, AnyFunc<T, C> ifnot) {
+        return some -> some == null ? ifnull.call() : ifnot.apply(some);
+    }
+
+    static <T, C> AnyFunc<T, C> mapNull(C ifnull, C ifnot) {
+        return some -> some == null ? ifnull : ifnot;
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T, C, I> AnyFunc<T, C> cast(Class<I> clazz, AnyFunc<? super I, C> forInstance, AnyFunc<? super T, C> orAnother) {
+        return some -> clazz.isInstance(some) ? forInstance.apply((I) some) : orAnother.apply(some);
+    }
+
+    /**
+     * adapter for "map" functions and not builder-style(void) setters or any other side actions(logging?) as
+     * .map(with(o -> o.setId(42))).map(with(o -> o.setSome("some")))
+     */
+    @SafeVarargs
+    static <T> AnyFunc<T, T> with(Action1<T>... performActions) {
+        return t -> {
+            Arrays.stream(performActions).forEach(a -> a.call(t));
+            return t;
+        };
+    }
+
+    interface AnySupplier<T> extends Supplier<T>, Func0<T> {
+
+        // convert to func that ignores incoming arg
+        default <A> AnyFunc<A, T> onAny() {
+            return some -> get();
+        }
+
+        @Override
+        default T call() {
+            return get();
+        }
+
+        ;
+
+        default <R> AnySupplier<R> then(AnyFunc<? super T, R> after) {
+            return after.on(this);
+        }
+
+        default <R, A1> AnySupplier<R> then(Func2<? super T, A1, ? extends R> after, A1 arg1) {
+            return then(some -> after.call(some, arg1));
+        }
+    }
+
     interface AnyAction<T> extends Action1<T>, Consumer<T>/*, Handler<T>*/ {
         @Override
         default void accept(T t) {
             invoke(t);
-        };
+        }
+
+        ;
 
         @Override
         default void call(T t) {
             invoke(t);
-        };
+        }
+
+        ;
 
 //        @Override
 //        default void handle(T t) {
@@ -112,7 +213,7 @@ public interface Func {
         }
 
         @Override
-        default R call(T t){
+        default R call(T t) {
             return invoke(t);
         }
 
@@ -123,7 +224,7 @@ public interface Func {
         default AnyFunc<T, R> orIf(Predicate<R> condition, AnyFunc<T, R> onCondition) {
             return (T t) -> {
                 R res = invoke(t);
-                return condition.test(res) ? onCondition.invoke(t): res;
+                return condition.test(res) ? onCondition.invoke(t) : res;
             };
         }
 
@@ -138,99 +239,6 @@ public interface Func {
         }
 
         R invoke(T t);
-    }
-
-    static <R> AnyAction<R> conditional(AnyFunc<? super R, Boolean> condition, Action1<? super R> action) {
-        return arg -> {
-            if (condition.apply(arg)) {
-                action.call(arg);
-            }
-        };
-    }
-
-    static <R> AnyAction<R> conditional(Boolean condition, Action1<? super R> action) {
-        return arg -> {
-            if (condition) {
-                action.call(arg);
-            }
-        };
-    }
-
-    @SafeVarargs
-    static <R> AnyAction<R> compose(AnyAction<R>...actions) {
-        return Arrays.stream(actions).reduce(AnyAction::then).orElse(r -> {});
-    }
-
-    static <R> AnyFunc<?, R> NULL() {
-        return any -> null;
-    }
-
-    static <T, R> AnyFunc<T, R> exact(R r) {
-        return any -> r;
-    }
-
-    static <S> AnyFunc<S, S> self(){
-        return t -> t;
-    }
-
-    static <T, R> AnyFunc<T, R> do̱(Func1<T, R> ref) {
-        return ref::call;
-    }
-
-    static <T, R, A1> AnyFunc<T, R> do̱(Func2<T, A1, R> f2, A1 arg1){
-        return t -> f2.call(t, arg1);
-    }
-    static <T, R, A1, A2> AnyFunc<T, R> do̱(Func3<T, A1, A2, R> f3, A1 arg1, A2 arg2){
-        return t -> f3.call(t, arg1, arg2);
-    }
-
-    AnyFunc<Object, String> asStr = String::valueOf;
-
-    static AnyFunc<String, String> first(int n) {
-        return Func.<String>self().then(s -> StringUtils.substring(s, 0, n));
-    }
-    AnyFunc<Object, Boolean> asBool = asStr.then(Boolean::valueOf);
-    AnyFunc<Object, Integer> asInt = self().then(MiscUtils::anyToNum).then(Number::intValue);
-    AnyFunc<Object, Long> asLong = self().then(MiscUtils::anyToNum).then(Number::longValue);
-    AnyFunc<Object, Double> asDouble = self().then(MiscUtils::anyToNum).then(Number::doubleValue);
-//    AnyFunc<Object, JsonExtend> asJson = self().then(JsonExtend::extend);
-//    AnyFunc<Object, Integer> asJsCount = self().then(cast(JsonArray.class, JsonArray::size, cast(JsonObject.class, JsonObject::size, notJson -> -1)));
-
-    static <C> AnyFunc<Object, C> cast(Class<C> clazz) {
-        return clazz::cast;
-    }
-
-    static <C> AnyFunc<Object, C> cast(Class<C> clazz, AnyFunc<Object, C> orAnother) {
-        return select(clazz::isInstance, clazz::cast, orAnother);
-    }
-
-    static <T, C> AnyFunc<T, C> select(Predicate<T> cond, AnyFunc<T, C> ftrue, AnyFunc<T, C> ffalse) {
-        return some -> cond.test(some) ? ftrue.apply(some) : ffalse.apply(some);
-    }
-
-    static <T, C> AnyFunc<T, C> mapNull(AnySupplier<C> ifnull, AnyFunc<T, C> ifnot) {
-        return some -> some == null ? ifnull.call(): ifnot.apply(some);
-    }
-
-    static <T, C> AnyFunc<T, C> mapNull(C ifnull, C ifnot) {
-        return some -> some == null ? ifnull : ifnot;
-    }
-
-    @SuppressWarnings("unchecked")
-    static <T, C, I> AnyFunc<T, C> cast(Class<I> clazz, AnyFunc<? super I, C> forInstance, AnyFunc<? super T, C> orAnother) {
-        return some -> clazz.isInstance(some) ? forInstance.apply((I) some) : orAnother.apply(some);
-    }
-
-    /**
-     * adapter for "map" functions and not builder-style(void) setters or any other side actions(logging?) as
-     *  .map(with(o -> o.setId(42))).map(with(o -> o.setSome("some")))
-     */
-    @SafeVarargs
-    static <T> AnyFunc<T, T> with(Action1<T>...performActions) {
-        return t ->  {
-            Arrays.stream(performActions).forEach(a -> a.call(t));
-            return t;
-        };
     }
 
 }

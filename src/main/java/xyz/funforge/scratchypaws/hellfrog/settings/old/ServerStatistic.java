@@ -30,14 +30,6 @@ public class ServerStatistic {
     private volatile ConcurrentHashMap<Long, MessageStatistic> textChatStats = new ConcurrentHashMap<>();
     private volatile Long startDate = 0L;
 
-    public Long getStartDate() {
-        return startDate != null ? startDate : 0L;
-    }
-
-    public void setStartDate(Long startDate) {
-        this.startDate = startDate != null ? startDate : 0L;
-    }
-
     @JsonIgnore
     public static void appendResultStats(@NotNull MessageBuilder msg, @NotNull TreeMap<Long, List<String>> stats,
                                          int innerLevel) {
@@ -48,6 +40,14 @@ public class ServerStatistic {
                     }
                     msg.append(item).appendNewLine();
                 }));
+    }
+
+    public Long getStartDate() {
+        return startDate != null ? startDate : 0L;
+    }
+
+    public void setStartDate(Long startDate) {
+        this.startDate = startDate != null ? startDate : 0L;
     }
 
     public boolean isCollectNonDefaultSmileStats() {
