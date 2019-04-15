@@ -363,8 +363,10 @@ public class TwoPhaseTransfer {
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         if (randomLines != null && randomLines.size() > 0) {
             String rndLine = "";
-            while (msg.length() + rndLine.length() <= PHASE_MSG_LENGTH) {
+            while (msg.length() + rndLine.length() + 1 <= PHASE_MSG_LENGTH) {
                 msg.append(rndLine);
+                if (rndLine.length() > 0)
+                    msg.append(" ");
                 rndLine = randomLines.get(rnd.nextInt(randomLines.size()));
             }
         } else {

@@ -79,6 +79,7 @@ public final class CodeSourceUtils {
                 .scan()) {
             scanResult.getAllClasses().stream()
                     .filter(ci -> ci.extendsSuperclass(superClassFQDN.getName()))
+                    .filter(ci -> !ci.isAbstract())
                     .filter(ClassInfo::isPublic)
                     .map(ClassInfo::getName)
                     .forEachOrdered(name -> {
