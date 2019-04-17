@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.regex.Pattern;
 
 /**
  * Двухфазная передача сообщения из привата в канал с последующей анонимизацией (экспериментально).
@@ -35,7 +36,7 @@ import java.util.concurrent.*;
  * ивенты создания/редактирования сообщений)
  * <br/>
  * Вначале создаётся сообщение (и соответственно - ивента) с мусором.
- * {@link #sendInitialMessage(ServerTextChannel, List, boolean)}
+ * {@link #sendInitialRandomMessage(ServerTextChannel, List, boolean)}
  * Далее производится редактирование сообщения произвольное число раз (с соответствующей генерацией ивентов
  * редактирования) с заполнением произвольным содержимым. Автор подставляется произвольным образом из общего списка
  * участников сервера.
@@ -59,7 +60,7 @@ public class TwoPhaseTransfer {
     /**
      * Длина мусорных сообщений
      */
-    private static final int PHASE_MSG_LENGTH = 500;
+    private static final int PHASE_MSG_LENGTH = 100;
     /**
      * Минимальное число мусорных редактирований
      */
@@ -67,15 +68,18 @@ public class TwoPhaseTransfer {
     /**
      * Максимальное число мусорных редактирований
      */
-    private static final int MAX_REWRITE = 5;
+    private static final int MAX_REWRITE = 3;
     /**
      * Сообщение в футере, без аттача
      */
     private static final String FOOTER_MESSAGE = "Wait 5 sec...";
+
+    private static final String INITIAL_FOOTER_WITH_ATTACHER = "Wait 5 sec... (message contains attaches or urls)";
     /**
      * Сообщение в футере для передаваемых сообщений с аттачем (нотификация, что содержится аттач)
      */
     private static final String FOOTER_WITH_ATTACHES = "Wait 5 sec (message contains attachments that are displayed after anonymization)..";
+
     /**
      * Сообщение в футере для конечного анонимизированного сообщения, если оно содержит аттачи
      */
@@ -97,6 +101,16 @@ public class TwoPhaseTransfer {
      */
     private static volatile List<String> randomLines;
 
+    /**
+     * Максимальный размер файла для аттача
+     */
+    private static final int MAX_FILE_SIZE = 8_388_608; // 8 Мб
+
+    /**
+     * Паттерн локальных сообщений
+     */
+    private static final Pattern IGNORE_LINES_PATTERN = Pattern.compile("^(/{2}|\\+)");
+
     static {
         try {
             PATH_TO_PHRASES_FILE = CodeSourceUtils.resolve("two_phase.txt");
@@ -117,12 +131,9 @@ public class TwoPhaseTransfer {
      */
     public static void replaceLined() {
         try {
-            System.err.println(PATH_TO_PHRASES_FILE);
             if (Files.exists(PATH_TO_PHRASES_FILE)) {
                 randomLines = Files.readAllLines(PATH_TO_PHRASES_FILE, StandardCharsets.UTF_8);
-                System.err.println("Exists");
             } else {
-                System.err.println("Not exists");
                 randomLines = new ArrayList<>(0);
             }
         } catch (IOException err) {
@@ -147,18 +158,34 @@ public class TwoPhaseTransfer {
      * @param event ивент нового сообщения
      */
     void transferAction(@NotNull MessageCreateEvent event) {
-        if (event.getServer().isPresent()) return;
         if (event.getMessageAuthor().isYourself()) return;
 
         Long serverTransfer = settingsController.getServerTransfer();
         Long textChannelTransfer = settingsController.getServerTextChatTransfer();
 
         if (serverTransfer != null && textChannelTransfer != null) {
+
             event.getApi().getServerById(serverTransfer).ifPresent(server ->
                     server.getTextChannelById(textChannelTransfer).ifPresent(ch -> {
                         MessageAuthor author = event.getMessageAuthor();
                         String messageContent = event.getMessageContent();
+
+                        boolean isServerTextChatMessage = false;
+                        if (event.getServerTextChannel().isPresent()) {
+                            ServerTextChannel channel = event.getServerTextChannel().get();
+                            long srvId = channel.getServer().getId();
+                            long chtId = channel.getId();
+                            if (srvId != serverTransfer || chtId != textChannelTransfer) return;
+                            if (!IGNORE_LINES_PATTERN.matcher(messageContent).find()) return;
+                            isServerTextChatMessage = true;
+                        }
+
                         List<InMemAttach> attaches = extractAttaches(event.getMessageAttachments());
+
+                        if (isServerTextChatMessage) {
+                            event.getMessage().delete();
+                        }
+
                         CompletableFuture.runAsync(() -> parallelTransferAction(server, ch, author, messageContent, attaches));
                     }));
         }
@@ -181,16 +208,17 @@ public class TwoPhaseTransfer {
         try {
             messageContent = ServerSideResolver.findReplaceSimpleEmoji(messageContent, server);
             List<String> urls = extractAllUrls(messageContent);
-            List<User> membersList = new ArrayList<>(server.getMembers());
+            //List<User> membersList = new ArrayList<>(server.getMembers());
             boolean hasAttachment = !urls.isEmpty() || !attachments.isEmpty();
 
-            msg = sendInitialMessage(ch, membersList, hasAttachment).get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
-            rewritePhaseMessage(msg, membersList, hasAttachment);
-            writeRealMessageBody(msg, messageContent, author, hasAttachment);
-            sleepAction();
-            rewritePhaseMessage(msg, membersList, hasAttachment);
+            //msg = sendInitialRandomMessage(ch, membersList, hasAttachment).get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
+            msg = sendInitialMessageWithBody(ch, messageContent, author, hasAttachment).get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
+            //rewritePhaseMessage(msg, membersList, hasAttachment);
+            //writeRealMessageBody(msg, messageContent, author, hasAttachment);
             writeUrls(urls, ch);
             sendAttachments(attachments, ch);
+            sleepAction();
+            //rewritePhaseMessage(msg, membersList, hasAttachment);
             anonymousMessage(msg, messageContent, hasAttachment);
 
         } catch (Exception err) {
@@ -275,6 +303,7 @@ public class TwoPhaseTransfer {
     private List<InMemAttach> extractAttaches(Collection<MessageAttachment> attachments) {
         List<InMemAttach> result = new ArrayList<>(attachments.size());
         for (MessageAttachment attachment : attachments) {
+            if (attachment.getSize() > MAX_FILE_SIZE) continue;
             try {
                 String name = attachment.getFileName();
                 byte[] attachBytes = attachment.downloadAsByteArray().get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
@@ -328,13 +357,26 @@ public class TwoPhaseTransfer {
      * @param hasAttachments признак наличия аттачей либо ссылок в сообщении
      * @return ожидаемое сообщение
      */
-    private CompletableFuture<Message> sendInitialMessage(ServerTextChannel channel,
-                                                          List<User> membersList,
-                                                          boolean hasAttachments) {
+    private CompletableFuture<Message> sendInitialRandomMessage(ServerTextChannel channel,
+                                                                List<User> membersList,
+                                                                boolean hasAttachments) {
         MessageBuilder msg = new MessageBuilder()
                 .setEmbed(buildRandomEmbed(membersList, hasAttachments));
 
         return msg.send(channel);
+    }
+
+    private CompletableFuture<Message> sendInitialMessageWithBody(ServerTextChannel channel,
+                                                                  String messageContent,
+                                                                  MessageAuthor author,
+                                                                  boolean hasAttachments) {
+        return new MessageBuilder()
+                .setEmbed(new EmbedBuilder()
+                        .setAuthor(author)
+                        .setDescription(messageContent)
+                        .setTimestampToNow()
+                        .setFooter(hasAttachments ? INITIAL_FOOTER_WITH_ATTACHER : FOOTER_MESSAGE))
+                .send(channel);
     }
 
     /**

@@ -29,8 +29,8 @@ public class ServerSideResolver {
     private static final Pattern CHANNEL_TAG_REGEXP = Pattern.compile("^<#[0-9]+>$"); // <#525287388818178050>
     private static final Pattern CHANNEL_TAG_SEARCH = Pattern.compile("<#[0-9]+>", Pattern.MULTILINE);
     private static final Pattern EMOJI_TAG_REGEXP = Pattern.compile("^<a?:.+?:\\d+>$"); // <:swiborg:530385828157980694>
-    private static final String EMOJI_SHORT_REGEXP = ":[A-z_0-9]+:";
-    private static final Pattern CUSTOM_EMOJI_SHORT = Pattern.compile(EMOJI_SHORT_REGEXP, Pattern.MULTILINE);
+    private static final Pattern CUSTOM_EMOJI_SHORT = Pattern.compile("^:[A-z_0-9]+:$");
+    private static final Pattern CUSTOM_COMBO_EMOJI_SEARCH = Pattern.compile("(<a?:.+?:\\d+>|:[A-z_0-9]+:)", Pattern.MULTILINE);
 
     public static Optional<User> resolveUser(Server server, String rawValue) {
         // 1. вначале ищем по явному id
@@ -243,9 +243,10 @@ public class ServerSideResolver {
     @NotNull
     public static String findReplaceSimpleEmoji(String rawMessage, Server server) {
         StringBuilder result = new StringBuilder(rawMessage);
-        Matcher finder = CUSTOM_EMOJI_SHORT.matcher(rawMessage);
+        Matcher finder = CUSTOM_COMBO_EMOJI_SEARCH.matcher(rawMessage);
         while (finder.find()) {
             String found = finder.group();
+            if (EMOJI_TAG_REGEXP.matcher(found).find()) continue;
             server.getCustomEmojis().stream()
                     .filter(n -> (":" + n.getName() + ":").equalsIgnoreCase(found))
                     .findFirst().ifPresent(kke -> {
