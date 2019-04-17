@@ -33,8 +33,10 @@ public class DiceReaction
         extends MsgCreateReaction {
 
     private static final String SHORT_ROLL_PREFIX = "([lLдД]{2})";
-    private static final Pattern DICE_PATTERN = Pattern.compile("^([rRрР])?(d?\\d{1,2}[dDдД]\\d+|[lLдД]{2})([=<>]{1,2}\\d+)?");
-    private static final Pattern SEARCH_PATTERN = Pattern.compile("(^|\\n).*([rRрР])?(d?\\d{1,2}[dDдД]\\d+|[lLдД]{2})([=<>]{1,2}\\d+)?");
+    private static final Pattern DICE_PATTERN = Pattern.compile("^([rр])?(d?\\d{1,2}[dд]\\d+|[lд]{2})([=<>]{1,2}\\d+)?",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern SEARCH_PATTERN = Pattern.compile("^\\s*([rр])?(d?\\d{1,2}[dд]\\d+|[lд]{2})([=<>]{1,2}\\d+)?",
+            Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
     private static final String DEFAULT_ROLL = "1d20";
 
     private static final Path ROFL_ROOT = Paths.get("./rofls");
