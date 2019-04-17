@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Основные функции команд бота
@@ -321,12 +322,14 @@ public abstract class BotCommand {
                         .setAuthor(yourself))
                 .send(channel).thenAccept(m -> {
             if (type == ERROR_MESSAGE) {
-                try {
-                    Thread.sleep(20_000L);
-                    if (m.canYouDelete())
-                        m.delete();
-                } catch (InterruptedException ignore) {
-                }
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        Thread.sleep(20_000L);
+                        if (m.canYouDelete())
+                            m.delete();
+                    } catch (InterruptedException ignore) {
+                    }
+                });
             }
         });
     }
