@@ -1,6 +1,7 @@
 package xyz.funforge.scratchypaws.hellfrog.common;
 
 import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
@@ -98,6 +99,7 @@ public class CommonUtils {
         return ret;
     }
 
+    @NotNull
     public static String addLinebreaks(String input, int maxLineLength) {
         StringTokenizer tok = new StringTokenizer(input, " ");
         StringBuilder output = new StringBuilder(input.length());
@@ -157,5 +159,11 @@ public class CommonUtils {
         int exp = (int) (Math.log(bytes) / Math.log(unit));
         String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
         return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
+    }
+
+    @NotNull
+    @Contract(pure = true)
+    public static String reduceConcat(final String s1, final String s2) {
+        return s1 + ", " + s2;
     }
 }

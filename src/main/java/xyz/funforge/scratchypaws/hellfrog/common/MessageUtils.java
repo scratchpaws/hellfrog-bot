@@ -133,7 +133,8 @@ public class MessageUtils {
                 .replace("*", "\\*")
                 .replace("_", "\\_")
                 .replace("~", "\\~")
-                .replace("|", "\\|");
+                .replace("|", "\\|")
+                .replace("\\", "\\\\");
     }
 
     public static void deleteMessageIfCan(@Nullable Message msg) {

@@ -12,10 +12,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -232,12 +229,43 @@ public class ServerSideResolver {
         return message;
     }
 
-    public static String getGrants(Permissions permissions) {
-        Optional<String> value = Arrays.stream(PermissionType.values())
-                .filter(t -> !permissions.getState(t).equals(PermissionState.UNSET))
-                .map(t -> t + " - " + permissions.getState(t))
-                .reduce((s1, s2) -> s1 + ", " + s2);
-        return value.orElse("");
+    @NotNull
+    public static Optional<String> getAllowedGrants(@NotNull Server server, User user) {
+        return getAllowedGrants(server.getPermissions(user));
+    }
+
+    @NotNull
+    public static Optional<String> getDeniedGrants(@NotNull Server server, User user) {
+        return getDeniedGrants(server.getPermissions(user));
+    }
+
+    @NotNull
+    public static Optional<String> getAllowedGrants(@NotNull Role role) {
+        return getAllowedGrants(role.getPermissions());
+    }
+
+    @NotNull
+    public static Optional<String> getDeniedGrants(@NotNull Role role) {
+        return getDeniedGrants(role.getPermissions());
+    }
+
+    @NotNull
+    public static Optional<String> getAllowedGrants(@NotNull Permissions permissions) {
+        return enumeratePermissionTypes(permissions.getAllowedPermission());
+    }
+
+    @NotNull
+    public static Optional<String> getDeniedGrants(@NotNull Permissions permissions) {
+        return enumeratePermissionTypes(permissions.getDeniedPermissions());
+    }
+
+    @NotNull
+    public static Optional<String> enumeratePermissionTypes(@NotNull Collection<PermissionType> types) {
+        return types.stream()
+                .map(PermissionType::name)
+                .sorted()
+                .map(n -> n.toLowerCase().replace("_", " "))
+                .reduce(CommonUtils::reduceConcat);
     }
 
     @NotNull
@@ -291,7 +319,7 @@ public class ServerSideResolver {
         public String getNotFoundStringList() {
             if (hasNotFound()) {
                 Optional<String> result = notFound.stream()
-                        .reduce((r1, r2) -> r1 + ", " + r2);
+                        .reduce(CommonUtils::reduceConcat);
                 if (result.isPresent())
                     return result.get();
             }
