@@ -34,9 +34,9 @@ public class DiceReaction
 
     private static final String SHORT_ROLL_PREFIX = "([lLдД]{2})";
     private static final Pattern DICE_PATTERN = Pattern.compile("^([rр])?(d?\\d{1,2}[dд]\\d+|[lд]{2})([=<>]{1,2}\\d+)?",
-            Pattern.CASE_INSENSITIVE);
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern SEARCH_PATTERN = Pattern.compile("^\\s*([rр])?(d?\\d{1,2}[dд]\\d+|[lд]{2})([=<>]{1,2}\\d+)?",
-            Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
+            Pattern.MULTILINE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final String DEFAULT_ROLL = "1d20";
 
     private static final Path ROFL_ROOT = Paths.get("./rofls");
@@ -67,7 +67,7 @@ public class DiceReaction
     @Override
     public boolean canReact(MessageCreateEvent event) {
         String messageString = event.getMessageContent();
-        Matcher matcher = SEARCH_PATTERN.matcher(messageString.toLowerCase());
+        Matcher matcher = SEARCH_PATTERN.matcher(messageString);
         return matcher.find();
     }
 
