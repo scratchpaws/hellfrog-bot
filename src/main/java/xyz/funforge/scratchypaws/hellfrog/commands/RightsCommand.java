@@ -16,6 +16,7 @@ import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
 import xyz.funforge.scratchypaws.hellfrog.reactions.MsgCreateReaction;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.CommandRights;
+import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerPreferences;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -80,7 +81,20 @@ public class RightsCommand
                 .desc("Select text channel for rights control. If not arguments - use this text channel.")
                 .build();
 
-        addCmdlineOption(userOption, roleOption, commandOption, allowOption, disallowOption, showAllowOption, channelOption);
+        Option aclModeSwitchOption = Option.builder("m")
+                .longOpt("mode")
+                .hasArg()
+                .optionalArg(true)
+                .argName("[old|new]")
+                .desc("Switch access control mode for commands that has restrictions by channel" +
+                        " - old and new. Old mode strongly required permissions for manage channel " +
+                        "and strongly allowed role/user list. New mode strongly required permissions " +
+                        "only for manage channel, allowed role/user list is optional. Default action is " +
+                        "show current mode. Default mode is old.")
+                .build();
+
+        addCmdlineOption(userOption, roleOption, commandOption, allowOption, disallowOption, showAllowOption,
+                channelOption, aclModeSwitchOption);
 
         super.enableOnlyServerCommandStrict();
         super.setFooter(FOOTER);
@@ -102,6 +116,45 @@ public class RightsCommand
                                                    ArrayList<String> anotherLines) {
 
         SettingsController settingsController = SettingsController.getInstance();
+
+        boolean aclSwitchMode = cmdline.hasOption('m');
+        String aclSwitchModeValue = cmdline.getOptionValue('m', "").toLowerCase();
+
+        if (aclSwitchMode) {
+            ServerPreferences serverPreferences = settingsController.getServerPreferences(server.getId());
+            if (CommonUtils.isTrStringEmpty(aclSwitchModeValue)) {
+                String message = "Current access control mode is " + (serverPreferences.getNewAclMode() ?
+                        "new" : "old") + '.';
+                showInfoMessage(message, channel);
+            } else {
+                if (!canExecuteServerCommand(event, server)) {
+                    showAccessDeniedServerMessage(channel);
+                    return;
+                }
+                switch (aclSwitchModeValue) {
+                    case "old":
+                        serverPreferences.setNewAclMode(false);
+                        break;
+
+                    case "new":
+                        serverPreferences.setNewAclMode(true);
+                        break;
+
+                    default:
+                        showErrorMessage("Unknown mode. Must be \"old\" or \"new\" or " +
+                                "empty for display current mode", channel);
+                        return;
+                }
+
+                settingsController.saveServerSideParameters(server.getId());
+
+                String message = "Access control switched to " + (serverPreferences.getNewAclMode() ?
+                        "new" : "old") + " mode.";
+                showInfoMessage(message, channel);
+            }
+
+            return;
+        }
 
         if (!cmdline.hasOption('c')) {
             showErrorMessage("You have not specified a command for configuring rights.", channel);
@@ -277,7 +330,7 @@ public class RightsCommand
                 addServerTextChannelsListToMessage(resultMessage, channelsNoChanged);
             }
 
-            resultMessage.send(channel);
+            showInfoMessage(resultMessage.getStringBuilder().toString(), channel);
         } else if (showMode) {
             MessageBuilder msgBuilder = new MessageBuilder();
             for (String cmd : commands) {
@@ -339,7 +392,7 @@ public class RightsCommand
                         resolvedAllowedRoles.isEmpty() &&
                         resolvedAllowedChannels.isEmpty())
                     msgBuilder.append("  * No rights were specified for the command.");
-                msgBuilder.send(channel);
+                showInfoMessage(msgBuilder.getStringBuilder().toString(), channel);
             }
         }
     }

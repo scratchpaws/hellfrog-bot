@@ -5,6 +5,8 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.javacord.api.DiscordApi;
+import org.javacord.api.entity.Permissionable;
+import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
@@ -12,6 +14,7 @@ import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -35,6 +38,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -102,15 +106,8 @@ public class ServiceCommand
                 .argName("text chat")
                 .build();
 
-        Option grabServerData = Option.builder("grab")
-                .desc("Grab server info data as possible")
-                .hasArg()
-                .optionalArg(true)
-                .argName("server id")
-                .build();
-
         super.addCmdlineOption(stopBot, memInfo, botDate, inviteUrl, runGc, runtimeShell, lastUsage,
-                uploadFailRofl, uploadWinRofl, secureTransfer, grabServerData);
+                uploadFailRofl, uploadWinRofl, secureTransfer);
 
         super.disableUpdateLastCommandUsage();
     }
@@ -167,12 +164,10 @@ public class ServiceCommand
         boolean uploadFailRofl = cmdline.hasOption('f');
         boolean uploadWinRofl = cmdline.hasOption('w');
         boolean secureTransfer = cmdline.hasOption("sec");
-        boolean grabServerData = cmdline.hasOption("grab");
         String transferChat = cmdline.getOptionValue("sec", "");
-        String grabServerRawId = cmdline.getOptionValue("grab", "");
 
         if (stopAction ^ memInfo ^ getDate ^ getInvite ^ runGc ^ runtimeShell ^ lastUsageAction ^
-                uploadWinRofl ^ uploadFailRofl ^ secureTransfer ^ grabServerData) {
+                uploadWinRofl ^ uploadFailRofl ^ secureTransfer) {
 
             if (stopAction) {
                 doStopAction(event);
@@ -293,28 +288,6 @@ public class ServiceCommand
                         });
                     });
                 });
-            }
-
-            if (grabServerData) {
-                long serverId = 0L;
-                if (!CommonUtils.isTrStringEmpty(grabServerRawId) && !CommonUtils.isLong(grabServerRawId)) {
-                    showErrorMessage("Parameter must be a server id", channel);
-                    return;
-                }
-                if (event.getServer().isPresent()) {
-                    serverId = event.getServer().get().getId();
-                }
-                if (!CommonUtils.isTrStringEmpty(grabServerRawId) && CommonUtils.isLong(grabServerRawId)) {
-                    serverId = CommonUtils.onlyNumbersToLong(grabServerRawId);
-                }
-                if (serverId == 0L) {
-                    showErrorMessage("Server Id required", channel);
-                    return;
-                }
-
-                event.getApi().getServerById(serverId).ifPresentOrElse(server ->
-                                executeGrabServerInfo(server, channel),
-                        () -> showErrorMessage("Server not found by this id", channel));
             }
         } else {
             showErrorMessage("Only one service command may be execute", channel);
@@ -498,67 +471,5 @@ public class ServiceCommand
                     .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
                     .send(event.getChannel());
         }
-    }
-
-    private void executeGrabServerInfo(final Server server, final TextChannel channel) {
-        StringBuilder sw = new StringBuilder();
-        MessageBuilder res = new MessageBuilder();
-        sw.append("--- Members list: ---\n");
-        User owner = server.getOwner();
-        for (User member : server.getMembers()) {
-            String displayName = member.getDisplayName(server);
-            String id = member.getIdAsString();
-            String discriminatedName = member.getDiscriminatedName();
-            sw.append(displayName).append('\n')
-                    .append("  full name: ").append(discriminatedName).append('\n')
-                    .append("  id: ").append(id).append('\n');
-            if (owner.equals(member))
-                sw.append("  This user is a server owner\n");
-            server.getRoles(member)
-                    .stream()
-                    .map(Role::getName)
-                    .filter(r -> !r.equals("@everyone"))
-                    .reduce((r1, r2) -> r1 + ", " + r2)
-                    .ifPresent(r -> sw.append("  roles: ").append(r).append('\n'));
-        }
-        sw.append("--- Roles list: ---\n");
-        List<Role> roles = new ArrayList<>(server.getRoles());
-        roles.sort((o1, o2) -> o2.getPosition() - o1.getPosition());
-        for (Role role : roles) {
-            String name = role.getName();
-            String id = role.getIdAsString();
-            sw.append(name).append('\n')
-                    .append("  id: ").append(id).append('\n');
-            role.getColor()
-                    .ifPresent(c ->
-                            sw.append("  color: #")
-                                    .append(Integer.toHexString(c.getRed()))
-                                    .append(Integer.toHexString(c.getGreen()))
-                                    .append(Integer.toHexString(c.getBlue()))
-                                    .append('\n'));
-            sw.append("  mention tag: ").append(role.getMentionTag()).append('\n');
-            sw.append("  position: ").append(role.getPosition()).append('\n');
-            sw.append("  grants:").append('\n');
-            ServerSideResolver.getAllowedGrants(role).ifPresent(list -> {
-                sw.append("    allowed:\n");
-                for (String line : CommonUtils.addLinebreaks(list, 110).split("\n"))
-                    sw.append("      ").append(line).append('\n');
-            });
-            ServerSideResolver.getDeniedGrants(role).ifPresent(list -> {
-                sw.append("    denied: ").append(list).append('\n');
-                for (String line : CommonUtils.addLinebreaks(list, 110).split("\n"))
-                    sw.append("      ").append(line).append('\n');
-            });
-        }
-        server.getCustomEmojis().stream()
-                .map(KnownCustomEmoji::getMentionTag)
-                .reduce(CommonUtils::reduceConcat)
-                .ifPresent(list ->
-                        sw.append("--- Emoji list: ---\n")
-                                .append(CommonUtils.addLinebreaks(list, 120))
-                );
-        byte[] attach = sw.toString().getBytes(StandardCharsets.UTF_8);
-        res.addAttachment(attach, "MemberList.txt");
-        res.send(channel);
     }
 }

@@ -26,7 +26,6 @@ public class ServerSideResolver {
     private static final Pattern CHANNEL_TAG_REGEXP = Pattern.compile("^<#[0-9]+>$"); // <#525287388818178050>
     private static final Pattern CHANNEL_TAG_SEARCH = Pattern.compile("<#[0-9]+>", Pattern.MULTILINE);
     private static final Pattern EMOJI_TAG_REGEXP = Pattern.compile("^<a?:.+?:\\d+>$"); // <:swiborg:530385828157980694>
-    private static final Pattern CUSTOM_EMOJI_SHORT = Pattern.compile("^:[A-z_0-9]+:$");
     private static final Pattern CUSTOM_COMBO_EMOJI_SEARCH = Pattern.compile("(<a?:.+?:\\d+>|:[A-z_0-9]+:)", Pattern.MULTILINE);
 
     public static Optional<User> resolveUser(Server server, String rawValue) {
@@ -59,7 +58,7 @@ public class ServerSideResolver {
             return member;
         }
         // 5. И наконец по нику
-        return CommonUtils.getFirstOrEmpty(server.getMembersByDisplayName(rawValue));
+        return CommonUtils.getFirstOrEmpty(server.getMembersByDisplayNameIgnoreCase(rawValue));
     }
 
     public static Optional<Role> resolveRole(Server server, String rawValue) {
@@ -79,7 +78,7 @@ public class ServerSideResolver {
                 return role;
         }
         // 3. И наконец ищем по имени роли
-        return CommonUtils.getFirstOrEmpty(server.getRolesByName(rawValue));
+        return CommonUtils.getFirstOrEmpty(server.getRolesByNameIgnoreCase(rawValue));
     }
 
     public static Optional<ServerTextChannel> resolveChannel(Server server, String rawValue) {

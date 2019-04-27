@@ -24,6 +24,7 @@ public class ServerPreferences
     private CopyOnWriteArrayList<ActiveVote> activeVotes = new CopyOnWriteArrayList<>();
     private volatile Boolean joinLeaveDisplay = false;
     private volatile Long joinLeaveChannel = null;
+    private volatile Boolean newAclMode = false;
 
     /**
      * Получить префикс для вызова бота на данном сервере
@@ -90,5 +91,13 @@ public class ServerPreferences
 
     public void setJoinLeaveChannel(long textChannelId) {
         this.joinLeaveChannel = textChannelId;
+    }
+
+    public boolean getNewAclMode() {
+        return newAclMode != null && newAclMode;
+    }
+
+    public void setNewAclMode(boolean newAclMode) {
+        this.newAclMode = newAclMode;
     }
 }
