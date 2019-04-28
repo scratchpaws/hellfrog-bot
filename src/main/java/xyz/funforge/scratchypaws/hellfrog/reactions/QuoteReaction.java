@@ -9,20 +9,26 @@ import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.Nullable;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.InMemoryAttach;
 import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class QuoteReaction
         extends MsgCreateReaction {
 
+
+
     private static final String PREFIX = "qt";
     private static final String DESCRIPTION = "Quote message by link (use qt [link|message id] for quote)";
 
-    private static final Pattern QUOTE_SEARCH = Pattern.compile("^[qQtTцЦтТ]{2}.*channels/\\d+/\\d+/\\d+", Pattern.MULTILINE);
-    private static final Pattern SIMPLE_SEARCH = Pattern.compile("^[qQtTцЦтТ]{2}\\s*\\d+");
+    private static final Pattern QUOTE_SEARCH = Pattern.compile("^[qtцт]{2}.*channels/\\d+/\\d+/\\d+",
+            Pattern.MULTILINE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern SIMPLE_SEARCH = Pattern.compile("^[qtцт]{2}\\s*\\d+",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     public QuoteReaction() {
         super.setCommandPrefix(PREFIX);
@@ -67,7 +73,11 @@ public class QuoteReaction
 
         if (messageLink == null) return;
 
-        String messageUrl = MessageUtils.getMessageUrl(messageLink);
+        List<InMemoryAttach> quotedAttaches = MessageUtils.extractAttaches(messageLink.getAttachments());
+        List<String> quotedLinks = MessageUtils.extractAllUrls(messageLink.getContent());
+
+        List<InMemoryAttach> otherAttaches = MessageUtils.extractAttaches(sourceMessage.getAttachments());
+        List<String> otherLinks = MessageUtils.extractAllUrls(sourceMessage.getContent());
 
         EmbedBuilder embedBuilder = new EmbedBuilder();
         embedBuilder.setTitle("Quoted message:");
@@ -76,7 +86,6 @@ public class QuoteReaction
         embedBuilder.setDescription(messageLink.getContent());
 
         messageLink.getUserAuthor().ifPresent(embedBuilder::setAuthor);
-        embedBuilder.setUrl(messageUrl);
 
         new MessageBuilder()
                 .setEmbed(embedBuilder)

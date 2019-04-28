@@ -4,21 +4,26 @@ import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
+import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.server.Server;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.nibor.autolink.LinkExtractor;
+import org.nibor.autolink.LinkSpan;
+import org.nibor.autolink.LinkType;
+import xyz.funforge.scratchypaws.hellfrog.core.TwoPhaseTransfer;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class MessageUtils {
+public class MessageUtils
+    implements CommonConstants {
 
     public static final Pattern MESSAGE_LINK_SEARCH = Pattern.compile("https.*discord.*channels/\\d+/\\d+/\\d+", Pattern.MULTILINE);
 
@@ -141,5 +146,80 @@ public class MessageUtils {
         if (msg == null) return;
         if (msg.canYouDelete())
             msg.delete();
+    }
+
+    /**
+     * Извлечение аттачей из сообщения в память.
+     * Аттачи, которые неудалось извлечь - игнорируются.
+     *
+     * @param attachments аттачи из сообщения
+     * @return сохранённые в памяти аттачи
+     */
+    public static List<InMemoryAttach> extractAttaches(Collection<MessageAttachment> attachments) {
+        List<InMemoryAttach> result = new ArrayList<>(attachments.size());
+        for (MessageAttachment attachment : attachments) {
+            if (attachment.getSize() > MAX_FILE_SIZE) continue;
+            try {
+                String name = attachment.getFileName();
+                byte[] attachBytes = attachment.downloadAsByteArray().get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
+                result.add(new InMemoryAttach(name, attachBytes));
+            } catch (Exception ignore) {
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Создание сообщения со списком URL, что бы для них отобразился предпросмотр.
+     *
+     * @param urls список URL
+     * @param ch   текстовый канал, куда необходимо отправить сообщение
+     */
+    public static void writeUrls(@NotNull List<String> urls,
+                           ServerTextChannel ch) {
+
+        if (!urls.isEmpty()) {
+            MessageBuilder linkBuilder = new MessageBuilder();
+            urls.forEach(s -> linkBuilder.append(s).appendNewLine());
+            MessageUtils.sendLongMessage(linkBuilder, ch);
+        }
+    }
+
+    /**
+     * Извлечение списка URL из содержимого исходного сообщения пользователя
+     *
+     * @param messageContent сообщение пользователя
+     * @return список обнаруженных URL
+     */
+    public static List<String> extractAllUrls(String messageContent) {
+        List<String> urls = new ArrayList<>();
+        if (!CommonUtils.isTrStringEmpty(messageContent)) {
+            for (LinkSpan span : LinkExtractor.builder()
+                    .linkTypes(EnumSet.of(LinkType.WWW, LinkType.URL))
+                    .build()
+                    .extractLinks(messageContent)) {
+                urls.add(messageContent.substring(span.getBeginIndex(), span.getEndIndex()));
+            }
+        }
+        return Collections.unmodifiableList(urls);
+    }
+
+    /**
+     * Отправка аттачей
+     *
+     * @param attachments список аттачей
+     * @param ch          канал для отправки двухфазных сообщений
+     */
+    public static void sendAttachments(List<InMemoryAttach> attachments, ServerTextChannel ch) {
+        if (!attachments.isEmpty()) {
+            for (InMemoryAttach attach : attachments) {
+                try {
+                    new MessageBuilder()
+                            .addAttachment(attach.getBytes(), attach.getFileName())
+                            .send(ch).get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
+                } catch (Exception ignore) {}
+            }
+        }
     }
 }

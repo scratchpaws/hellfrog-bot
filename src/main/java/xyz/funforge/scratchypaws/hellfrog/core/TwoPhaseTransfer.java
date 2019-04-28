@@ -2,7 +2,6 @@ package xyz.funforge.scratchypaws.hellfrog.core;
 
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.Message;
-import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageAuthor;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
@@ -11,10 +10,8 @@ import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
-import org.nibor.autolink.LinkExtractor;
-import org.nibor.autolink.LinkSpan;
-import org.nibor.autolink.LinkType;
 import xyz.funforge.scratchypaws.hellfrog.common.CodeSourceUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.InMemoryAttach;
 import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
@@ -23,11 +20,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.regex.Pattern;
+
+import static xyz.funforge.scratchypaws.hellfrog.common.MessageUtils.extractAttaches;
 
 /**
  * Двухфазная передача сообщения из привата в канал с последующей анонимизацией (экспериментально).
@@ -180,10 +177,16 @@ public class TwoPhaseTransfer {
                             isServerTextChatMessage = true;
                         }
 
-                        List<InMemAttach> attaches = extractAttaches(event.getMessageAttachments());
+                        List<InMemoryAttach> attaches = extractAttaches(event.getMessageAttachments());
 
                         if (isServerTextChatMessage) {
-                            event.getMessage().delete();
+                            CompletableFuture.runAsync(() -> {
+                                try {
+                                    Thread.sleep(1_000L);
+                                } catch (InterruptedException ignore) {
+                                }
+                                event.getMessage().delete();
+                            });
                         }
 
                         CompletableFuture.runAsync(() -> parallelTransferAction(server, ch, author, messageContent, attaches));
@@ -202,12 +205,13 @@ public class TwoPhaseTransfer {
      * @param attachments    вложения сообщений
      */
     private void parallelTransferAction(Server server, ServerTextChannel ch, MessageAuthor author, String messageContent,
-                                        List<InMemAttach> attachments) {
+                                        List<InMemoryAttach> attachments) {
         Message msg = null;
 
+        SettingsController.getInstance().updateLastCommandUsage();
         try {
             messageContent = ServerSideResolver.findReplaceSimpleEmoji(messageContent, server);
-            List<String> urls = extractAllUrls(messageContent);
+            List<String> urls = MessageUtils.extractAllUrls(messageContent);
             //List<User> membersList = new ArrayList<>(server.getMembers());
             boolean hasAttachment = !urls.isEmpty() || !attachments.isEmpty();
 
@@ -215,8 +219,8 @@ public class TwoPhaseTransfer {
             msg = sendInitialMessageWithBody(ch, messageContent, author, hasAttachment).get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
             //rewritePhaseMessage(msg, membersList, hasAttachment);
             //writeRealMessageBody(msg, messageContent, author, hasAttachment);
-            writeUrls(urls, ch);
-            sendAttachments(attachments, ch);
+            MessageUtils.writeUrls(urls, ch);
+            MessageUtils.sendAttachments(attachments, ch);
             sleepAction();
             //rewritePhaseMessage(msg, membersList, hasAttachment);
             anonymousMessage(msg, messageContent, hasAttachment);
@@ -253,22 +257,6 @@ public class TwoPhaseTransfer {
     }
 
     /**
-     * Создание сообщения со списком URL, что бы для них отобразился предпросмотр.
-     *
-     * @param urls список URL
-     * @param ch   текстовый канал, куда необходимо отправить сообщение
-     */
-    private void writeUrls(@NotNull List<String> urls,
-                           ServerTextChannel ch) {
-
-        if (!urls.isEmpty()) {
-            MessageBuilder linkBuilder = new MessageBuilder();
-            urls.forEach(s -> linkBuilder.append(s).appendNewLine());
-            MessageUtils.sendLongMessage(linkBuilder, ch);
-        }
-    }
-
-    /**
      * Анонимизация сообщения (удаление автора), финальный этап жизненного цикла двухфазного сообщения.
      *
      * @param msg            исходное отпрвленное сообщение
@@ -291,61 +279,6 @@ public class TwoPhaseTransfer {
             Thread.sleep(ANONYMOUS_TIMEOUT);
         } catch (InterruptedException ignore) {
         }
-    }
-
-    /**
-     * Извлечение аттачей из сообщения в память.
-     * Аттачи, которые неудалось извлечь - игнорируются.
-     *
-     * @param attachments аттачи из сообщения
-     * @return сохранённые в памяти аттачи
-     */
-    private List<InMemAttach> extractAttaches(Collection<MessageAttachment> attachments) {
-        List<InMemAttach> result = new ArrayList<>(attachments.size());
-        for (MessageAttachment attachment : attachments) {
-            if (attachment.getSize() > MAX_FILE_SIZE) continue;
-            try {
-                String name = attachment.getFileName();
-                byte[] attachBytes = attachment.downloadAsByteArray().get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
-                result.add(new InMemAttach(name, attachBytes));
-            } catch (Exception ignore) {
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * Отправка аттачей
-     *
-     * @param attachments список аттачей
-     * @param ch          канал для отправки двухфазных сообщений
-     */
-    private void sendAttachments(List<InMemAttach> attachments, ServerTextChannel ch) {
-        if (!attachments.isEmpty()) {
-            MessageBuilder msg = new MessageBuilder();
-            for (InMemAttach attach : attachments) {
-                msg.addAttachment(attach.fileContent, attach.fileName);
-            }
-            msg.send(ch);
-        }
-    }
-
-    /**
-     * Извлечение списка URL из содержимого исходного сообщения пользователя
-     *
-     * @param messageContent сообщение пользователя
-     * @return список обнаруженных URL
-     */
-    private List<String> extractAllUrls(String messageContent) {
-        List<String> urls = new ArrayList<>();
-        for (LinkSpan span : LinkExtractor.builder()
-                .linkTypes(EnumSet.of(LinkType.WWW, LinkType.URL))
-                .build()
-                .extractLinks(messageContent)) {
-            urls.add(messageContent.substring(span.getBeginIndex(), span.getEndIndex()));
-        }
-        return urls;
     }
 
     /**
@@ -453,18 +386,5 @@ public class TwoPhaseTransfer {
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         int selectedUser = rnd.nextInt(memberList.size());
         return memberList.get(selectedUser);
-    }
-
-    /**
-     * Сохранённый в памяти аттач, с именем и содержимым
-     */
-    private static class InMemAttach {
-        String fileName;
-        byte[] fileContent;
-
-        InMemAttach(String fileName, byte[] fileContent) {
-            this.fileName = fileName;
-            this.fileContent = fileContent;
-        }
     }
 }
