@@ -13,10 +13,8 @@ import org.jetbrains.annotations.Nullable;
 import org.nibor.autolink.LinkExtractor;
 import org.nibor.autolink.LinkSpan;
 import org.nibor.autolink.LinkType;
-import xyz.funforge.scratchypaws.hellfrog.core.TwoPhaseTransfer;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -134,12 +132,12 @@ public class MessageUtils
     @NotNull
     public static String escapeSpecialSymbols(@Nullable String value) {
         if (CommonUtils.isTrStringEmpty(value)) return "";
-        return value.replace("`", "\\`")
+        return value.replace("\\", "\\\\")
+                .replace("`", "\\`")
                 .replace("*", "\\*")
                 .replace("_", "\\_")
                 .replace("~", "\\~")
-                .replace("|", "\\|")
-                .replace("\\", "\\\\");
+                .replace("|", "\\|");
     }
 
     public static void deleteMessageIfCan(@Nullable Message msg) {
@@ -177,7 +175,7 @@ public class MessageUtils
      * @param ch   текстовый канал, куда необходимо отправить сообщение
      */
     public static void writeUrls(@NotNull List<String> urls,
-                           ServerTextChannel ch) {
+                                 TextChannel ch) {
 
         if (!urls.isEmpty()) {
             MessageBuilder linkBuilder = new MessageBuilder();
@@ -199,7 +197,11 @@ public class MessageUtils
                     .linkTypes(EnumSet.of(LinkType.WWW, LinkType.URL))
                     .build()
                     .extractLinks(messageContent)) {
-                urls.add(messageContent.substring(span.getBeginIndex(), span.getEndIndex()));
+                String url = messageContent.substring(span.getBeginIndex(), span.getEndIndex());
+                if (url.endsWith("||")) {
+                    url = url.substring(0, url.length() - 2);
+                }
+                urls.add(url);
             }
         }
         return Collections.unmodifiableList(urls);
@@ -211,7 +213,7 @@ public class MessageUtils
      * @param attachments список аттачей
      * @param ch          канал для отправки двухфазных сообщений
      */
-    public static void sendAttachments(List<InMemoryAttach> attachments, ServerTextChannel ch) {
+    public static void sendAttachments(List<InMemoryAttach> attachments, TextChannel ch) {
         if (!attachments.isEmpty()) {
             for (InMemoryAttach attach : attachments) {
                 try {

@@ -3,7 +3,6 @@ package xyz.funforge.scratchypaws.hellfrog.core;
 import besus.utils.collection.Sequental;
 import org.apache.tools.ant.types.Commandline;
 import org.javacord.api.DiscordApi;
-import org.javacord.api.entity.Icon;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
@@ -33,6 +32,7 @@ import org.javacord.core.entity.permission.PermissionsImpl;
 import xyz.funforge.scratchypaws.hellfrog.commands.BotCommand;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.UserCachedData;
 import xyz.funforge.scratchypaws.hellfrog.reactions.*;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerPreferences;
@@ -43,7 +43,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 public class EventsListener
         implements MessageCreateListener, MessageEditListener, MessageDeleteListener,
@@ -292,31 +291,9 @@ public class EventsListener
             mayBeChannel.ifPresent(c -> {
                 Instant currentStamp = Instant.now();
                 String stampAsString = CommonUtils.getCurrentGmtTimeAsString();
-                String displayUserName;
-                if (event.getServer().getMembers().contains(event.getUser())) {
-                    displayUserName = event.getServer().getDisplayName(event.getUser());
-                } else {
-                    displayUserName = event.getUser().getName();
-                }
-                boolean hasAvatarData = false;
-                byte[] avatarBytes = new byte[0];
-                String avatarName;
-                String avatarExt = "";
-                try {
-                    Icon avatar = event.getUser().getAvatar();
-                    avatarName = avatar.getUrl().getFile();
-                    String[] nameEl = avatarName.split("\\.");
-                    if (nameEl.length > 0) {
-                        avatarExt = nameEl[nameEl.length - 1];
-                        avatarBytes = avatar.asByteArray().get(20, TimeUnit.SECONDS);
-                        if (avatarBytes.length > 0) {
-                            hasAvatarData = true;
-                        }
-                    }
-                } catch (Exception ignore) {
-                }
+                UserCachedData userCachedData = new UserCachedData(event.getUser(), event.getServer());
 
-                String userName = displayUserName
+                String userName = userCachedData.getDisplayUserName()
                         + " (" + event.getUser().getDiscriminatedName() + ")";
                 final int newlineBreak = 20;
                 EmbedBuilder embedBuilder = new EmbedBuilder()
@@ -329,8 +306,8 @@ public class EventsListener
                         .addField("Action", code.toString(), true)
                         .addField("Server",
                                 CommonUtils.addLinebreaks(event.getServer().getName(), newlineBreak), true);
-                if (hasAvatarData) {
-                    embedBuilder.setThumbnail(avatarBytes, avatarExt);
+                if (userCachedData.isHasAvatar()) {
+                    embedBuilder.setThumbnail(userCachedData.getAvatarBytes(), userCachedData.getAvatarExtension());
                 }
                 new MessageBuilder()
                         .setEmbed(embedBuilder)

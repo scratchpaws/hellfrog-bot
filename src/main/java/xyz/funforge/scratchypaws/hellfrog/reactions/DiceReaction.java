@@ -12,6 +12,7 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
+import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
 import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
 
@@ -175,9 +176,9 @@ public class DiceReaction
                         long max = diceNum * varNum + 1;
                         String defName = "You";
                         if (user != null) {
-                            defName = server != null ?
+                            defName = MessageUtils.escapeSpecialSymbols(server != null ?
                                     server.getDisplayName(user) :
-                                    user.getName();
+                                    user.getName());
                         }
                         MessageBuilder msg = new MessageBuilder()
                                 .append(defName, MessageDecoration.BOLD)
