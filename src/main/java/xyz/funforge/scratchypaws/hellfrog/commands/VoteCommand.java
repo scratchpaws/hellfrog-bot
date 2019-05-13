@@ -345,18 +345,17 @@ public class VoteCommand
             Map<Long, KnownCustomEmoji> foundCustomEmoji = new HashMap<>();
 
             if (!hasPoints) {
-                VotePoint negative = new VotePoint();
-                negative.setId(1L);
-                negative.setEmoji(EmojiParser.parseToUnicode(":thumbsdown:"));
-                negative.setPointText("Vote down");
-
                 VotePoint positive = new VotePoint();
                 positive.setId(2L);
                 positive.setEmoji(EmojiParser.parseToUnicode(":thumbsup:"));
-                positive.setPointText("Vote up");
-
-                votePoints.add(negative);
+                positive.setPointText("Yes");
                 votePoints.add(positive);
+
+                VotePoint negative = new VotePoint();
+                negative.setId(1L);
+                negative.setEmoji(EmojiParser.parseToUnicode(":thumbsdown:"));
+                negative.setPointText("No");
+                votePoints.add(negative);
             } else {
                 long counter = 1L;
                 for (int i = 0; i < rawPoints.size(); i += 2) {
