@@ -1,6 +1,8 @@
 package xyz.funforge.scratchypaws.hellfrog.core;
 
 import besus.utils.collection.Sequental;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.tools.ant.types.Commandline;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.ServerTextChannel;
@@ -50,12 +52,14 @@ public class EventsListener
         ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener {
 
-    private static final String VERSION_STRING = "0.1.19b";
+    private static final String VERSION_STRING = "0.1.20b";
 
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
     private final MessageStats messageStats = new MessageStats();
     private final TwoPhaseTransfer twoPhaseTransfer = new TwoPhaseTransfer();
+    private static final Logger log = LogManager.getLogger(EventsListener.class.getSimpleName());
+    private static final Logger cmdlog = LogManager.getLogger("Commands debug");
 
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
@@ -127,7 +131,7 @@ public class EventsListener
         }
 
         String[] rawCmdline = Commandline.translateCommandline(withoutCommonPrefix);
-        System.out.println(Arrays.toString(rawCmdline));
+        cmdlog.info(Arrays.toString(rawCmdline));
 
         if (rawCmdline.length >= 1) {
             String commandPrefix = rawCmdline[0].toLowerCase();
@@ -242,7 +246,7 @@ public class EventsListener
                 "Invite url: " + api.createBotInvite(new PermissionsImpl(1544940737))
                 : " ";
         String readyMsg = "Bot started. " + invite;
-        System.err.println(readyMsg);
+        log.info(readyMsg);
         BroadCast.sendBroadcastToAllBotOwners(readyMsg);
 
         // выключать в продуктиве. будет спамить

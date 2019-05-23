@@ -3,6 +3,8 @@ package xyz.funforge.scratchypaws.hellfrog.common;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,6 +22,7 @@ public final class CodeSourceUtils {
 
     private volatile static Path codeSourceParentPath = null;
     private volatile static Path codeSourceJarPath = null;
+    private static final Logger log = LogManager.getLogger(CodeSourceUtils.class.getSimpleName());
 
     private CodeSourceUtils() {
         throw new RuntimeException("Instance of " + CodeSourceUtils.class.getName() + " not allowed.");
@@ -96,10 +99,10 @@ public final class CodeSourceUtils {
         }
         successList.stream()
                 .reduce((s1, s2) -> s1 + ", " + s2)
-                .ifPresent(s -> System.err.println("Created instances of: " + s));
+                .ifPresent(s -> log.info("Created instances of: " + s));
         failList.stream()
                 .reduce((s1, s2) -> s1 + '\n' + s2)
-                .ifPresent(s -> System.err.println("Unable to create instances of:\n" + s));
+                .ifPresent(s -> log.info("Unable to create instances of:\n" + s));
         return Collections.unmodifiableList(collectedCommandsList);
     }
 }
