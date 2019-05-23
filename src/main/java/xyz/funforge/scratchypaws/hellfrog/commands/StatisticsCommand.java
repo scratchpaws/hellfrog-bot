@@ -88,7 +88,7 @@ public class StatisticsCommand
                                                    ArrayList<String> anotherLines) {
 
         if (!canExecuteServerCommand(event, server)) {
-            showAccessDeniedServerMessage(channel);
+            event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
             return;
         }
 

@@ -173,7 +173,7 @@ public class EventsListener
                             );
                 }
 
-                helpUsage.send(event.getChannel());
+                event.getMessageAuthor().asUser().ifPresent(helpUsage::send);
             }
         }
     }

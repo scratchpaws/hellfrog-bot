@@ -5,6 +5,7 @@ import org.apache.commons.cli.*;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.MessageBuilder;
+import org.javacord.api.entity.message.Messageable;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -222,10 +223,6 @@ public abstract class BotCommand {
         if (mayBeUser.isPresent() && (channel instanceof ServerTextChannel)) {
             User user = mayBeUser.get();
             new MessageBuilder()
-                    .append(user)
-                    .append(", check your private")
-                    .send(channel);
-            new MessageBuilder()
                     .appendCode("", getCommandHelpUsage())
                     .send(user);
         } else {
@@ -244,23 +241,47 @@ public abstract class BotCommand {
         return result;
     }
 
-    void showAccessDeniedGlobalMessage(TextChannel channel) {
-        showErrorMessage("Only bot owners can do it.", channel);
+    void showAccessDeniedGlobalMessage(Messageable messageable) {
+        showErrorMessage("Only bot owners can do it.", messageable);
     }
 
-    void showAccessDeniedServerMessage(TextChannel channel) {
-        showErrorMessage("Only allowed users and roles can do it.", channel);
+    void showAccessDeniedServerMessage(Messageable messageable) {
+        showErrorMessage("Only allowed users and roles can do it.", messageable);
     }
 
-    void showErrorMessage(String textMessage, TextChannel channel) {
-        showEmbedMessage(textMessage, channel, ERROR_MESSAGE);
+    void showErrorMessage(String textMessage, Messageable messageable) {
+        showEmbedMessage(textMessage, messageable, ERROR_MESSAGE);
     }
 
-    void showInfoMessage(String textMessage, TextChannel channel) {
-        showEmbedMessage(textMessage, channel, INFO_MESSAGE);
+    void showErrorMessageByRights(String textMessage, MessageCreateEvent event) {
+        showEmbedMessageByRights(textMessage, event, ERROR_MESSAGE);
     }
 
-    private void showEmbedMessage(String textMessage, TextChannel channel, int type) {
+    void showInfoMessageByRights(String textMessage, MessageCreateEvent event) {
+        showEmbedMessageByRights(textMessage, event, INFO_MESSAGE);
+    }
+
+    void showInfoMessage(String textMessage, Messageable messageable) {
+        showEmbedMessage(textMessage, messageable, INFO_MESSAGE);
+    }
+
+    private void showEmbedMessageByRights(String textMessage, MessageCreateEvent event, int type) {
+        event.getMessageAuthor().asUser().ifPresent(user -> {
+            event.getServer().ifPresent(server ->
+                    event.getServerTextChannel().ifPresent(serverTextChannel -> {
+                        if (server.isAdmin(user) || server.isOwner(user)) {
+                            showEmbedMessage(textMessage, serverTextChannel, type);
+                        } else {
+                            showEmbedMessage(textMessage, user, type);
+                        }
+                    }));
+            if (!event.isServerMessage()) {
+                showEmbedMessage(textMessage, user, type);
+            }
+        });
+    }
+
+    private void showEmbedMessage(String textMessage, Messageable target, int type) {
         Color messageColor = Color.BLACK;
         switch (type) {
             case ERROR_MESSAGE:
@@ -271,7 +292,7 @@ public abstract class BotCommand {
                 messageColor = Color.CYAN;
                 break;
         }
-        User yourself = channel.getApi().getYourself();
+        User yourself = SettingsController.getInstance().getDiscordApi().getYourself();
         new MessageBuilder()
                 .setEmbed(new EmbedBuilder()
                         .setColor(messageColor)
@@ -279,7 +300,7 @@ public abstract class BotCommand {
                         .setTimestampToNow()
                         .setFooter(type == ERROR_MESSAGE ? "This message will automatically delete in 20 seconds." : null)
                         .setAuthor(yourself))
-                .send(channel).thenAccept(m -> {
+                .send(target).thenAccept(m -> {
             if (type == ERROR_MESSAGE) {
                 CompletableFuture.runAsync(() -> {
                     try {

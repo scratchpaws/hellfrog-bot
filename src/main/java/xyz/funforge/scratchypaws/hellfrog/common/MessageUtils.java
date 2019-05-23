@@ -6,6 +6,7 @@ import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageBuilder;
+import org.javacord.api.entity.message.Messageable;
 import org.javacord.api.entity.server.Server;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -76,10 +77,10 @@ public class MessageUtils
         }
     }
 
-    public static void sendLongMessage(MessageBuilder messageBuilder, TextChannel channel) {
+    public static void sendLongMessage(MessageBuilder messageBuilder, Messageable messageable) {
 
         if (messageBuilder.getStringBuilder().length() <= 2000) {
-            messageBuilder.send(channel);
+            messageBuilder.send(messageable);
         } else {
             String[] lines = messageBuilder.getStringBuilder().toString()
                     .split("\n");
@@ -97,13 +98,13 @@ public class MessageUtils
                 int current = msg.getStringBuilder().length();
                 int lineLen = line.length();
                 if (current + lineLen + 1 > 2000) { // учитываем в т.ч. \n как 1 символ переноса
-                    msg.send(channel);
+                    msg.send(messageable);
                     msg = new MessageBuilder();
                 }
                 msg.append(line).appendNewLine();
             }
             if (msg.getStringBuilder().length() > 0) {
-                msg.send(channel);
+                msg.send(messageable);
             }
         }
     }

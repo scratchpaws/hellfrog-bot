@@ -12,9 +12,9 @@ buildNumber.properties
 # ---> Java
 *.class
 
-# B2B Adm SS specified
-test-db/
+# log files
 *.log
+*.log.gz
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*

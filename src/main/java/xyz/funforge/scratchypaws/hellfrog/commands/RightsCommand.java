@@ -125,10 +125,10 @@ public class RightsCommand
             if (CommonUtils.isTrStringEmpty(aclSwitchModeValue)) {
                 String message = "Current access control mode is " + (serverPreferences.getNewAclMode() ?
                         "new" : "old") + '.';
-                showInfoMessage(message, channel);
+                showInfoMessageByRights(message, event);
             } else {
                 if (!canExecuteServerCommand(event, server)) {
-                    showAccessDeniedServerMessage(channel);
+                    event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
                     return;
                 }
                 switch (aclSwitchModeValue) {
@@ -200,7 +200,7 @@ public class RightsCommand
 
         if (allowMode || disallowMode) {
             if (!canExecuteServerCommand(event, server)) {
-                showAccessDeniedServerMessage(channel);
+                event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
                 return;
             }
             boolean userModify = cmdline.hasOption('u');
@@ -392,7 +392,7 @@ public class RightsCommand
                         resolvedAllowedRoles.isEmpty() &&
                         resolvedAllowedChannels.isEmpty())
                     msgBuilder.append("  * No rights were specified for the command.");
-                showInfoMessage(msgBuilder.getStringBuilder().toString(), channel);
+                showInfoMessageByRights(msgBuilder.getStringBuilder().toString(), event);
             }
         }
     }

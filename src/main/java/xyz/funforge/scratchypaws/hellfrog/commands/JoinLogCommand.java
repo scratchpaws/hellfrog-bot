@@ -64,7 +64,7 @@ public class JoinLogCommand
                                                    ArrayList<String> anotherLines) {
 
         if (!canExecuteServerCommand(event, server, channel.getId())) {
-            showAccessDeniedServerMessage(channel);
+            event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
             return;
         }
 

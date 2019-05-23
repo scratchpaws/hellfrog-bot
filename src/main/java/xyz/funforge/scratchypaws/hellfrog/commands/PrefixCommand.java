@@ -55,7 +55,7 @@ public class PrefixCommand
         SettingsController settingsController = SettingsController.getInstance();
 
         if (cmdline.hasOption('g') && cmdline.hasOption('s')) {
-            showErrorMessage("Сannot specify changing and display parameters at the same time.", channel);
+            showErrorMessageByRights("Сannot specify changing and display parameters at the same time.", event);
             return;
         }
 
@@ -65,17 +65,17 @@ public class PrefixCommand
                 long serverId = server.getId();
                 String serverName = server.getName();
                 String serverPrefix = settingsController.getBotPrefix(serverId);
-                showInfoMessage("Current bot prefix for " + serverName + " server is: " +
-                        serverPrefix, channel);
+                showInfoMessageByRights("Current bot prefix for " + serverName + " server is: " +
+                        serverPrefix, event);
             } else {
                 // глобально
                 String globalPrefix = settingsController.getGlobalCommonPrefix();
-                showInfoMessage("Current bot global prefix is: " +
-                        globalPrefix, channel);
+                showInfoMessageByRights("Current bot global prefix is: " +
+                        globalPrefix, event);
             }
         } else if (cmdline.hasOption('s')) {
             if (cmdlineArgs.size() < 1) {
-                showErrorMessage("Prefix not set", channel);
+                showErrorMessageByRights("Prefix not set", event);
             } else {
 
                 String newPrefix = cmdlineArgs.get(0).trim();
@@ -94,7 +94,7 @@ public class PrefixCommand
                                     + newPrefix + " help)");
                         }
                     } else {
-                        showAccessDeniedServerMessage(channel);
+                        event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
                     }
                 } else {
                     // глобально
@@ -103,7 +103,7 @@ public class PrefixCommand
                         showInfoMessage("Prefix changed to " + newPrefix.trim() +
                                 " (globally, by default) ", channel);
                     } else {
-                        showAccessDeniedGlobalMessage(channel);
+                        event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedGlobalMessage);
                     }
                 }
             }

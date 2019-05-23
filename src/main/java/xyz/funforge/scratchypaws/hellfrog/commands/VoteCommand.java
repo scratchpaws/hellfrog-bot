@@ -259,7 +259,7 @@ public class VoteCommand
                         resultMessage.appendNewLine();
                     });
 
-            MessageUtils.sendLongMessage(resultMessage, channel);
+            event.getMessageAuthor().asUser().ifPresent(user -> MessageUtils.sendLongMessage(resultMessage, user));
         } else if (interruptMode) {
             List<ActiveVote> activeVotes = settingsController.getServerPreferences(server.getId())
                     .getActiveVotes();
@@ -273,9 +273,9 @@ public class VoteCommand
                                 cnt++;
                             }
                             if (cnt > 0) {
-                                showErrorMessage("Some votes cannot be interrupted " +
+                                showErrorMessageByRights("Some votes cannot be interrupted " +
                                                 "(access denied)",
-                                        channel);
+                                        event);
                             }
                         })
                 );
@@ -287,13 +287,13 @@ public class VoteCommand
                         if (canExecuteServerCommand(event, server, activeVote.getTextChatId())) {
                             voteController.interruptVote(server.getId(), interruptId);
                         } else {
-                            showAccessDeniedServerMessage(channel);
+                            event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
                             return;
                         }
                     }
                 }
                 if (!found) {
-                    showErrorMessage("Unable to find a vote with the specified ID", channel);
+                    showErrorMessageByRights("Unable to find a vote with the specified ID", event);
                 }
             }
         } else {
@@ -306,17 +306,17 @@ public class VoteCommand
             if (targetChannelOpt.isPresent()) {
                 targetChannel = targetChannelOpt.get();
             } else {
-                showErrorMessage("Unable to resolve target server text channel", channel);
+                showErrorMessageByRights("Unable to resolve target server text channel", event);
                 return;
             }
 
             if (!canExecuteServerCommand(event, server, targetChannel.getId())) {
-                showAccessDeniedServerMessage(channel);
+                event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
                 return;
             }
 
             if (cmdlineArgs.isEmpty() && anotherLines.isEmpty()) {
-                showErrorMessage("Descriptive text must be specified", channel);
+                showErrorMessageByRights("Descriptive text must be specified", event);
                 return;
             }
 

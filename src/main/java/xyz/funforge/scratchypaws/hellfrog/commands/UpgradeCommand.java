@@ -82,7 +82,7 @@ public class UpgradeCommand
     private void commandAction(CommandLine cmdline,
                                TextChannel channel, MessageCreateEvent event) {
         if (!canExecuteGlobalCommand(event)) {
-            showAccessDeniedGlobalMessage(channel);
+            event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedGlobalMessage);
             return;
         }
 
