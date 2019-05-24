@@ -59,7 +59,7 @@ public class DumpCommand
         if (serverInfo) {
             long serverId = 0L;
             if (!CommonUtils.isTrStringEmpty(serverInfoIdValue) && !CommonUtils.isLong(serverInfoIdValue)) {
-                showErrorMessage("Parameter must be a server id", channel);
+                showErrorMessage("Parameter must be a server id", event);
                 return;
             }
             if (event.getServer().isPresent()) {
@@ -69,7 +69,7 @@ public class DumpCommand
                 serverId = CommonUtils.onlyNumbersToLong(serverInfoIdValue);
             }
             if (serverId == 0L) {
-                showErrorMessage("Server Id required", channel);
+                showErrorMessage("Server Id required", event);
                 return;
             }
 
@@ -77,17 +77,15 @@ public class DumpCommand
                 boolean isCanServerExecute = super.canExecuteServerCommand(event, server, channel.getId());
                 boolean isCanGlobalExecute = super.canExecuteGlobalCommand(event);
                 if (isCanGlobalExecute || isCanServerExecute) {
-                    detachedGrabServerInfo(server, channel);
+                    detachedGrabServerInfo(server, event);
                 } else {
-                    showAccessDeniedGlobalMessage(channel);
+                    showAccessDeniedGlobalMessage(event);
                 }
-            }, () -> {
-                showErrorMessage("Server not found by this id", channel);
-            });
+            }, () -> showErrorMessage("Server not found by this id", event));
         }
     }
 
-    private void detachedGrabServerInfo(final Server server, final TextChannel channel) {
+    private void detachedGrabServerInfo(final Server server, final MessageCreateEvent event) {
         StringBuilder sw = new StringBuilder();
         MessageBuilder res = new MessageBuilder();
         String serverName = server.getName();
@@ -243,7 +241,7 @@ public class DumpCommand
                                 .append(CommonUtils.addLinebreaks(list, 120))
                 );
         byte[] attach = sw.toString().getBytes(StandardCharsets.UTF_8);
-        res.addAttachment(attach, "MemberList.txt");
-        res.send(channel);
+        res.addAttachment(attach, "ServerInfo_" + server.getId() + ".txt");
+        res.send(getMessageTargetByRights(event));
     }
 }

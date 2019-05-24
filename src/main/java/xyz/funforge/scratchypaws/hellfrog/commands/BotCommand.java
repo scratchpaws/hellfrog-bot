@@ -2,15 +2,21 @@ package xyz.funforge.scratchypaws.hellfrog.commands;
 
 import besus.utils.collection.Sequental;
 import org.apache.commons.cli.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.Messageable;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
+import org.javacord.api.exception.MissingPermissionsException;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import xyz.funforge.scratchypaws.hellfrog.common.CodeSourceUtils;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 import xyz.funforge.scratchypaws.hellfrog.core.AccessControlCheck;
@@ -24,6 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Основные функции команд бота
@@ -42,6 +49,7 @@ public abstract class BotCommand {
     private boolean onlyServerCommand = false;
     private String footer = "";
     private boolean updateLastUsage = true;
+    private static final Logger log = LogManager.getLogger(BotCommand.class.getSimpleName());
 
     public BotCommand(String botPrefix, String description) {
         this.prefix = botPrefix;
@@ -145,13 +153,13 @@ public abstract class BotCommand {
                     if (!onlyServerCommand) {
                         executeCreateMessageEventDirect(cmdline, cmdlineArgs, channel, event, anotherLines);
                     } else {
-                        showErrorMessage("This command can't be run into private channel", channel);
+                        showErrorMessage("This command can't be run into private channel", event);
                     }
                 }
             }
         } catch (ParseException err) {
             String errMsg = "Unable to parse command arguments: " + err.getMessage();
-            showErrorMessage(errMsg, channel);
+            showErrorMessage(errMsg, event);
         }
     }
 
@@ -232,7 +240,7 @@ public abstract class BotCommand {
         }
     }
 
-    private ArrayList<String> cleanArgsDelimiter(String[] args) {
+    private ArrayList<String> cleanArgsDelimiter(@NotNull String[] args) {
         ArrayList<String> result = new ArrayList<>(args.length);
         for (String item : args) {
             if (!item.equals("--"))
@@ -241,47 +249,64 @@ public abstract class BotCommand {
         return result;
     }
 
-    void showAccessDeniedGlobalMessage(Messageable messageable) {
-        showErrorMessage("Only bot owners can do it.", messageable);
+    Messageable getMessageTargetByRights(MessageCreateEvent event) {
+        return canShowMessageByRights(event) ? event.getChannel() : event.getMessageAuthor()
+                .asUser().orElse(event.getApi().getOwner().join());
     }
 
-    void showAccessDeniedServerMessage(Messageable messageable) {
-        showErrorMessage("Only allowed users and roles can do it.", messageable);
+    void showAccessDeniedGlobalMessage(MessageCreateEvent event) {
+        showErrorMessage("Only bot owners can do it.", event);
     }
 
-    void showErrorMessage(String textMessage, Messageable messageable) {
-        showEmbedMessage(textMessage, messageable, ERROR_MESSAGE);
+    void showAccessDeniedServerMessage(MessageCreateEvent event) {
+        showErrorMessage("Only allowed users and roles can do it.", event);
     }
 
-    void showErrorMessageByRights(String textMessage, MessageCreateEvent event) {
-        showEmbedMessageByRights(textMessage, event, ERROR_MESSAGE);
+    void showErrorMessage(String textMessage, MessageCreateEvent event) {
+        resolveMessageEmbedByRights(textMessage, event, ERROR_MESSAGE);
     }
 
-    void showInfoMessageByRights(String textMessage, MessageCreateEvent event) {
-        showEmbedMessageByRights(textMessage, event, INFO_MESSAGE);
+    void showInfoMessage(String textMessage, MessageCreateEvent event) {
+        resolveMessageEmbedByRights(textMessage, event, INFO_MESSAGE);
     }
 
-    void showInfoMessage(String textMessage, Messageable messageable) {
-        showEmbedMessage(textMessage, messageable, INFO_MESSAGE);
+    private void resolveMessageEmbedByRights(@NotNull String textMessage, @NotNull MessageCreateEvent event, int type) {
+        event.getMessageAuthor().asUser().ifPresentOrElse(user -> event.getServer().ifPresentOrElse(server ->
+                        event.getServerTextChannel().ifPresentOrElse(serverTextChannel -> {
+                            boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, event, server, strictByChannels);
+                            boolean canWriteToChannel = serverTextChannel.canYouWrite();
+                            if (hasRights && canWriteToChannel) {
+                                showEmbedMessage(textMessage, serverTextChannel, user, type);
+                            } else {
+                                showEmbedMessage(textMessage, user, null, type);
+                            }
+                        }, () -> showEmbedMessage(textMessage, user, null, type)),
+                () -> showEmbedMessage(textMessage, user, null, type)),
+                () -> log.warn("Receive message from {}", event.getMessageAuthor()));
     }
 
-    private void showEmbedMessageByRights(String textMessage, MessageCreateEvent event, int type) {
-        event.getMessageAuthor().asUser().ifPresent(user -> {
-            event.getServer().ifPresent(server ->
-                    event.getServerTextChannel().ifPresent(serverTextChannel -> {
-                        if (server.isAdmin(user) || server.isOwner(user)) {
-                            showEmbedMessage(textMessage, serverTextChannel, type);
-                        } else {
-                            showEmbedMessage(textMessage, user, type);
-                        }
-                    }));
-            if (!event.isServerMessage()) {
-                showEmbedMessage(textMessage, user, type);
-            }
-        });
+    @Contract("null -> false")
+    private boolean canShowMessageByRights(MessageCreateEvent event) {
+        if (event == null)
+            return false;
+        if (event.isServerMessage())
+            return false;
+
+        Optional<User> mayBeUser = event.getMessageAuthor().asUser();
+        Optional<Server> mayBeServer = event.getServer();
+        Optional<ServerTextChannel> mayBeTextChannel = event.getServerTextChannel();
+        if (mayBeUser.isPresent() && mayBeServer.isPresent() && mayBeTextChannel.isPresent()) {
+            Server server = mayBeServer.get();
+            ServerTextChannel channel = mayBeTextChannel.get();
+            boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, event, server, strictByChannels);
+            boolean canWriteToChannel = channel.canYouWrite();
+            return hasRights && canWriteToChannel;
+        } else {
+            return false;
+        }
     }
 
-    private void showEmbedMessage(String textMessage, Messageable target, int type) {
+    private void showEmbedMessage(String textMessage, Messageable target, @Nullable User alternatePrivateTarget, int type) {
         Color messageColor = Color.BLACK;
         switch (type) {
             case ERROR_MESSAGE:
@@ -293,23 +318,40 @@ public abstract class BotCommand {
                 break;
         }
         User yourself = SettingsController.getInstance().getDiscordApi().getYourself();
-        new MessageBuilder()
-                .setEmbed(new EmbedBuilder()
-                        .setColor(messageColor)
-                        .setDescription(textMessage)
-                        .setTimestampToNow()
-                        .setFooter(type == ERROR_MESSAGE ? "This message will automatically delete in 20 seconds." : null)
-                        .setAuthor(yourself))
-                .send(target).thenAccept(m -> {
-            if (type == ERROR_MESSAGE) {
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        Thread.sleep(20_000L);
-                        if (m.canYouDelete())
-                            m.delete();
-                    } catch (InterruptedException ignore) {
-                    }
-                });
+        Message message = null;
+        try {
+            message = new MessageBuilder()
+                    .setEmbed(new EmbedBuilder()
+                            .setColor(messageColor)
+                            .setDescription(textMessage)
+                            .setTimestampToNow()
+                            //.setFooter(type == ERROR_MESSAGE ? "This message will automatically delete in 20 seconds." : null)
+                            .setAuthor(yourself))
+                    .send(target).get(10_000L, TimeUnit.SECONDS);
+        } catch (Exception err) {
+            if (target instanceof TextChannel && alternatePrivateTarget != null) {
+                if (err.getCause() instanceof MissingPermissionsException) {
+                    showEmbedMessage("Unable sent message to text channel! Missing permission!",
+                            alternatePrivateTarget, null, ERROR_MESSAGE);
+                } else {
+                    log.error("Unable to send message: " + err.getMessage(), err);
+                }
+                showEmbedMessage(textMessage, alternatePrivateTarget, null, type);
+            }
+        }
+/*
+        if (message != null && type == ERROR_MESSAGE) {
+            deleteErrorMessage(message);
+        }*/
+    }
+
+    private void deleteErrorMessage(Message message) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                Thread.sleep(20_000L);
+                if (message.canYouDelete())
+                    message.delete();
+            } catch (InterruptedException ignore) {
             }
         });
     }

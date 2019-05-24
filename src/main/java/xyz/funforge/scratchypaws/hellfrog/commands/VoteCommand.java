@@ -134,12 +134,12 @@ public class VoteCommand
 
         boolean hasTimeout = cmdline.hasOption('t');
         if (hasTimeout && !CommonUtils.isLong(cmdline.getOptionValue('t'))) {
-            showErrorMessage("Timeout must be a number", channel);
+            showErrorMessage("Timeout must be a number", event);
             return;
         }
         long timeout = hasTimeout ? CommonUtils.onlyNumbersToLong(cmdline.getOptionValue('t')) : 0;
         if (hasTimeout && timeout <= 0) {
-            showErrorMessage("Timeout must be a positive number great that zero", channel);
+            showErrorMessage("Timeout must be a positive number great that zero", event);
             return;
         }
 
@@ -148,12 +148,12 @@ public class VoteCommand
         short interruptId = (short) (interruptMode ? CommonUtils.onlyNumbersToLong(cmdline.getOptionValue('i')) : 0);
 
         if (interruptMode && !CommonUtils.isLong(cmdline.getOptionValue('i')) && !interruptAll) {
-            showErrorMessage("Vote ID must be a number or \"all\"", channel);
+            showErrorMessage("Vote ID must be a number or \"all\"", event);
             return;
         }
 
         if (interruptMode && interruptId <= 0 && !interruptAll) {
-            showErrorMessage("Vote ID must be a positive number great that zero", channel);
+            showErrorMessage("Vote ID must be a positive number great that zero", event);
             return;
         }
 
@@ -166,7 +166,7 @@ public class VoteCommand
         boolean hasWinThreshold = cmdline.hasOption('w') && !CommonUtils.isTrStringEmpty(cmdline.getOptionValue('w'));
         long winThreshold = CommonUtils.onlyNumbersToLong(cmdline.getOptionValue('w'));
         if (hasWinThreshold && winThreshold <= 0) {
-            showErrorMessage("Win threshold parameter must be a positive number great that zero", channel);
+            showErrorMessage("Win threshold parameter must be a positive number great that zero", event);
             return;
         }
         boolean defaultChoose = cmdline.hasOption('d') || hasWinThreshold;
@@ -174,7 +174,7 @@ public class VoteCommand
         if ((interruptMode || listMode) && (hasPoints || rolesFilter || hasTimeout || specifiedChannel
                 || singleChooseMode || defaultChoose)) {
             showErrorMessage("Cannot specify different modes and it arguments " +
-                    "of the command at the same time.", channel);
+                    "of the command at the same time.", event);
             return;
         }
 
@@ -259,7 +259,7 @@ public class VoteCommand
                         resultMessage.appendNewLine();
                     });
 
-            event.getMessageAuthor().asUser().ifPresent(user -> MessageUtils.sendLongMessage(resultMessage, user));
+            MessageUtils.sendLongMessage(resultMessage, getMessageTargetByRights(event));
         } else if (interruptMode) {
             List<ActiveVote> activeVotes = settingsController.getServerPreferences(server.getId())
                     .getActiveVotes();
@@ -273,7 +273,7 @@ public class VoteCommand
                                 cnt++;
                             }
                             if (cnt > 0) {
-                                showErrorMessageByRights("Some votes cannot be interrupted " +
+                                showErrorMessage("Some votes cannot be interrupted " +
                                                 "(access denied)",
                                         event);
                             }
@@ -287,13 +287,13 @@ public class VoteCommand
                         if (canExecuteServerCommand(event, server, activeVote.getTextChatId())) {
                             voteController.interruptVote(server.getId(), interruptId);
                         } else {
-                            event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
+                            showAccessDeniedServerMessage(event);
                             return;
                         }
                     }
                 }
                 if (!found) {
-                    showErrorMessageByRights("Unable to find a vote with the specified ID", event);
+                    showErrorMessage("Unable to find a vote with the specified ID", event);
                 }
             }
         } else {
@@ -306,17 +306,22 @@ public class VoteCommand
             if (targetChannelOpt.isPresent()) {
                 targetChannel = targetChannelOpt.get();
             } else {
-                showErrorMessageByRights("Unable to resolve target server text channel", event);
+                showErrorMessage("Unable to resolve target server text channel", event);
+                return;
+            }
+
+            if (!targetChannel.canWrite(event.getApi().getYourself())) {
+                showErrorMessage("Bot cannot write message to target server text channel", event);
                 return;
             }
 
             if (!canExecuteServerCommand(event, server, targetChannel.getId())) {
-                event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
+                showAccessDeniedServerMessage(event);
                 return;
             }
 
             if (cmdlineArgs.isEmpty() && anotherLines.isEmpty()) {
-                showErrorMessageByRights("Descriptive text must be specified", event);
+                showErrorMessage("Descriptive text must be specified", event);
                 return;
             }
 
@@ -330,14 +335,14 @@ public class VoteCommand
                 rawPoints.addAll(Arrays.asList(cmdline.getOptionValues('p')));
             }
             if (hasPoints && (rawPoints.size() < 2 || rawPoints.size() % 2 != 0)) {
-                showErrorMessage("The number of emoji must match the number of points of voting.", channel);
+                showErrorMessage("The number of emoji must match the number of points of voting.", event);
                 return;
             }
 
             ServerSideResolver.ParseResult<Role> parsedRoles = ServerSideResolver.resolveRolesList(server, rawRoles);
             if (parsedRoles.hasNotFound()) {
                 showErrorMessage("The specified roles are not found: " +
-                        parsedRoles.getNotFoundStringList(), channel);
+                        parsedRoles.getNotFoundStringList(), event);
                 return;
             }
 
@@ -375,7 +380,7 @@ public class VoteCommand
                             votePoint.setCustomEmoji(custom.getId());
                             foundCustomEmoji.put(custom.getId(), custom);
                         } else {
-                            showErrorMessage("Unable to find custom emoji " + rawEmoji + " on server", channel);
+                            showErrorMessage("Unable to find custom emoji " + rawEmoji + " on server", event);
                             return;
                         }
                     } else {
@@ -393,7 +398,7 @@ public class VoteCommand
                                 duplicateFound = true;
                         }
                         if (duplicateFound) {
-                            showErrorMessage("Emoji duplicates found", channel);
+                            showErrorMessage("Emoji duplicates found", event);
                             return;
                         }
                     }
@@ -404,13 +409,13 @@ public class VoteCommand
 
             if (defaultChoose && votePoints.size() < 2) {
                 showErrorMessage("Voting with the default vote point should have " +
-                        "two or more vote points", channel);
+                        "two or more vote points", event);
                 return;
             }
 
             if (hasWinThreshold && votePoints.size() != 2) {
                 showErrorMessage("Voting with the winner threshold " +
-                        "should have only two vote points", channel);
+                        "should have only two vote points", event);
                 return;
             }
 
@@ -511,14 +516,10 @@ public class VoteCommand
                         .add(newVote);
                 settingsController.saveServerSideParameters(server.getId());
 
-                String voteUrl = "https://discordapp.com/channels/" +
-                        server.getId() + "/" +
-                        newVote.getTextChatId() + "/" +
-                        newVote.getMessageId();
-
-                showInfoMessage("Vote created: " + voteUrl, channel);
+                String voteUrl = MessageUtils.getMessageUrl(msg);
+                showInfoMessage("Vote created: " + voteUrl, event);
             } catch (Exception err) {
-                showErrorMessage("Unable to create vote: " + err.getMessage(), channel);
+                showErrorMessage("Unable to create vote: " + err.getMessage(), event);
             }
         }
     }

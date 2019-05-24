@@ -64,7 +64,7 @@ public class JoinLogCommand
                                                    ArrayList<String> anotherLines) {
 
         if (!canExecuteServerCommand(event, server, channel.getId())) {
-            event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
+            showAccessDeniedServerMessage(event);
             return;
         }
 
@@ -87,7 +87,7 @@ public class JoinLogCommand
             if (!CommonUtils.isTrStringEmpty(textChannelName)) {
                 mayBeChannel = ServerSideResolver.resolveChannel(server, textChannelName);
                 if (mayBeChannel.isEmpty()) {
-                    showErrorMessage("Unable to resolve text channel", channel);
+                    showErrorMessage("Unable to resolve text channel", event);
                     return;
                 } else {
                     targetChannel = mayBeChannel.get().getId();
@@ -96,17 +96,17 @@ public class JoinLogCommand
 
             if (enableFlag) {
                 if (targetChannel == 0 && previousChannel == 0) {
-                    showErrorMessage("Text channel is not set", channel);
+                    showErrorMessage("Text channel is not set", event);
                     return;
                 }
 
                 if (currentState && targetChannel == 0) {
-                    showErrorMessage("Logging already enabled", channel);
+                    showErrorMessage("Logging already enabled", event);
                     return;
                 }
 
                 if (targetChannel == 0 && previousChannel > 0 && mayBeChannel.isEmpty()) {
-                    showErrorMessage("Unable to enable logging - text channel no longer exists", channel);
+                    showErrorMessage("Unable to enable logging - text channel no longer exists", event);
                     return;
                 }
 
@@ -122,16 +122,16 @@ public class JoinLogCommand
                         msg.append(" to channel ")
                                 .append(serverTextChannel));
 
-                showInfoMessage(msg.getStringBuilder().toString(), channel);
+                showInfoMessage(msg.getStringBuilder().toString(), event);
             }
 
             if (disableFlag) {
                 if (!currentState) {
-                    showErrorMessage("Logging already disabled.", channel);
+                    showErrorMessage("Logging already disabled.", event);
                 } else {
                     preferences.setJoinLeaveDisplay(false);
                     settingsController.saveServerSideParameters(server.getId());
-                    showInfoMessage("Join/Leave logging disabled", channel);
+                    showInfoMessage("Join/Leave logging disabled", event);
                 }
             }
 
@@ -147,12 +147,12 @@ public class JoinLogCommand
                         msg.append(", but target text channel not found. Logging will not work.");
                     }
                 }
-                showInfoMessage(msg.getStringBuilder().toString(), channel);
+                showInfoMessage(msg.getStringBuilder().toString(), event);
             }
         } else if (!enableFlag && !disableFlag) {
-            showErrorMessage("Action required", channel);
+            showErrorMessage("Action required", event);
         } else {
-            showErrorMessage("Only one action may be execute", channel);
+            showErrorMessage("Only one action may be execute", event);
         }
     }
 

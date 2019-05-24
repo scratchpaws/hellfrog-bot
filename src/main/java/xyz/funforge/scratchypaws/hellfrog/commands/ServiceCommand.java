@@ -5,21 +5,15 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.javacord.api.DiscordApi;
-import org.javacord.api.entity.Permissionable;
-import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
-import org.javacord.api.entity.permission.Permissions;
-import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
-import org.javacord.core.entity.permission.PermissionsImpl;
 import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
@@ -38,7 +32,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -67,11 +60,6 @@ public class ServiceCommand
         Option botDate = Option.builder("d")
                 .longOpt("date")
                 .desc("Get bot current local date and time")
-                .build();
-
-        Option inviteUrl = Option.builder("i")
-                .longOpt("invite")
-                .desc("Get bot invite url")
                 .build();
 
         Option runGc = Option.builder("g")
@@ -106,7 +94,7 @@ public class ServiceCommand
                 .argName("text chat")
                 .build();
 
-        super.addCmdlineOption(stopBot, memInfo, botDate, inviteUrl, runGc, runtimeShell, lastUsage,
+        super.addCmdlineOption(stopBot, memInfo, botDate, runGc, runtimeShell, lastUsage,
                 uploadFailRofl, uploadWinRofl, secureTransfer);
 
         super.disableUpdateLastCommandUsage();
@@ -148,7 +136,7 @@ public class ServiceCommand
                                 TextChannel channel, MessageCreateEvent event,
                                 ArrayList<String> anotherLines) {
         if (!canExecuteGlobalCommand(event)) {
-            showAccessDeniedGlobalMessage(channel);
+            showAccessDeniedGlobalMessage(event);
             return;
         }
 
@@ -157,7 +145,6 @@ public class ServiceCommand
         boolean stopAction = cmdline.hasOption('s');
         boolean memInfo = cmdline.hasOption('m');
         boolean getDate = cmdline.hasOption('d');
-        boolean getInvite = cmdline.hasOption('i');
         boolean runGc = cmdline.hasOption('g');
         boolean runtimeShell = cmdline.hasOption('r');
         boolean lastUsageAction = cmdline.hasOption('l');
@@ -166,7 +153,7 @@ public class ServiceCommand
         boolean secureTransfer = cmdline.hasOption("sec");
         String transferChat = cmdline.getOptionValue("sec", "");
 
-        if (stopAction ^ memInfo ^ getDate ^ getInvite ^ runGc ^ runtimeShell ^ lastUsageAction ^
+        if (stopAction ^ memInfo ^ getDate ^ runGc ^ runtimeShell ^ lastUsageAction ^
                 uploadWinRofl ^ uploadFailRofl ^ secureTransfer) {
 
             if (stopAction) {
@@ -191,7 +178,7 @@ public class ServiceCommand
                                 .addField("Total memory:", CommonUtils.humanReadableByteCount(runtime.totalMemory(), false), true)
                                 .addField("Allocated memory:", CommonUtils.humanReadableByteCount(allocatedMemory, false), true)
                                 .setDescription(runGc ? "GC called" : ""))
-                        .send(channel);
+                        .send(getMessageTargetByRights(event));
             }
 
             if (getDate) {
@@ -200,17 +187,7 @@ public class ServiceCommand
                                 .setTitle("Current date and time: ")
                                 .setDescription(CommonUtils.getCurrentGmtTimeAsString())
                                 .setTimestampToNow())
-                        .send(channel);
-            }
-
-            if (getInvite) {
-                if (settingsController.getDiscordApi() != null) {
-                    new MessageBuilder()
-                            .append("Bot invite URL: ", MessageDecoration.BOLD)
-                            .append(settingsController.getDiscordApi()
-                                    .createBotInvite(new PermissionsImpl(470149318)))
-                            .send(channel);
-                }
+                        .send(getMessageTargetByRights(event));
             }
 
             if (runtimeShell) {
@@ -225,7 +202,7 @@ public class ServiceCommand
                                     .setTimestampToNow()
                                     .setTitle("Last usage")
                                     .setDescription("No last usage found"))
-                            .send(channel);
+                            .send(getMessageTargetByRights(event));
                 } else {
                     Duration duration = Duration.between(lastCommandUsage, Instant.now());
                     long totalSeconds = duration.toSeconds();
@@ -240,7 +217,7 @@ public class ServiceCommand
                                     .setTimestampToNow()
                                     .setTitle("Last usage")
                                     .setDescription(res))
-                            .send(channel);
+                            .send(getMessageTargetByRights(event));
                 }
             }
 
@@ -279,7 +256,7 @@ public class ServiceCommand
                                         .setDescription("Two-phase transfer disabled")
                                         .setFooter("This message will be removed after 3 sec.")
                                         .setTimestampToNow())
-                                .send(channel).thenAccept(msg1 -> {
+                                .send(getMessageTargetByRights(event)).thenAccept(msg1 -> {
                             try {
                                 Thread.sleep(3_000L);
                             } catch (InterruptedException ignore) {
@@ -290,7 +267,7 @@ public class ServiceCommand
                 });
             }
         } else {
-            showErrorMessage("Only one service command may be execute", channel);
+            showErrorMessage("Only one service command may be execute", event);
         }
     }
 
@@ -323,7 +300,7 @@ public class ServiceCommand
                         .setTitle("WARNING")
                         .setDescription("Bot stopping NOW!")
                         .setFooter(userData))
-                .send(event.getChannel()).join();
+                .send(getMessageTargetByRights(event)).join();
 
         BroadCast.sendBroadcastUnsafeUsageCE("call bot stopping", event);
 
@@ -374,12 +351,12 @@ public class ServiceCommand
                         }
                     });
                 } else {
-                    showErrorMessage("Debug script required", event.getChannel());
+                    showErrorMessage("Debug script required", event);
                 }
             }));
 
         } else {
-            showErrorMessage("Remote debug not allowed", event.getChannel());
+            showErrorMessage("Remote debug not allowed", event);
         }
     }
 
@@ -438,7 +415,7 @@ public class ServiceCommand
     private void uploadRoflAction(MessageCreateEvent event, boolean isWin) {
         BroadCast.sendBroadcastUnsafeUsageCE("upload rofl file", event);
         if (event.getMessageAttachments().isEmpty()) {
-            showErrorMessage("Attach files requred", event.getChannel());
+            showErrorMessage("Attach files requred", event);
             return;
         }
         Path targetDirectory = isWin ? DiceReaction.getRoflHighPath() : DiceReaction.getRoflLowPath();
@@ -459,17 +436,16 @@ public class ServiceCommand
                 }
                 Path targetFile = targetDirectory.resolve(fileName);
                 Files.move(tmpFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
-                new MessageBuilder()
-                        .append("File " + fileName + " uploaded to " +
-                                (isWin ? "win (high)" : "fail (low)") + " rofl collection.")
-                        .send(event.getChannel());
+
+                showInfoMessage("File " + fileName + " uploaded to " +
+                        (isWin ? "win (high)" : "fail (low)") + " rofl collection.", event);
             }
         } catch (Exception err) {
             new MessageBuilder()
                     .append("Exception reached while upload rofl file:", MessageDecoration.BOLD)
                     .appendNewLine()
                     .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
-                    .send(event.getChannel());
+                    .send(getMessageTargetByRights(event));
         }
     }
 }

@@ -52,7 +52,7 @@ public class EventsListener
         ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener {
 
-    private static final String VERSION_STRING = "0.1.20b";
+    private static final String VERSION_STRING = "0.1.21b";
 
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
@@ -60,6 +60,8 @@ public class EventsListener
     private final TwoPhaseTransfer twoPhaseTransfer = new TwoPhaseTransfer();
     private static final Logger log = LogManager.getLogger(EventsListener.class.getSimpleName());
     private static final Logger cmdlog = LogManager.getLogger("Commands debug");
+
+    private String botInviteUrl = "";
 
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
@@ -142,18 +144,20 @@ public class EventsListener
                     commandPrefix.equals("-h") ||
                     commandPrefix.equals("--help")) {
 
-                MessageBuilder helpUsage = new MessageBuilder()
+                MessageBuilder embedMessageText = new MessageBuilder()
                         .append(settingsController.getBotName())
                         .append(" ")
                         .append(VERSION_STRING, MessageDecoration.BOLD)
                         .appendNewLine()
                         .append("Yet another Discord (tm)(c)(r) bot")
                         .appendNewLine()
+                        .append("[Invite URL](").append(botInviteUrl).append(")")
+                        .appendNewLine()
                         .append("The following commands are available:", MessageDecoration.BOLD)
                         .appendNewLine();
 
                 BotCommand.all().stream()
-                        .forEach(c -> helpUsage.append(c.getPrefix())
+                        .forEach(c -> embedMessageText.append(c.getPrefix())
                                 .append(" - ")
                                 .append(c.getCommandDescription())
                                 .appendNewLine()
@@ -161,19 +165,25 @@ public class EventsListener
 
                 Sequental<MsgCreateReaction> msgCreateReactions = MsgCreateReaction.all();
                 if (msgCreateReactions.stream().count() > 0) {
-                    helpUsage.append("The following reactions with access control available:",
+                    embedMessageText.append("The following reactions with access control available:",
                             MessageDecoration.BOLD)
                             .appendNewLine();
                     msgCreateReactions.stream()
                             .filter(MsgCreateReaction::isAccessControl)
-                            .forEach(r -> helpUsage.append(r.getCommandPrefix())
+                            .forEach(r -> embedMessageText.append(r.getCommandPrefix())
                                     .append(" - ")
                                     .append(r.getCommandDescription())
                                     .appendNewLine()
                             );
                 }
 
-                event.getMessageAuthor().asUser().ifPresent(helpUsage::send);
+                event.getMessageAuthor().asUser().ifPresent(user -> new MessageBuilder()
+                        .setEmbed(new EmbedBuilder()
+                                .setAuthor(event.getApi().getYourself())
+                                .setColor(Color.GREEN)
+                                .setTimestampToNow()
+                                .setDescription(embedMessageText.getStringBuilder().toString()))
+                        .send(user));
             }
         }
     }
@@ -242,9 +252,8 @@ public class EventsListener
         BotCommand.all(); // заранее инициируем поиск и инстантинацию классов команд
         MsgCreateReaction.all();
         DiscordApi api = SettingsController.getInstance().getDiscordApi();
-        String invite = api != null ?
-                "Invite url: " + api.createBotInvite(new PermissionsImpl(1544940737))
-                : " ";
+        botInviteUrl = api != null ? api.createBotInvite(new PermissionsImpl(67497153)) : "";
+        String invite = "Invite url: " + botInviteUrl;
         String readyMsg = "Bot started. " + invite;
         log.info(readyMsg);
         BroadCast.sendBroadcastToAllBotOwners(readyMsg);

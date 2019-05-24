@@ -55,7 +55,7 @@ public class PrefixCommand
         SettingsController settingsController = SettingsController.getInstance();
 
         if (cmdline.hasOption('g') && cmdline.hasOption('s')) {
-            showErrorMessageByRights("Сannot specify changing and display parameters at the same time.", event);
+            showErrorMessage("Сannot specify changing and display parameters at the same time.", event);
             return;
         }
 
@@ -65,17 +65,17 @@ public class PrefixCommand
                 long serverId = server.getId();
                 String serverName = server.getName();
                 String serverPrefix = settingsController.getBotPrefix(serverId);
-                showInfoMessageByRights("Current bot prefix for " + serverName + " server is: " +
+                showInfoMessage("Current bot prefix for " + serverName + " server is: " +
                         serverPrefix, event);
             } else {
                 // глобально
                 String globalPrefix = settingsController.getGlobalCommonPrefix();
-                showInfoMessageByRights("Current bot global prefix is: " +
+                showInfoMessage("Current bot global prefix is: " +
                         globalPrefix, event);
             }
         } else if (cmdline.hasOption('s')) {
             if (cmdlineArgs.size() < 1) {
-                showErrorMessageByRights("Prefix not set", event);
+                showErrorMessage("Prefix not set", event);
             } else {
 
                 String newPrefix = cmdlineArgs.get(0).trim();
@@ -87,23 +87,23 @@ public class PrefixCommand
                     if (canExecuteServerCommand(event, server)) {
                         settingsController.setBotPrefix(serverId, newPrefix);
                         showInfoMessage("Prefix changed to " + newPrefix.trim() +
-                                " on server " + serverName, channel);
+                                " on server " + serverName, event);
                         if (server.canYouChangeOwnNickname()) {
                             User botUser = server.getApi().getYourself();
                             server.updateNickname(botUser, settingsController.getBotName() + " ("
                                     + newPrefix + " help)");
                         }
                     } else {
-                        event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
+                        showAccessDeniedServerMessage(event);
                     }
                 } else {
                     // глобально
                     if (canExecuteGlobalCommand(event)) {
                         settingsController.setGlobalCommonPrefix(newPrefix);
                         showInfoMessage("Prefix changed to " + newPrefix.trim() +
-                                " (globally, by default) ", channel);
+                                " (globally, by default) ", event);
                     } else {
-                        event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedGlobalMessage);
+                        showAccessDeniedGlobalMessage(event);
                     }
                 }
             }
@@ -126,25 +126,25 @@ public class PrefixCommand
         SettingsController settingsController = SettingsController.getInstance();
 
         if (cmdline.hasOption('g') && cmdline.hasOption('s')) {
-            showErrorMessage("Сannot specify changing and display parameters at the same time.", channel);
+            showErrorMessage("Сannot specify changing and display parameters at the same time.", event);
             return;
         }
 
         if (cmdline.hasOption('g')) {
             String globalPrefix = settingsController.getGlobalCommonPrefix();
             showInfoMessage("Current bot global prefix is: " +
-                    globalPrefix, channel);
+                    globalPrefix, event);
         } else if (cmdline.hasOption('s')) {
             if (cmdlineArgs.size() < 1) {
-                showErrorMessage("Prefix not set", channel);
+                showErrorMessage("Prefix not set", event);
             } else {
                 String newPrefix = cmdlineArgs.get(0).trim();
                 if (canExecuteGlobalCommand(event)) {
                     settingsController.setGlobalCommonPrefix(newPrefix);
                     showInfoMessage("Prefix changed to " + newPrefix.trim() +
-                            " (globally, by default) ", channel);
+                            " (globally, by default) ", event);
                 } else {
-                    showAccessDeniedGlobalMessage(channel);
+                    showAccessDeniedGlobalMessage(event);
                 }
             }
         }

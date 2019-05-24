@@ -82,7 +82,7 @@ public class UpgradeCommand
     private void commandAction(CommandLine cmdline,
                                TextChannel channel, MessageCreateEvent event) {
         if (!canExecuteGlobalCommand(event)) {
-            event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedGlobalMessage);
+            showAccessDeniedGlobalMessage(event);
             return;
         }
 
@@ -94,14 +94,14 @@ public class UpgradeCommand
 
         if (showLibrariesAction && (updateMainJarAction || updateLibraryJarAction || deleteLibraryJarAction
                 || updateTwoPhaseFileAction)) {
-            showErrorMessage("Cannot specify different modes of the command at the same time.", channel);
+            showErrorMessage("Cannot specify different modes of the command at the same time.", event);
         } else if (!(updateMainJarAction || showLibrariesAction || updateLibraryJarAction || deleteLibraryJarAction
                 || updateTwoPhaseFileAction)) {
-            showErrorMessage("Action required.", channel);
+            showErrorMessage("Action required.", event);
         } else if (updateMainJarAction) {
             doUpdateMainJar(event);
         } else if (showLibrariesAction) {
-            doShowLibraries(channel);
+            doShowLibraries(event);
         } else if (updateLibraryJarAction) {
             doUploadLibrary(event);
         } else if (updateTwoPhaseFileAction) {
@@ -112,44 +112,43 @@ public class UpgradeCommand
     }
 
     private void doUpdateMainJar(@NotNull MessageCreateEvent event) {
-        TextChannel channel = event.getChannel();
         BroadCast.sendBroadcastUnsafeUsageCE("upgrade main jar file", event);
         List<MessageAttachment> attaches = event.getMessage().getAttachments();
         if (attaches.size() != 1) {
-            showErrorMessage("One main jar file required.", channel);
+            showErrorMessage("One main jar file required.", event);
             return;
         }
         MessageAttachment attachment = attaches.get(0);
         if (!attachment.getFileName().toLowerCase().endsWith(".jar")) {
-            showErrorMessage("The file is not a jar file.", channel);
+            showErrorMessage("The file is not a jar file.", event);
             return;
         }
         Path mainJar;
         try {
             mainJar = CodeSourceUtils.getCodeSourceJarPath();
         } catch (IOException err) {
-            showErrorMessage("Unable to resolve code source: " + err, channel);
+            showErrorMessage("Unable to resolve code source: " + err, event);
             return;
         }
         if (mainJar == null) {
-            showErrorMessage("Replacing of code source not supported", channel);
+            showErrorMessage("Replacing of code source not supported", event);
             return;
         }
-        showInfoMessage("Saving attachment", channel);
+        showInfoMessage("Saving attachment", event);
         try (SavedAttachment savedAttachment = new SavedAttachment(attachment)) {
-            showInfoMessage("Attachment saved", channel);
+            showInfoMessage("Attachment saved", event);
 
 
-            showInfoMessage("Replacing the main jar file", channel);
+            showInfoMessage("Replacing the main jar file", event);
             savedAttachment.moveTo(mainJar);
-            showInfoMessage("Replacing done", channel);
+            showInfoMessage("Replacing done", event);
 
         } catch (IOException err) {
-            showErrorMessage("Unable to upgrade main jar file: " + err, channel);
+            showErrorMessage("Unable to upgrade main jar file: " + err, event);
         }
     }
 
-    private void doShowLibraries(@NotNull TextChannel channel) {
+    private void doShowLibraries(@NotNull MessageCreateEvent event) {
         Module unnamed = getClass().getModule();
         Set<String> activePackages = unnamed != null ? unnamed.getPackages() : new TreeSet<>();
         try {
@@ -160,7 +159,7 @@ public class UpgradeCommand
                     found.add(entry);
                 }
             } catch (IOException err) {
-                showErrorMessage("Unable to list library dir: " + err, channel);
+                showErrorMessage("Unable to list library dir: " + err, event);
                 return;
             }
             found.sort(Comparator.comparing(Path::getFileName));
@@ -172,90 +171,88 @@ public class UpgradeCommand
                                             .append("Library list:", MessageDecoration.BOLD)
                                             .appendNewLine()
                                             .append(list, MessageDecoration.CODE_LONG)
-                                            .send(channel)
+                                            .send(getMessageTargetByRights(event))
                             , new Thread(() -> new MessageBuilder()
                                     .append("Library list is empty", MessageDecoration.BOLD)
-                                    .send(channel)));
+                                    .send(getMessageTargetByRights(event))));
         } catch (IOException err) {
-            showErrorMessage("Unable to get list: " + err, channel);
+            showErrorMessage("Unable to get list: " + err, event);
         }
     }
 
     private void doUploadLibrary(@NotNull MessageCreateEvent event) {
-        TextChannel channel = event.getChannel();
         BroadCast.sendBroadcastUnsafeUsageCE("upgrade library jar file", event);
         List<MessageAttachment> attaches = event.getMessage().getAttachments();
         if (attaches.isEmpty()) {
-            showErrorMessage("One library jar file required.", channel);
+            showErrorMessage("One library jar file required.", event);
             return;
         }
         Path libraryRootPath;
         try {
             libraryRootPath = getRootLibraryPath();
         } catch (IOException err) {
-            showErrorMessage("Unable to resolve code source: " + err, channel);
+            showErrorMessage("Unable to resolve code source: " + err, event);
             return;
         }
 
         for (MessageAttachment attach : attaches) {
             if (!attach.getFileName().toLowerCase().endsWith(".jar")) {
                 showErrorMessage("The file " + attach.getFileName() +
-                        " is not a jar file.", channel);
+                        " is not a jar file.", event);
                 continue;
             }
-            showInfoMessage("Saving attachment " + attach.getFileName(), channel);
+            showInfoMessage("Saving attachment " + attach.getFileName(), event);
             try (SavedAttachment savedAttachment = new SavedAttachment(attach)) {
                 showInfoMessage("Attachment " + savedAttachment.getFileName() +
-                        " saved, moving file into libraries directory.", channel);
+                        " saved, moving file into libraries directory.", event);
                 Path target = libraryRootPath.resolve(savedAttachment.getFileName());
                 try {
                     savedAttachment.moveTo(target);
-                    showInfoMessage("Attachment " + target + " saved", channel);
+                    showInfoMessage("Attachment " + target + " saved", event);
                 } catch (IOException placeE) {
                     showErrorMessage("Unable to place attachment " +
                             savedAttachment.getFileName() +
-                            " to libraries directory: " + placeE, channel);
+                            " to libraries directory: " + placeE, event);
                 }
             } catch (IOException saveE) {
                 showErrorMessage("Unable to save attachment " +
-                        attach.getFileName() + ": " + saveE, channel);
+                        attach.getFileName() + ": " + saveE, event);
             }
         }
     }
 
     private void doDeleteLibrary(@NotNull CommandLine cmdline, @NotNull MessageCreateEvent event) {
-        TextChannel channel = event.getChannel();
         BroadCast.sendBroadcastUnsafeUsageCE("delete library", event);
         String[] names = cmdline.getOptionValues('d');
         if (names == null || names.length == 0) {
-            showErrorMessage("Library names required.", channel);
+            showErrorMessage("Library names required.", event);
             return;
         }
         Path rootLibraryPath;
         try {
             rootLibraryPath = getRootLibraryPath();
         } catch (IOException err) {
-            showErrorMessage("Unable to resolve code source: " + err, channel);
+            showErrorMessage("Unable to resolve code source: " + err, event);
             return;
         }
         for (String libName : names) {
             Path target = rootLibraryPath.resolve(libName);
             if (Files.notExists(target)) {
-                showErrorMessage("File " + libName + " not exists", channel);
+                showErrorMessage("File " + libName + " not exists", event);
                 continue;
             }
             if (!Files.isRegularFile(target)) {
-                showErrorMessage("File " + libName + " is not regular file", channel);
+                showErrorMessage("File " + libName + " is not regular file", event);
                 continue;
             }
             try {
                 if (Files.deleteIfExists(target)) {
-                    showInfoMessage("File " + target + " deleted", channel);
+                    showInfoMessage("File " + target + " deleted", event);
                 } else {
-                    showErrorMessage("File " + target + " not deleted", channel);
+                    showErrorMessage("File " + target + " not deleted", event);
                 }
             } catch (IOException err) {
-                showErrorMessage("Unable to delete file " + target + ": " + err, channel);
+                showErrorMessage("Unable to delete file " + target + ": " + err, event);
             }
         }
     }
@@ -302,7 +299,7 @@ public class UpgradeCommand
     private void upgradeTwoPhaseFile(@NotNull MessageCreateEvent event) {
         BroadCast.sendBroadcastUnsafeUsageCE("upgrade two phase mix file", event);
         if (event.getMessageAttachments().isEmpty()) {
-            showErrorMessage("Two phase file is empty", event.getChannel());
+            showErrorMessage("Two phase file is empty", event);
             return;
         }
 
@@ -310,9 +307,9 @@ public class UpgradeCommand
             try (SavedAttachment savedAttachment = new SavedAttachment(ma)) {
                 savedAttachment.moveTo(TwoPhaseTransfer.getPathToPhrasesFile());
                 TwoPhaseTransfer.replaceLined();
-                showInfoMessage("Success replaced", event.getChannel());
+                showInfoMessage("Success replaced", event);
             } catch (IOException err) {
-                showErrorMessage("Unable to save attachment: " + err, event.getChannel());
+                showErrorMessage("Unable to save attachment: " + err, event);
             }
         });
     }

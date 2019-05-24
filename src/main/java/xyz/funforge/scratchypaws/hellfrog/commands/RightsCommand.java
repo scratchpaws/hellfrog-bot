@@ -125,10 +125,10 @@ public class RightsCommand
             if (CommonUtils.isTrStringEmpty(aclSwitchModeValue)) {
                 String message = "Current access control mode is " + (serverPreferences.getNewAclMode() ?
                         "new" : "old") + '.';
-                showInfoMessageByRights(message, event);
+                showInfoMessage(message, event);
             } else {
                 if (!canExecuteServerCommand(event, server)) {
-                    event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
+                    showAccessDeniedServerMessage(event);
                     return;
                 }
                 switch (aclSwitchModeValue) {
@@ -142,7 +142,7 @@ public class RightsCommand
 
                     default:
                         showErrorMessage("Unknown mode. Must be \"old\" or \"new\" or " +
-                                "empty for display current mode", channel);
+                                "empty for display current mode", event);
                         return;
                 }
 
@@ -150,14 +150,14 @@ public class RightsCommand
 
                 String message = "Access control switched to " + (serverPreferences.getNewAclMode() ?
                         "new" : "old") + " mode.";
-                showInfoMessage(message, channel);
+                showInfoMessage(message, event);
             }
 
             return;
         }
 
         if (!cmdline.hasOption('c')) {
-            showErrorMessage("You have not specified a command for configuring rights.", channel);
+            showErrorMessage("You have not specified a command for configuring rights.", event);
             return;
         }
 
@@ -180,7 +180,7 @@ public class RightsCommand
         if (unknownCommands.size() > 0) {
             unknownCommands.stream()
                     .reduce((cmd1, cmd2) -> cmd1 + ", " + cmd2)
-                    .ifPresent(res -> showErrorMessage("These commands are not recognized:" + res, channel));
+                    .ifPresent(res -> showErrorMessage("These commands are not recognized:" + res, event));
             return;
         }
 
@@ -189,18 +189,18 @@ public class RightsCommand
         boolean showMode = cmdline.hasOption('s');
 
         if (allowMode && disallowMode) {
-            showErrorMessage("Cannot specify allow and deny parameters at the same time", channel);
+            showErrorMessage("Cannot specify allow and deny parameters at the same time", event);
             return;
         }
 
         if (showMode && (allowMode || disallowMode)) {
-            showErrorMessage("Cannot specify changing and display parameters at the same time.", channel);
+            showErrorMessage("Cannot specify changing and display parameters at the same time.", event);
             return;
         }
 
         if (allowMode || disallowMode) {
             if (!canExecuteServerCommand(event, server)) {
-                event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
+                showAccessDeniedServerMessage(event);
                 return;
             }
             boolean userModify = cmdline.hasOption('u');
@@ -215,7 +215,7 @@ public class RightsCommand
 
             if (!userModify && !rolesModify && !channelsModify && !modifyThisChannel) {
                 showErrorMessage("You must specify the role, user, or text channel for which you are setting rights.",
-                        channel);
+                        event);
                 return;
             }
 
@@ -330,7 +330,7 @@ public class RightsCommand
                 addServerTextChannelsListToMessage(resultMessage, channelsNoChanged);
             }
 
-            showInfoMessage(resultMessage.getStringBuilder().toString(), channel);
+            showInfoMessage(resultMessage.getStringBuilder().toString(), event);
         } else if (showMode) {
             MessageBuilder msgBuilder = new MessageBuilder();
             for (String cmd : commands) {
@@ -392,7 +392,7 @@ public class RightsCommand
                         resolvedAllowedRoles.isEmpty() &&
                         resolvedAllowedChannels.isEmpty())
                     msgBuilder.append("  * No rights were specified for the command.");
-                showInfoMessageByRights(msgBuilder.getStringBuilder().toString(), event);
+                showInfoMessage(msgBuilder.getStringBuilder().toString(), event);
             }
         }
     }

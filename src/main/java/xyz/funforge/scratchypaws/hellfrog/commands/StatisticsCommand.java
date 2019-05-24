@@ -88,7 +88,7 @@ public class StatisticsCommand
                                                    ArrayList<String> anotherLines) {
 
         if (!canExecuteServerCommand(event, server)) {
-            event.getMessageAuthor().asUser().ifPresent(this::showAccessDeniedServerMessage);
+            showAccessDeniedServerMessage(event);
             return;
         }
 
@@ -107,12 +107,12 @@ public class StatisticsCommand
 
         if ((smilesOnly || textChatsFilter || usersStatsFilter)
                 && (enableOption || disableOption || resetOption)) {
-            showErrorMessage("Display options (-m/-c) are set only when displaying statistics", channel);
+            showErrorMessage("Display options (-m/-c) are set only when displaying statistics", event);
             return;
         }
 
         if (smilesOnly && (textChatsFilter || usersStatsFilter)) {
-            showErrorMessage("Display only emoji and filtering by users and text chat do not mix", channel);
+            showErrorMessage("Display only emoji and filtering by users and text chat do not mix", event);
             return;
         }
 
@@ -123,23 +123,23 @@ public class StatisticsCommand
 
             if (enableOption) {
                 if (serverStatistic.isCollectNonDefaultSmileStats()) {
-                    showErrorMessage("Statistic collection already enabled", channel);
+                    showErrorMessage("Statistic collection already enabled", event);
                 } else {
                     serverStatistic.setCollectNonDefaultSmileStats(true);
                     long startDate = Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTimeInMillis();
                     serverStatistic.setStartDate(startDate);
                     settingsController.saveServerSideStatistic(serverId);
-                    showInfoMessage("Statistic collection enabled", channel);
+                    showInfoMessage("Statistic collection enabled", event);
                 }
             }
 
             if (disableOption) {
                 if (!serverStatistic.isCollectNonDefaultSmileStats()) {
-                    showErrorMessage("Statistic collection already disabled", channel);
+                    showErrorMessage("Statistic collection already disabled", event);
                 } else {
                     serverStatistic.setCollectNonDefaultSmileStats(false);
                     settingsController.saveServerSideStatistic(serverId);
-                    showInfoMessage("Statistic collection disabled", channel);
+                    showInfoMessage("Statistic collection disabled", event);
                 }
             }
 
@@ -148,12 +148,12 @@ public class StatisticsCommand
                 long startDate = Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTimeInMillis();
                 serverStatistic.setStartDate(startDate);
                 settingsController.saveServerSideStatistic(serverId);
-                showInfoMessage("Statistic will be reset.", channel);
+                showInfoMessage("Statistic will be reset.", event);
             }
 
             if (statusOption) {
                 String state = serverStatistic.isCollectNonDefaultSmileStats() ? "enabled" : "disabled";
-                showInfoMessage("Statistic collection " + state, channel);
+                showInfoMessage("Statistic collection " + state, event);
             }
 
             if (showOption) {
@@ -169,19 +169,19 @@ public class StatisticsCommand
 
                 if (parsedTextChannel.hasNotFound()) {
                     showErrorMessage("Unable to find text channels: " +
-                            parsedTextChannel.getNotFoundStringList(), channel);
+                            parsedTextChannel.getNotFoundStringList(), event);
                     return;
                 }
 
                 if (parsedCustomEmoji.hasNotFound()) {
                     showErrorMessage("Unable to find emoji: " +
-                            parsedCustomEmoji.getNotFoundStringList(), channel);
+                            parsedCustomEmoji.getNotFoundStringList(), event);
                     return;
                 }
 
                 if (parsedUsers.hasNotFound()) {
                     showErrorMessage("Unable to find users: " +
-                            parsedUsers.getNotFoundStringList(), channel);
+                            parsedUsers.getNotFoundStringList(), event);
                     return;
                 }
 
@@ -235,7 +235,7 @@ public class StatisticsCommand
                 if (emojiStat.isEmpty() && userStats.isEmpty() && textChatStat.isEmpty()) {
                     new MessageBuilder()
                             .append("Message statistic is empty")
-                            .send(channel);
+                            .send(getMessageTargetByRights(event));
                 } else {
                     MessageBuilder resultMessage = new MessageBuilder();
 
@@ -263,16 +263,21 @@ public class StatisticsCommand
                         ServerStatistic.appendResultStats(resultMessage, textChatStat, 1);
                     }
 
-                    MessageUtils.sendLongMessage(resultMessage, channel);
+                    MessageUtils.sendLongMessage(resultMessage, getMessageTargetByRights(event));
                 }
             }
         } else {
-            showErrorMessage("Only one option may be use.", channel);
+            showErrorMessage("Only one option may be use.", event);
         }
     }
 
     @Override
-    protected void executeCreateMessageEventDirect(CommandLine cmdline, ArrayList<String> cmdlineArgs, TextChannel channel, MessageCreateEvent event, ArrayList<String> anotherLines) {
-        showErrorMessage("Not allowed into private", channel);
+    protected void executeCreateMessageEventDirect(CommandLine cmdline,
+                                                   ArrayList<String> cmdlineArgs,
+                                                   TextChannel channel,
+                                                   MessageCreateEvent event,
+                                                   ArrayList<String> anotherLines) {
+
+        showErrorMessage("Not allowed into private", event);
     }
 }
