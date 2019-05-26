@@ -34,7 +34,7 @@
                      filePattern="hellfrog_sql_%d{yyyy-MM-dd}_%i.log.gz"
                      append="true">
             <PatternLayout>
-                <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] %msg%n</Pattern>
+                <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%t] [%logger{36}] %msg%n</Pattern>
             </PatternLayout>
             <Policies>
                 <OnStartupTriggeringPolicy/>
@@ -48,6 +48,8 @@
         <Logger name="Commands debug" level="info" additivity="false">
             <AppenderRef ref="cmdLogger"/>
         </Logger>
+        <!--<logger name="org.hibernate.SQL" level="trace"/>
+        <logger name="org.hibernate.tool.hbm2ddl" level="trace"/>-->
         <Logger name="org.hibernate" level="info" additivity="false">
             <AppenderRef ref="hibernateLogger"/>
         </Logger>
