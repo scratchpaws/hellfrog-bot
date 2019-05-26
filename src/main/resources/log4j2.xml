@@ -29,10 +29,27 @@
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
+        <RollingFile name="hibernateLogger"
+                     fileName="hellfrog_sql.log"
+                     filePattern="hellfrog_sql_%d{yyyy-MM-dd}_%i.log.gz"
+                     append="true">
+            <PatternLayout>
+                <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] %msg%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <TimeBasedTriggeringPolicy/>
+                <CronTriggeringPolicy schedule="0 0 * * * ?"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
     </Appenders>
     <Loggers>
         <Logger name="Commands debug" level="info" additivity="false">
             <AppenderRef ref="cmdLogger"/>
+        </Logger>
+        <Logger name="org.hibernate" level="info" additivity="false">
+            <AppenderRef ref="hibernateLogger"/>
         </Logger>
         <Root level="info">
             <AppenderRef ref="plainLogger"/>
