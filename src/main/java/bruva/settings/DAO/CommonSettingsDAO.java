@@ -1,19 +1,21 @@
 package bruva.settings.DAO;
 
 import bruva.settings.AutoSession;
-import bruva.settings.CommonSetting;
 import bruva.settings.CommonName;
+import bruva.settings.CommonSetting;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.query.Query;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
 
 public class CommonSettingsDAO {
 
     private static final Logger log = LogManager.getLogger(CommonSettingsDAO.class.getSimpleName());
+    private static final String PARAM_VALUE_FROM_NAME_HQL = "from CommonSetting cs where cs.name = :name";
 
     public List<CommonSetting> getAll() throws Exception {
         try (AutoSession session = AutoSession.openSession()) {
@@ -21,10 +23,31 @@ public class CommonSettingsDAO {
         }
     }
 
-    public void save(CommonSetting commonPreference) throws Exception {
-        try (AutoSession session = AutoSession.openSession()) {
-            session.save(commonPreference);
+    @Nullable
+    private CommonSetting getCommonSettingByKey(@NotNull AutoSession session, @NotNull String parameterKey)
+            throws Exception {
+
+        Query<CommonSetting> query = session.createQuery(PARAM_VALUE_FROM_NAME_HQL, CommonSetting.class);
+        query.setParameter("name", parameterKey);
+        List<CommonSetting> result = query.list();
+        return result != null && !result.isEmpty() ? result.get(0) : null;
+    }
+
+    private void writeCommonSetting(@NotNull AutoSession session, @NotNull CommonName parameterName,
+                                    @Nullable CommonSetting commonSetting, @Nullable String value)
+            throws Exception {
+
+        String parameterKey = CommonName.NAMES.get(parameterName);
+
+        if (commonSetting == null) {
+            commonSetting = new CommonSetting();
+            commonSetting.setName(parameterKey);
+            commonSetting.setInsertDate(new Date());
+            commonSetting.setComment(CommonName.COMMENTS.getOrDefault(parameterName, "empty"));
         }
+        commonSetting.setUpdateDate(new Date());
+        commonSetting.setValue(value != null ? value : CommonName.DEFAULT_VALUES.get(parameterName));
+        session.save(commonSetting);
     }
 
     public String get(CommonName parameterName) throws Exception {
@@ -33,27 +56,12 @@ public class CommonSettingsDAO {
             throw new IllegalArgumentException("Parameter unknown");
 
         try (AutoSession session = AutoSession.openSession()) {
-            CriteriaBuilder cb = session.getCriteriaBuilder();
-            CriteriaQuery<CommonSetting> cq = cb.createQuery(CommonSetting.class);
-            Root<CommonSetting> prefR = cq.from(CommonSetting.class);
-            cq.select(prefR);
-            cq.where(cb.equal(prefR.get("name"), parameterKey));
-            List<CommonSetting> result = session.createQuery(cq).list();
-
-            if (result == null || result.isEmpty()) {
-                CommonSetting common = new CommonSetting();
-                common.setName(parameterKey);
-                common.setValue(CommonName.DEFAULT_VALUES.get(parameterName));
-                common.setComment(CommonName.COMMENTS.get(parameterName));
-                common.setInsertDate(new Date());
-                common.setUpdateDate(new Date());
-                session.save(common);
+            CommonSetting result = getCommonSettingByKey(session, parameterKey);
+            if (result == null) {
+                writeCommonSetting(session, parameterName, null, null);
             }
-
             session.success();
-
-            return result != null && !result.isEmpty()
-                    ? result.get(0).getValue()
+            return result != null ? result.getValue()
                     : CommonName.DEFAULT_VALUES.get(parameterName);
         }
     }
@@ -67,23 +75,8 @@ public class CommonSettingsDAO {
             parameterValue = CommonName.DEFAULT_VALUES.get(parameterName);
 
         try (AutoSession session = AutoSession.openSession()) {
-            CriteriaBuilder cb = session.getCriteriaBuilder();
-            CriteriaQuery<CommonSetting> cq = cb.createQuery(CommonSetting.class);
-            Root<CommonSetting> prefR = cq.from(CommonSetting.class);
-            cq.select(prefR);
-            cq.where(cb.equal(prefR.get("name"), parameterKey));
-            List<CommonSetting> output = session.createQuery(cq).list();
-            CommonSetting modify = output != null && !output.isEmpty()
-                    ? output.get(0) : null;
-            if (modify == null) {
-                modify = new CommonSetting();
-                modify.setName(parameterKey);
-                modify.setInsertDate(new Date());
-                modify.setComment(CommonName.COMMENTS.get(parameterName));
-            }
-            modify.setValue(parameterValue);
-            modify.setUpdateDate(new Date());
-            session.save(modify);
+            CommonSetting modify = getCommonSettingByKey(session, parameterKey);
+            writeCommonSetting(session, parameterName, modify, parameterValue);
         }
     }
 }

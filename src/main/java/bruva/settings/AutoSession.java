@@ -38,6 +38,10 @@ public class AutoSession
         return getCriteriaBuilder().createQuery(type);
     }
 
+    public<T> Query<T> createQuery(String queryText, Class<T> type) throws Exception {
+        return hibernateSession.createQuery(queryText, type);
+    }
+
     public CriteriaBuilder getCriteriaBuilder() {
         return hibernateSession.getCriteriaBuilder();
     }
@@ -56,7 +60,7 @@ public class AutoSession
         return result;
     }
 
-    public<T> void save(T object) {
+    public<T> void save(T object) throws Exception {
         hibernateSession.saveOrUpdate(object);
         success();
     }

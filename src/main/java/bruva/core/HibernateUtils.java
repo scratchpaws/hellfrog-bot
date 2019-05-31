@@ -32,7 +32,6 @@ public class HibernateUtils {
                         MetadataSources metadataSources = new MetadataSources(registry);
                         metadata = metadataSources.getMetadataBuilder().build();
                         sessionFactory = metadata.buildSessionFactory();
-                       // entityManager = sessionFactory.createEntityManager();
                     } catch (Exception err) {
                         log.error("Unable to create session factory", err);
                         close();

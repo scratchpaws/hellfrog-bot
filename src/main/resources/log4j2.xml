@@ -50,6 +50,12 @@
         </Logger>
         <!--<logger name="org.hibernate.SQL" level="trace"/>
         <logger name="org.hibernate.tool.hbm2ddl" level="trace"/>-->
+        <Logger name="bruva.settings.DAO.CommonSettingsDAO" level="info" additivity="false">
+            <AppenderRef ref="hibernateLogger"/>
+        </Logger>
+        <Logger name="bruva.settings.AutoSession" level="info" additivity="false">
+            <AppenderRef ref="hibernateLogger"/>
+        </Logger>
         <Logger name="org.hibernate" level="info" additivity="false">
             <AppenderRef ref="hibernateLogger"/>
         </Logger>

@@ -17,7 +17,7 @@ public enum CommonName {
     public static final Map<CommonName, String> DEFAULT_VALUES = Map.of(
             CommonName.BOT_PREFIX, "b>",
             CommonName.BOT_NAME, "Bratha",
-            CommonName.REMOTE_DEBUG, "true",
+            CommonName.REMOTE_DEBUG, "false",
             CommonName.SERVER_TRANSFER, "0",
             CommonName.SERVER_TEXTCHAT_TRANSFER, "0"
     );
