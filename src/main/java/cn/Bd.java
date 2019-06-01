@@ -8,27 +8,21 @@ import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
-import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.server.invite.InviteBuilder;
 import org.javacord.api.entity.user.User;
 import org.jetbrains.annotations.NotNull;
-import xyz.funforge.scratchypaws.hellfrog.common.BroadCast;
-import xyz.funforge.scratchypaws.hellfrog.common.CodeSourceUtils;
-import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
-import xyz.funforge.scratchypaws.hellfrog.common.MessageUtils;
-import xyz.funforge.scratchypaws.hellfrog.core.ServerSideResolver;
+import xyz.funforge.scratchypaws.hellfrog.common.*;
 import xyz.funforge.scratchypaws.hellfrog.settings.SettingsController;
+import xyz.funforge.scratchypaws.hellfrog.settings.old.ServerStatistic;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -286,5 +280,80 @@ public class Bd {
         } else {
             return "It's not this bot message";
         }
+    }
+
+    @MethodInfo("Get statistics of selected server by sser() and send to user by sus()")
+    public static String stat() {
+        if (selectedServer == null)
+            return "No server selected by sser() method";
+        if (selectedUser == null)
+            return "No user selected by sus() method";
+        final Server server = selectedServer;
+        final User user = selectedUser;
+        SettingsController settingsController = SettingsController.getInstance();
+        ServerStatistic serverStatistic = settingsController.getServerStatistic(server.getId());
+        try (StringWriter strWriter = new StringWriter()) {
+            String sinceStr = "";
+            if (serverStatistic.getStartDate() > 0L) {
+                Calendar since = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                since.setTimeInMillis(serverStatistic.getStartDate());
+                sinceStr = String.format(" (since %tF %<tT (UTC))", since);
+            }
+            TreeMap<Long, List<String>> emojiStat = new TreeMap<>(Comparator.reverseOrder());
+            TreeMap<Long, List<String>> userStats = serverStatistic.buildUserStats(new ArrayList<>());
+            TreeMap<Long, List<String>> textChatStat = serverStatistic.buildTextChatStats(new ArrayList<>(),
+                    new ArrayList<>());
+            serverStatistic.getNonDefaultSmileStats()
+                    .forEach((id, stat) -> {
+                        if (stat.getUsagesCount() != null && stat.getUsagesCount().get() > 0L) {
+                            long usagesCount = stat.getUsagesCount().get();
+                            OptionalUtils.ifPresentOrElse(server.getCustomEmojiById(id),
+                                    emoji -> {
+                                        MessageBuilder tmp = new MessageBuilder()
+                                                .append(String.valueOf(usagesCount))
+                                                .append(" - ")
+                                                .append(emoji)
+                                                .append(" ");
+                                        if (stat.getLastUsage() != null && stat.getLastUsage().get() > 0) {
+                                            Calendar last = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                                            last.setTimeInMillis(stat.getLastUsage().get());
+                                            tmp.append(String.format("last usage at %tF %<tT (UTC)", last));
+                                        }
+                                        if (!emojiStat.containsKey(usagesCount)) {
+                                            List<String> emptyList = new ArrayList<>();
+                                            emojiStat.put(usagesCount, emptyList);
+                                        }
+                                        emojiStat.get(usagesCount)
+                                                .add(tmp.getStringBuilder().toString());
+                                    }, () -> serverStatistic.getNonDefaultSmileStats()
+                                            .remove(id));
+                        }
+                    });
+            strWriter.append("Collected statistic").append(sinceStr).append(":")
+                    .append('\n');
+            strWriter.append(">> Custom emoji usage statistic:")
+                    .append('\n');
+            MessageBuilder msg = new MessageBuilder();
+            ServerStatistic.appendResultStats(msg, emojiStat, 1);
+            strWriter.append(msg.getStringBuilder().toString());
+            strWriter.append(">> User message statistics:")
+                    .append('\n');
+            msg = new MessageBuilder();
+            ServerStatistic.appendResultStats(msg, userStats, 1);
+            strWriter.append(msg.getStringBuilder().toString());
+            strWriter.append(">> Text chat message statistics:")
+                    .append('\n');
+            msg = new MessageBuilder();
+            ServerStatistic.appendResultStats(msg, textChatStat, 1);
+            strWriter.append(msg.getStringBuilder().toString());
+            byte[] result = strWriter.toString().getBytes(StandardCharsets.UTF_8);
+            new MessageBuilder()
+                    .addAttachment(result, "stat.txt")
+                    .send(user);
+        } catch (IOException err) {
+            return "Unable to generate stats: " + err.getMessage();
+        }
+
+        return "OK";
     }
 }
