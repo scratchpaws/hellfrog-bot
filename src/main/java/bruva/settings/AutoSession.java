@@ -42,6 +42,10 @@ public class AutoSession
         return hibernateSession.createQuery(queryText, type);
     }
 
+    public Query createQuery(String queryText) throws Exception {
+        return hibernateSession.createQuery(queryText);
+    }
+
     public CriteriaBuilder getCriteriaBuilder() {
         return hibernateSession.getCriteriaBuilder();
     }

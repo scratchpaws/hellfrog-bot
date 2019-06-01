@@ -3,6 +3,12 @@ package bruva.core;
 import bruva.settings.SettingsController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.javacord.api.DiscordApi;
+import org.javacord.api.DiscordApiBuilder;
+
+import java.util.Comparator;
+import java.util.TreeSet;
+import java.util.concurrent.CompletableFuture;
 
 public class Loader {
 
@@ -14,50 +20,53 @@ public class Loader {
         log.info("Database is started");
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            log.info("Closing database");
+            log.info("Closing database (Shutdown hook)");
             HibernateUtils.close();
-            log.info("Database is closed");
+            log.info("Database is closed (Shutdown hook)");
         }));
 
-        SettingsController settingsController = SettingsController.getInstance();
-        settingsController.getApiKey().ifPresentOrElse(s ->
-                System.out.println("API key is: " + s),
-                () -> System.out.println("Unable to load api key"));
+        SettingsController.getInstance().getApiKey().ifPresentOrElse(Loader::start,
+                () -> log.error("Required bot api for startup. It placed into file "
+                        + SettingsController.getApiKeyFile()));
 
-        settingsController.getBotPrefix().ifPresentOrElse(s ->
-                System.out.println("Bot prefix is: " + s),
-                () -> System.out.println("Unable to get bot prefix"));
-        settingsController.isRemoteDebugEnabled().ifPresentOrElse(b ->
-                System.out.println("Bot remote debug " + (b ? "enabled" : "disabled")),
-                () -> System.out.println("Unable to get bot state"));
-
-        if (settingsController.setBotName("Bruva")) {
-            System.out.println("Bot name changed");
-        } else {
-            System.out.println("Bot name is not changed");
-        }
-
-        if (settingsController.setBotPrefix("b>")) {
-            System.out.println("Bot prefix is changed");
-        } else {
-            System.out.println("Bot prefix is not changed");
-        }
-
-        if (settingsController.setRemoteDebugEnable(true)) {
-            System.out.println("Remote debug enabled");
-        } else {
-            System.out.println("Cannot change remote debug state");
-        }
-
-        settingsController.getBotName().ifPresentOrElse(s ->
-                        System.out.println("Bot name is: " + s),
-                () -> System.out.println("Unable to load bot name"));
-        settingsController.getBotPrefix().ifPresentOrElse(s ->
-                        System.out.println("Bot prefix is: " + s),
-                () -> System.out.println("Unable to get bot prefix"));
-        settingsController.isRemoteDebugEnabled().ifPresentOrElse(b ->
-                        System.out.println("Bot remote debug " + (b ? "enabled" : "disabled")),
-                () -> System.out.println("Unable to get bot state"));
+        CompletableFuture.runAsync(() -> {
+            try {
+                Thread.sleep(15_000L);
+            } catch (InterruptedException err) {
+            }
+            System.exit(0);
+        });
         //HibernateUtils.generateDDL("./ddl.txt");
+    }
+
+    private static void start(String apiKey) {
+        new DiscordApiBuilder()
+                .setToken(apiKey)
+                .setRecommendedTotalShards()
+                .join()
+                .loginAllShards()
+                .forEach(shardFuture ->
+                        shardFuture.thenAccept(Loader::thenShardConnected)
+                                .exceptionally(Loader::thenExceptionReached)
+                );
+    }
+
+    private static void thenShardConnected(DiscordApi api) {
+        log.info("Shard with id " + api.getCurrentShard() + " (of " + api.getTotalShards() + ") connected");
+        if (api.getCurrentShard() == 0)
+            SettingsController.getInstance().setFirstShard(api);
+
+        long serverId = 575113435524890646L;
+        DiscordApi shard = SettingsController.getInstance().getShardForServer(serverId);
+        if (shard != null) {
+            System.err.println("For server " + serverId + " shard is " + shard.getCurrentShard());
+        } else {
+            System.err.println("For server " + serverId + " shard is null");
+        }
+    }
+
+    private static Void thenExceptionReached(Throwable error) {
+        log.error(error);
+        return null;
     }
 }

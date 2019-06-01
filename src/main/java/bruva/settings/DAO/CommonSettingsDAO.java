@@ -17,12 +17,6 @@ public class CommonSettingsDAO {
     private static final Logger log = LogManager.getLogger(CommonSettingsDAO.class.getSimpleName());
     private static final String PARAM_VALUE_FROM_NAME_HQL = "from CommonSetting cs where cs.name = :name";
 
-    public List<CommonSetting> getAll() throws Exception {
-        try (AutoSession session = AutoSession.openSession()) {
-            return session.getAll(CommonSetting.class);
-        }
-    }
-
     @Nullable
     private CommonSetting getCommonSettingByKey(@NotNull AutoSession session, @NotNull String parameterKey)
             throws Exception {

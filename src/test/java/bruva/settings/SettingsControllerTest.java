@@ -7,8 +7,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import javax.persistence.Table;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Optional;
 
 public class SettingsControllerTest {
@@ -21,7 +23,7 @@ public class SettingsControllerTest {
     }
 
     @Test
-    public void botPrefixText() throws Exception {
+    public void botPrefixText() {
         SettingsController settingsController = SettingsController.getInstance();
         String await = CommonName.DEFAULT_VALUES.get(CommonName.BOT_PREFIX);
         Optional<String> mayBeBotPrefix = settingsController.getBotPrefix();
@@ -39,7 +41,7 @@ public class SettingsControllerTest {
     }
 
     @Test
-    public void botNameTest() throws Exception {
+    public void botNameTest() {
         SettingsController settingsController = SettingsController.getInstance();
         String await = CommonName.DEFAULT_VALUES.get(CommonName.BOT_NAME);
         Optional<String> mayBeBotName = settingsController.getBotName();
@@ -57,7 +59,7 @@ public class SettingsControllerTest {
     }
 
     @Test
-    public void remoteDebugTest() throws Exception {
+    public void remoteDebugTest() {
         SettingsController settingsController = SettingsController.getInstance();
         String raw = CommonName.DEFAULT_VALUES.get(CommonName.BOT_NAME);
         boolean await = Boolean.parseBoolean(raw);
@@ -75,8 +77,40 @@ public class SettingsControllerTest {
         Assertions.assertEquals(await, value);
     }
 
+    @Test
+    public void botOwnerTest() {
+        SettingsController settingsController = SettingsController.getInstance();
+        Optional<List<Long>> mayBeList = settingsController.getAllBotOwners();
+        Assertions.assertTrue(mayBeList.isPresent());
+        Assertions.assertTrue(mayBeList.get().isEmpty());
+
+        long first = 1234567890L;
+        long second = 9876543210L;
+        boolean result = settingsController.addBotOwner(first);
+        Assertions.assertTrue(result);
+        result = settingsController.addBotOwner(second);
+        Assertions.assertTrue(result);
+        result = settingsController.addBotOwner(first);
+        Assertions.assertFalse(result);
+        mayBeList = settingsController.getAllBotOwners();
+        Assertions.assertTrue(mayBeList.isPresent());
+        Assertions.assertFalse(mayBeList.get().isEmpty());
+        List<Long> botOwners = mayBeList.get();
+        Assertions.assertTrue(botOwners.contains(first) && botOwners.contains(second));
+
+        result = settingsController.deleteBotOwner(first);
+        Assertions.assertTrue(result);
+        result = settingsController.deleteBotOwner(first);
+        Assertions.assertFalse(result);
+        mayBeList = settingsController.getAllBotOwners();
+        Assertions.assertTrue(mayBeList.isPresent());
+        Assertions.assertFalse(mayBeList.get().isEmpty());
+        botOwners = mayBeList.get();
+        Assertions.assertTrue(botOwners.contains(second) && !botOwners.contains(first));
+    }
+
     @AfterAll
-    public static void closeText() throws Exception {
+    public static void closeText() {
         HibernateUtils.close();
 
     }

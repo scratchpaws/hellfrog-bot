@@ -23,6 +23,7 @@ public class CommonSetting
     @Id
     @GeneratedValue(generator = "common_settings_ids")
     @SequenceGenerator(name = "common_settings_ids", sequenceName = "common_settings_ids")
+    @Column(name = "id", nullable = false)
     public long getId() {
         return id;
     }

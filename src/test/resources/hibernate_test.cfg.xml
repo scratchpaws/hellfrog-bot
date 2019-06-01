@@ -13,5 +13,6 @@
         <property name="hibernate.format_sql">true</property>
         <property name="current_session_context_class">thread</property>
         <mapping class="bruva.settings.Entity.CommonSetting"/>
+        <mapping class="bruva.settings.Entity.BotOwner"/>
     </session-factory>
 </hibernate-configuration>
