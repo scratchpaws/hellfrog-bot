@@ -21,15 +21,58 @@ public class SettingsControllerTest {
     }
 
     @Test
-    public void defaultBotPrefixText() throws Exception {
+    public void botPrefixText() throws Exception {
         SettingsController settingsController = SettingsController.getInstance();
         String await = CommonName.DEFAULT_VALUES.get(CommonName.BOT_PREFIX);
-        Optional<String> mayBeBotName = settingsController.getBotPrefix();
+        Optional<String> mayBeBotPrefix = settingsController.getBotPrefix();
+        Assertions.assertTrue(mayBeBotPrefix.isPresent());
+        String value = mayBeBotPrefix.orElse(null);
+        Assertions.assertEquals(await, value);
+
+        await = "x>";
+        boolean successChanges = settingsController.setBotPrefix(await);
+        Assertions.assertTrue(successChanges);
+        mayBeBotPrefix = settingsController.getBotPrefix();
+        Assertions.assertTrue(mayBeBotPrefix.isPresent());
+        value = mayBeBotPrefix.orElse(null);
+        Assertions.assertEquals(await, value);
+    }
+
+    @Test
+    public void botNameTest() throws Exception {
+        SettingsController settingsController = SettingsController.getInstance();
+        String await = CommonName.DEFAULT_VALUES.get(CommonName.BOT_NAME);
+        Optional<String> mayBeBotName = settingsController.getBotName();
         Assertions.assertTrue(mayBeBotName.isPresent());
         String value = mayBeBotName.orElse(null);
         Assertions.assertEquals(await, value);
 
-        await = "x>";
+        await = "Bruva";
+        boolean successChanges = settingsController.setBotName(await);
+        Assertions.assertTrue(successChanges);
+        mayBeBotName = settingsController.getBotName();
+        Assertions.assertTrue(mayBeBotName.isPresent());
+        value = mayBeBotName.orElse(null);
+        Assertions.assertEquals(await, value);
+    }
+
+    @Test
+    public void remoteDebugTest() throws Exception {
+        SettingsController settingsController = SettingsController.getInstance();
+        String raw = CommonName.DEFAULT_VALUES.get(CommonName.BOT_NAME);
+        boolean await = Boolean.parseBoolean(raw);
+        Optional<Boolean> mayBeRemoteState = settingsController.isRemoteDebugEnabled();
+        Assertions.assertTrue(mayBeRemoteState.isPresent());
+        boolean value = mayBeRemoteState.get();
+        Assertions.assertEquals(await, value);
+
+        await = !await;
+        boolean successChanges = settingsController.setRemoteDebugEnable(await);
+        Assertions.assertTrue(successChanges);
+        mayBeRemoteState = settingsController.isRemoteDebugEnabled();
+        Assertions.assertTrue(mayBeRemoteState.isPresent());
+        value = mayBeRemoteState.get();
+        Assertions.assertEquals(await, value);
     }
 
     @AfterAll

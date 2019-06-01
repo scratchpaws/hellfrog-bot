@@ -77,7 +77,7 @@ public class SettingsController {
 
     public Optional<Boolean> isRemoteDebugEnabled() {
         try {
-            return Optional.of(Boolean.valueOf(COMMON_SETTINGS_DAO.get(CommonName.REMOTE_DEBUG)));
+            return Optional.of(Boolean.parseBoolean(COMMON_SETTINGS_DAO.get(CommonName.REMOTE_DEBUG)));
         } catch (Exception err) {
             log.error("Unable to get remote debug status: " + err.getMessage(), err);
             return Optional.empty();
