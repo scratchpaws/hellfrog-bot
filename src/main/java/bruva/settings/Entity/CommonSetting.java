@@ -1,4 +1,4 @@
-package bruva.settings;
+package bruva.settings.Entity;
 
 import javax.persistence.*;
 import java.io.Serializable;

@@ -5,9 +5,9 @@ import besus.utils.func.Func;
 import besus.utils.func.Mapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.text.StringSubstitutor;
 import rx.functions.Func0;
 
 import java.net.URLDecoder;
@@ -233,6 +233,6 @@ public class MiscUtils {
     }
 
     public static String replace(String pattern, Mapper<String, ?> valueExtractor) {
-        return StrSubstitutor.replace(pattern, valueExtractor.asMap());
+        return StringSubstitutor.replace(pattern, valueExtractor.asMap());
     }
 }

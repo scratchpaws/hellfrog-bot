@@ -1,8 +1,8 @@
 package bruva.settings.DAO;
 
 import bruva.settings.AutoSession;
-import bruva.settings.CommonName;
-import bruva.settings.CommonSetting;
+import bruva.settings.Entity.CommonName;
+import bruva.settings.Entity.CommonSetting;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.query.Query;

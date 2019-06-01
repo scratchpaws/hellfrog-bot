@@ -17,10 +17,14 @@ public class HibernateUtils {
 
     private static StandardServiceRegistry registry = null;
     private static SessionFactory sessionFactory = null;
-   // private static EntityManager entityManager = null;
     private static Metadata metadata = null;
     private static ReentrantLock creationLock = new ReentrantLock();
     private static final Logger log = LogManager.getLogger(HibernateUtils.class.getSimpleName());
+    private static String hibernateRegistryName = "";
+
+    public static void setHibernateRegistryName(String hibernateRegistryName) {
+        HibernateUtils.hibernateRegistryName = hibernateRegistryName;
+    }
 
     public static SessionFactory getSessionFactory() throws Exception {
         if (sessionFactory == null) {
@@ -28,7 +32,15 @@ public class HibernateUtils {
             try {
                 if (sessionFactory == null) {
                     try {
-                        registry = new StandardServiceRegistryBuilder().configure().build();
+                        if (hibernateRegistryName != null && !hibernateRegistryName.trim().isEmpty()) {
+                            registry = new StandardServiceRegistryBuilder()
+                                    .configure(hibernateRegistryName)
+                                    .build();
+                        } else {
+                            registry = new StandardServiceRegistryBuilder()
+                                    .configure()
+                                    .build();
+                        }
                         MetadataSources metadataSources = new MetadataSources(registry);
                         metadata = metadataSources.getMetadataBuilder().build();
                         sessionFactory = metadata.buildSessionFactory();
