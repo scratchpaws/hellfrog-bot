@@ -2,7 +2,6 @@ package xyz.funforge.scratchypaws.hellfrog.core;
 
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
-import org.javacord.api.entity.permission.PermissionState;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.permission.Role;
@@ -12,7 +11,11 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import xyz.funforge.scratchypaws.hellfrog.common.CommonUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -58,7 +61,19 @@ public class ServerSideResolver {
             return member;
         }
         // 5. И наконец по нику
-        return CommonUtils.getFirstOrEmpty(server.getMembersByDisplayNameIgnoreCase(rawValue));
+        member = CommonUtils.getFirstOrEmpty(server.getMembersByDisplayNameIgnoreCase(rawValue));
+        if (member.isPresent()) {
+            return member;
+        }
+        // 6. Пытаемся отыскать по глобальному нику
+        try {
+            User found = server.getApi()
+                    .getUserById(CommonUtils.onlyNumbersToLong(rawValue))
+                    .get(10_000L, TimeUnit.SECONDS);
+            return Optional.ofNullable(found);
+        } catch (Exception err) {
+            return Optional.empty();
+        }
     }
 
     public static Optional<Role> resolveRole(Server server, String rawValue) {
