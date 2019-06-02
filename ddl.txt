@@ -1,0 +1,19 @@
+create sequence common_settings_ids start with 1 increment by 50;
+
+    create table bot_owners (
+       user_id bigint not null,
+        primary key (user_id)
+    );
+
+    create table common_preferences (
+       id bigint not null,
+        "COMMENT" varchar(255) not null,
+        insert_date timestamp not null,
+        name varchar(60) not null,
+        update_date timestamp not null,
+        value varchar(255) not null,
+        primary key (id)
+    );
+
+    alter table common_preferences 
+       add constraint common_preferences_uniq unique (name);
