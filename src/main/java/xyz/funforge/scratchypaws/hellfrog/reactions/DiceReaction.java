@@ -34,9 +34,9 @@ public class DiceReaction
         extends MsgCreateReaction {
 
     private static final String SHORT_ROLL_PREFIX = "([lLдД]{2})";
-    private static final Pattern DICE_PATTERN = Pattern.compile("^([rр])?(d?\\d{1,2}[dд]\\d+|[lд]{2})([=<>]{1,2}\\d+)?",
+    private static final Pattern DICE_PATTERN = Pattern.compile("^([rр])?(d?\\d{1,3}[dд]\\d+|[lд]{2})([=<>]{1,2}\\d+)?",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-    private static final Pattern SEARCH_PATTERN = Pattern.compile("^\\s*([rр])?(d?\\d{1,2}[dд]\\d+|[lд]{2})([=<>]{1,2}\\d+)?",
+    private static final Pattern SEARCH_PATTERN = Pattern.compile("^\\s*([rр])?(d?\\d{1,3}[dд]\\d+|[lд]{2})([=<>]{1,2}\\d+)?",
             Pattern.MULTILINE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final String DEFAULT_ROLL = "1d20";
 
@@ -113,7 +113,7 @@ public class DiceReaction
                     long diceNum = CommonUtils.onlyNumbersToLong(diceParams[0]);
                     long varNum = CommonUtils.onlyNumbersToLong(diceParams[1]);
                     long filter = doFilter ? CommonUtils.onlyNumbersToLong(diceParams[2]) : 0;
-                    if (diceNum > 0 && varNum > 0 && diceNum <= 10 && varNum <= 100 && filter >= 0 && filter <= 100) {
+                    if (diceNum > 0 && varNum > 0 && diceNum <= 100 && varNum <= 1000 && filter >= 0 && filter <= 1000) {
                         MessageBuilder dicesOutput = new MessageBuilder();
                         long sumResult = 0;
                         ThreadLocalRandom currRnd = ThreadLocalRandom.current();
