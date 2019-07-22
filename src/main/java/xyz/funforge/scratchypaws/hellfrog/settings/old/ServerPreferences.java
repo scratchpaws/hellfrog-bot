@@ -26,6 +26,10 @@ public class ServerPreferences
     private volatile Long joinLeaveChannel = null;
     private volatile Boolean newAclMode = false;
 
+    private volatile Boolean autoPromoteEnabled = false;
+    private volatile Long autoPromoteRoleId = null;
+    private volatile Long autoPromoteTimeout = 0L;
+
     /**
      * Получить префикс для вызова бота на данном сервере
      *
@@ -99,5 +103,31 @@ public class ServerPreferences
 
     public void setNewAclMode(boolean newAclMode) {
         this.newAclMode = newAclMode;
+    }
+
+    public Boolean getAutoPromoteEnabled() {
+        return autoPromoteEnabled != null && autoPromoteEnabled;
+    }
+
+    public void setAutoPromoteEnabled(Boolean autoPromoteEnabled) {
+        this.autoPromoteEnabled = autoPromoteEnabled != null ? autoPromoteEnabled : false;
+    }
+
+    public Long getAutoPromoteRoleId() {
+        return autoPromoteRoleId;
+    }
+
+    public void setAutoPromoteRoleId(Long autoPromoteRoleId) {
+        this.autoPromoteRoleId = autoPromoteRoleId;
+    }
+
+    public Long getAutoPromoteTimeout() {
+        return autoPromoteTimeout != null && autoPromoteTimeout >= 0L
+                ? autoPromoteTimeout : 0L;
+    }
+
+    public void setAutoPromoteTimeout(Long autoPromoteTimeout) {
+        this.autoPromoteTimeout = autoPromoteTimeout != null && autoPromoteTimeout >= 0L
+            ? autoPromoteTimeout : 0L;
     }
 }
