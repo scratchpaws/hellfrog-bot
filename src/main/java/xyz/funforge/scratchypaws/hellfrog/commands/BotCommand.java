@@ -1,6 +1,5 @@
 package xyz.funforge.scratchypaws.hellfrog.commands;
 
-import besus.utils.collection.Sequental;
 import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -63,9 +62,8 @@ public abstract class BotCommand {
         control.addOption(helpOption);
     }
 
-    public static Sequental<BotCommand> all() {
-        return Sequental.of(ALL_COMMANDS)
-                .repeatable();
+    public static List<BotCommand> all() {
+        return ALL_COMMANDS;
     }
 
     final void addCmdlineOption(Option... options) {

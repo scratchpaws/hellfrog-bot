@@ -1,6 +1,5 @@
 package xyz.funforge.scratchypaws.hellfrog.core;
 
-import besus.utils.collection.Sequental;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tools.ant.types.Commandline;
@@ -158,15 +157,15 @@ public class EventsListener
                         .append("The following commands are available:", MessageDecoration.BOLD)
                         .appendNewLine();
 
-                BotCommand.all().stream()
+                BotCommand.all()
                         .forEach(c -> embedMessageText.append(c.getPrefix())
                                 .append(" - ")
                                 .append(c.getCommandDescription())
                                 .appendNewLine()
                         );
 
-                Sequental<MsgCreateReaction> msgCreateReactions = MsgCreateReaction.all();
-                if (msgCreateReactions.stream().count() > 0) {
+                List<MsgCreateReaction> msgCreateReactions = MsgCreateReaction.all();
+                if (!msgCreateReactions.isEmpty()) {
                     embedMessageText.append("The following reactions with access control available:",
                             MessageDecoration.BOLD)
                             .appendNewLine();

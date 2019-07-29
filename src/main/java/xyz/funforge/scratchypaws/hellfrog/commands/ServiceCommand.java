@@ -1,6 +1,6 @@
 package xyz.funforge.scratchypaws.hellfrog.commands;
 
-import bsh.Interpreter;
+import groovy.lang.GroovyShell;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -43,6 +43,7 @@ public class ServiceCommand
 
     private static final String PREF = "srv";
     private static final String DESCRIPTIONS = "Common bot service commands";
+    private GroovyShell groovyShell = new GroovyShell();
 
     public ServiceCommand() {
         super(PREF, DESCRIPTIONS);
@@ -379,8 +380,7 @@ public class ServiceCommand
             try (PrintStream overrideOut = new PrintStream(outCache, true)) {
                 System.setOut(overrideOut);
                 System.setErr(overrideOut);
-                Interpreter interpreter = new Interpreter();
-                result = interpreter.eval(cmd);
+                result = groovyShell.evaluate(cmd);
             }
             StringBuilder resultOut = new StringBuilder();
             try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(

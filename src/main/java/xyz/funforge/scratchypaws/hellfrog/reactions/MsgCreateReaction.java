@@ -1,6 +1,5 @@
 package xyz.funforge.scratchypaws.hellfrog.reactions;
 
-import besus.utils.collection.Sequental;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
@@ -27,11 +26,8 @@ public abstract class MsgCreateReaction
     private String commandPrefix = "";
     private String commandDescription = "";
 
-    public static Sequental<MsgCreateReaction> all() {
-        // todo: сюда тоже класс-сканнер добаить
-        return Sequental
-                .of(ALL_MESSAGE_REACTS)
-                .repeatable();
+    public static List<MsgCreateReaction> all() {
+        return ALL_MESSAGE_REACTS;
     }
 
     void enableAccessControl() {
