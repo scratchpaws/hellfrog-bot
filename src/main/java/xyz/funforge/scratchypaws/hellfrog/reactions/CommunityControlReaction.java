@@ -52,7 +52,8 @@ public class CommunityControlReaction {
                 if (active) {
                     Emoji emoji = event.getEmoji();
                     boolean isControlEmoji =
-                            (emoji.isKnownCustomEmoji() && customEmoji.isPresent())
+                            (emoji.isKnownCustomEmoji() && customEmoji.isPresent()
+                                && emoji.equalsEmoji(customEmoji.get()))
                                     || (emoji.isUnicodeEmoji() && stringEmoji.isPresent()
                                     && emoji.asUnicodeEmoji().isPresent()
                                     && emoji.asUnicodeEmoji().get().endsWith(stringEmoji.get()));
