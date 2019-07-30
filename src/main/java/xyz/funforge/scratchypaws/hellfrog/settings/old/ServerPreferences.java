@@ -30,6 +30,12 @@ public class ServerPreferences
     private volatile Long autoPromoteRoleId = null;
     private volatile Long autoPromoteTimeout = 0L;
 
+    private CopyOnWriteArrayList<Long> communityControlUsers = new CopyOnWriteArrayList<>();
+    private volatile Long communityControlThreshold = 0L;
+    private volatile Long communityControlRoleId = 0L;
+    private volatile Long communityControlCustomEmojiId = 0L;
+    private volatile String communityControlEmoji = null;
+
     /**
      * Получить префикс для вызова бота на данном сервере
      *
@@ -129,5 +135,50 @@ public class ServerPreferences
     public void setAutoPromoteTimeout(Long autoPromoteTimeout) {
         this.autoPromoteTimeout = autoPromoteTimeout != null && autoPromoteTimeout >= 0L
             ? autoPromoteTimeout : 0L;
+    }
+
+    public List<Long> getCommunityControlUsers() {
+        return communityControlUsers;
+    }
+
+    public void setCommunityControlUsers(List<Long> communityControlUsers) {
+        this.communityControlUsers = communityControlUsers != null ?
+            new CopyOnWriteArrayList<>(communityControlUsers) : new CopyOnWriteArrayList<>();
+    }
+
+    public Long getCommunityControlThreshold() {
+        return communityControlThreshold != null ? communityControlThreshold : 0L;
+    }
+
+    public void setCommunityControlThreshold(Long communityControlThreshold) {
+        this.communityControlThreshold = communityControlThreshold != null ?
+            communityControlThreshold : 0L;
+    }
+
+    public Long getCommunityControlRoleId() {
+        return communityControlRoleId != null ? communityControlRoleId : 0L;
+    }
+
+    public void setCommunityControlRoleId(Long communityControlRoleId) {
+        this.communityControlRoleId = communityControlRoleId != null ?
+            communityControlRoleId : 0L;
+    }
+
+    public Long getCommunityControlCustomEmojiId() {
+        return communityControlCustomEmojiId != null ?
+                communityControlCustomEmojiId : 0L;
+    }
+
+    public void setCommunityControlCustomEmojiId(Long communityControlCustomEmojiId) {
+        this.communityControlCustomEmojiId = communityControlCustomEmojiId != null ?
+            communityControlCustomEmojiId : 0L;
+    }
+
+    public String getCommunityControlEmoji() {
+        return communityControlEmoji;
+    }
+
+    public void setCommunityControlEmoji(String communityControlEmoji) {
+        this.communityControlEmoji = communityControlEmoji;
     }
 }

@@ -53,12 +53,13 @@ public class EventsListener
         ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener {
 
-    private static final String VERSION_STRING = "0.1.21b";
+    private static final String VERSION_STRING = "0.1.22b";
 
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
     private final MessageStats messageStats = new MessageStats();
     private final TwoPhaseTransfer twoPhaseTransfer = new TwoPhaseTransfer();
+    private final CommunityControlReaction communityControlReaction = new CommunityControlReaction();
     private static final Logger log = LogManager.getLogger(EventsListener.class.getSimpleName());
     private static final Logger cmdlog = LogManager.getLogger("Commands debug");
 
@@ -230,11 +231,11 @@ public class EventsListener
     public void onReactionAdd(ReactionAddEvent event) {
         reactReaction.parseReaction(event, true);
         asVoteReaction.parseAction(event);
+        communityControlReaction.parseReaction(event);
     }
 
     @Override
     public void onReactionRemoveAll(ReactionRemoveAllEvent event) {
-
     }
 
     @Override
@@ -247,6 +248,7 @@ public class EventsListener
     @Override
     public void onReactionRemove(ReactionRemoveEvent event) {
         reactReaction.parseReaction(event, false);
+        communityControlReaction.parseReaction(event);
     }
 
     void onReady() {
@@ -308,33 +310,34 @@ public class EventsListener
     }
 
     private void autoAssignRole(Server server, User member, Role role) {
-        server.addRoleToUser(member, role);
-        ServerPreferences preferences = SettingsController.getInstance()
-                .getServerPreferences(server.getId());
-        if (preferences.isJoinLeaveDisplay() && preferences.getJoinLeaveChannel() > 0) {
-            Optional<ServerTextChannel> mayBeChannel =
-                    server.getTextChannelById(preferences.getJoinLeaveChannel());
-            mayBeChannel.ifPresent(c -> {
-                Instant currentStamp = Instant.now();
-                UserCachedData userCachedData = new UserCachedData(member, server);
-                String userName = userCachedData.getDisplayUserName()
-                        + " (" + member.getDiscriminatedName() + ")";
-                final int newlineBreak = 20;
-                EmbedBuilder embedBuilder = new EmbedBuilder()
-                        .setColor(Color.BLUE)
-                        .setTimestamp(currentStamp)
-                        .addField("User",
-                                CommonUtils.addLinebreaks(userName, newlineBreak), true)
-                        .addField("Assigned role",
-                                CommonUtils.addLinebreaks(role.getName(), newlineBreak), true);
-                if (userCachedData.isHasAvatar()) {
-                    embedBuilder.setThumbnail(userCachedData.getAvatarBytes(), userCachedData.getAvatarExtension());
-                }
-                new MessageBuilder()
-                        .setEmbed(embedBuilder)
-                        .send(c);
-            });
-        }
+        server.addRoleToUser(member, role).thenAccept(v -> {
+            ServerPreferences preferences = SettingsController.getInstance()
+                    .getServerPreferences(server.getId());
+            if (preferences.isJoinLeaveDisplay() && preferences.getJoinLeaveChannel() > 0) {
+                Optional<ServerTextChannel> mayBeChannel =
+                        server.getTextChannelById(preferences.getJoinLeaveChannel());
+                mayBeChannel.ifPresent(c -> {
+                    Instant currentStamp = Instant.now();
+                    UserCachedData userCachedData = new UserCachedData(member, server);
+                    String userName = userCachedData.getDisplayUserName()
+                            + " (" + member.getDiscriminatedName() + ")";
+                    final int newlineBreak = 20;
+                    EmbedBuilder embedBuilder = new EmbedBuilder()
+                            .setColor(Color.BLUE)
+                            .setTimestamp(currentStamp)
+                            .addField("User",
+                                    CommonUtils.addLinebreaks(userName, newlineBreak), true)
+                            .addField("Assigned role",
+                                    CommonUtils.addLinebreaks(role.getName(), newlineBreak), true);
+                    if (userCachedData.isHasAvatar()) {
+                        embedBuilder.setThumbnail(userCachedData.getAvatarBytes(), userCachedData.getAvatarExtension());
+                    }
+                    new MessageBuilder()
+                            .setEmbed(embedBuilder)
+                            .send(c);
+                });
+            }
+        });
     }
 
     @Override
