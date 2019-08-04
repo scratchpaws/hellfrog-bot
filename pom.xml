@@ -148,7 +148,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>xyz.funforge.scratchypaws.hellfrog.core.Loader</mainClass>
+                            <mainClass>hellfrog.core.Loader</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
