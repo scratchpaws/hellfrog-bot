@@ -36,6 +36,8 @@ public class ServerPreferences
     private volatile Long communityControlCustomEmojiId = 0L;
     private volatile String communityControlEmoji = null;
 
+    private ConcurrentHashMap<Long, WtfMap> wtfMapper = new ConcurrentHashMap<>();
+
     /**
      * Получить префикс для вызова бота на данном сервере
      *
@@ -180,5 +182,13 @@ public class ServerPreferences
 
     public void setCommunityControlEmoji(String communityControlEmoji) {
         this.communityControlEmoji = communityControlEmoji;
+    }
+
+    public ConcurrentHashMap<Long, WtfMap> getWtfMapper() {
+        return wtfMapper;
+    }
+
+    public void setWtfMapper(ConcurrentHashMap<Long, WtfMap> wtfMapper) {
+        this.wtfMapper = wtfMapper != null ? wtfMapper : new ConcurrentHashMap<>();
     }
 }
