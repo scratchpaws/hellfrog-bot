@@ -1,6 +1,5 @@
 package xyz.funforge.scratchypaws.hellfrog.core;
 
-import besus.utils.collection.Sequental;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tools.ant.types.Commandline;
@@ -9,6 +8,7 @@ import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 public class EventsListener
         implements MessageCreateListener, MessageEditListener, MessageDeleteListener,
@@ -52,12 +53,13 @@ public class EventsListener
         ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener {
 
-    private static final String VERSION_STRING = "0.1.21b";
+    private static final String VERSION_STRING = "0.1.22b";
 
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
     private final MessageStats messageStats = new MessageStats();
     private final TwoPhaseTransfer twoPhaseTransfer = new TwoPhaseTransfer();
+    private final CommunityControlReaction communityControlReaction = new CommunityControlReaction();
     private static final Logger log = LogManager.getLogger(EventsListener.class.getSimpleName());
     private static final Logger cmdlog = LogManager.getLogger("Commands debug");
 
@@ -156,15 +158,15 @@ public class EventsListener
                         .append("The following commands are available:", MessageDecoration.BOLD)
                         .appendNewLine();
 
-                BotCommand.all().stream()
+                BotCommand.all()
                         .forEach(c -> embedMessageText.append(c.getPrefix())
                                 .append(" - ")
                                 .append(c.getCommandDescription())
                                 .appendNewLine()
                         );
 
-                Sequental<MsgCreateReaction> msgCreateReactions = MsgCreateReaction.all();
-                if (msgCreateReactions.stream().count() > 0) {
+                List<MsgCreateReaction> msgCreateReactions = MsgCreateReaction.all();
+                if (!msgCreateReactions.isEmpty()) {
                     embedMessageText.append("The following reactions with access control available:",
                             MessageDecoration.BOLD)
                             .appendNewLine();
@@ -229,11 +231,11 @@ public class EventsListener
     public void onReactionAdd(ReactionAddEvent event) {
         reactReaction.parseReaction(event, true);
         asVoteReaction.parseAction(event);
+        communityControlReaction.parseReaction(event);
     }
 
     @Override
     public void onReactionRemoveAll(ReactionRemoveAllEvent event) {
-
     }
 
     @Override
@@ -246,6 +248,7 @@ public class EventsListener
     @Override
     public void onReactionRemove(ReactionRemoveEvent event) {
         reactReaction.parseReaction(event, false);
+        communityControlReaction.parseReaction(event);
     }
 
     void onReady() {
@@ -277,6 +280,64 @@ public class EventsListener
     @Override
     public void onServerMemberJoin(ServerMemberJoinEvent event) {
         serverMemberStateDisplay(event, MemberEventCode.JOIN);
+        Server server = event.getServer();
+        ServerPreferences preferences = SettingsController.getInstance()
+                .getServerPreferences(event.getServer().getId());
+        if (preferences.getAutoPromoteEnabled()
+            && preferences.getAutoPromoteRoleId() != null
+            && server.getRoleById(preferences.getAutoPromoteRoleId()).isPresent()) {
+
+            final long timeout = preferences.getAutoPromoteTimeout();
+            final long userId = event.getUser().getId();
+            final long serverId = event.getServer().getId();
+            final long roleId = preferences.getAutoPromoteRoleId() != null ?
+                    preferences.getAutoPromoteRoleId() : 0L;
+
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Thread.sleep(timeout * 1000L);
+                    DiscordApi api = SettingsController.getInstance().getDiscordApi();
+                    if (api != null) {
+                        api.getServerById(serverId).ifPresent(srv ->
+                                srv.getMemberById(userId).ifPresent(member ->
+                                        srv.getRoleById(roleId).ifPresent(role ->
+                                            autoAssignRole(srv, member, role)
+                                        )));
+                    }
+                } catch (InterruptedException ignore) {}
+            });
+        }
+    }
+
+    private void autoAssignRole(Server server, User member, Role role) {
+        server.addRoleToUser(member, role).thenAccept(v -> {
+            ServerPreferences preferences = SettingsController.getInstance()
+                    .getServerPreferences(server.getId());
+            if (preferences.isJoinLeaveDisplay() && preferences.getJoinLeaveChannel() > 0) {
+                Optional<ServerTextChannel> mayBeChannel =
+                        server.getTextChannelById(preferences.getJoinLeaveChannel());
+                mayBeChannel.ifPresent(c -> {
+                    Instant currentStamp = Instant.now();
+                    UserCachedData userCachedData = new UserCachedData(member, server);
+                    String userName = userCachedData.getDisplayUserName()
+                            + " (" + member.getDiscriminatedName() + ")";
+                    final int newlineBreak = 20;
+                    EmbedBuilder embedBuilder = new EmbedBuilder()
+                            .setColor(Color.BLUE)
+                            .setTimestamp(currentStamp)
+                            .addField("User",
+                                    CommonUtils.addLinebreaks(userName, newlineBreak), true)
+                            .addField("Assigned role",
+                                    CommonUtils.addLinebreaks(role.getName(), newlineBreak), true);
+                    if (userCachedData.isHasAvatar()) {
+                        embedBuilder.setThumbnail(userCachedData.getAvatarBytes(), userCachedData.getAvatarExtension());
+                    }
+                    new MessageBuilder()
+                            .setEmbed(embedBuilder)
+                            .send(c);
+                });
+            }
+        });
     }
 
     @Override
