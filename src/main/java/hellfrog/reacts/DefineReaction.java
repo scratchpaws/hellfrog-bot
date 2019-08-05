@@ -2,6 +2,7 @@ package hellfrog.reacts;
 
 import com.vdurmont.emoji.EmojiParser;
 import hellfrog.common.CommonConstants;
+import hellfrog.common.CommonUtils;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import hellfrog.settings.WtfMap;
@@ -14,6 +15,7 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.Enumeration;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -29,9 +31,9 @@ public class DefineReaction
 
     private ReentrantLock createDefinitionLock = new ReentrantLock();
 
-    private static final Pattern DEFINE_PATTERN = Pattern.compile("^(dfn|дфн)\\s+.*=.*",
+    private static final Pattern DEFINE_PATTERN = Pattern.compile("^(dfn|дфн|def|деф)\\s+.*=.*",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-    private static final Pattern CUT_DEFINE_PATTERN = Pattern.compile("^(dfn|дфн)\\s+",
+    private static final Pattern CUT_DEFINE_PATTERN = Pattern.compile("^(dfn|дфн|def|деф)\\s+",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     public DefineReaction() {
@@ -65,10 +67,10 @@ public class DefineReaction
             if (searchCut.find()) {
                 String defineSubstring = strMessage.substring(searchCut.end());
                 String[] nameAndDefine = defineSubstring.split("=");
-                if (nameAndDefine.length == 2) {
+                if (nameAndDefine.length >= 1 && nameAndDefine.length <= 2) {
                     Optional<User> mayBeUser = ServerSideResolver.resolveUser(server, nameAndDefine[0].trim());
                     mayBeUser.ifPresentOrElse(dfnUser -> {
-                        String define = nameAndDefine[1].strip();
+                        String define = nameAndDefine.length == 2 ? nameAndDefine[1].strip() : "";
                         if (!wtfAssign.containsKey(dfnUser.getId())
                                 || wtfAssign.get(dfnUser.getId()) == null) {
                             createDefinitionLock.lock();
@@ -83,13 +85,35 @@ public class DefineReaction
                             }
                         }
                         WtfMap wtfMap = wtfAssign.get(dfnUser.getId());
-                        wtfMap.getNameValues().put(user.getId(), define);
-                        wtfMap.getLastName().set(user.getId());
-                        SettingsController.getInstance().saveServerSideParameters(server.getId());
-                        new MessageBuilder()
-                                .append("Ok, saved ")
-                                .append(EmojiParser.parseToUnicode(":ok_hand:"))
-                                .send(textChannel);
+                        if (!CommonUtils.isTrStringEmpty(define)) {
+                            wtfMap.getNameValues().put(user.getId(), define);
+                            wtfMap.getLastName().set(user.getId());
+                            SettingsController.getInstance().saveServerSideParameters(server.getId());
+                            new MessageBuilder()
+                                    .append("Ok, saved ")
+                                    .append(EmojiParser.parseToUnicode(":ok_hand:"))
+                                    .send(textChannel);
+                        } else {
+                            String removed = wtfMap.getNameValues().remove(user.getId());
+                            if (removed != null) {
+                                Enumeration<Long> enm = wtfMap.getNameValues().keys();
+                                if (enm.hasMoreElements()) {
+                                    wtfMap.getLastName().set(enm.nextElement());
+                                } else {
+                                    wtfMap.getLastName().set(0L);
+                                }
+                                SettingsController.getInstance().saveServerSideParameters(server.getId());
+                                new MessageBuilder()
+                                        .append("Ok, removed ")
+                                        .append(EmojiParser.parseToUnicode(":ok_hand:"))
+                                        .send(textChannel);
+                            } else {
+                                new MessageBuilder()
+                                        .append("But already is empty ")
+                                        .append(EmojiParser.parseToUnicode(":ok_hand:"))
+                                        .send(textChannel);
+                            }
+                        }
                     }, () -> new MessageBuilder()
                             .append("I can't find this user ")
                             .append(EmojiParser.parseToUnicode(":shrug:"))
