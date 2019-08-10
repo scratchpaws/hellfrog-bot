@@ -1,4 +1,4 @@
-package hellfrog.commands;
+package hellfrog.commands.cmdline;
 
 import com.vdurmont.emoji.EmojiParser;
 import hellfrog.common.CommonUtils;

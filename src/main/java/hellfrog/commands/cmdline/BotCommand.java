@@ -1,5 +1,6 @@
-package hellfrog.commands;
+package hellfrog.commands.cmdline;
 
+import hellfrog.commands.ACLCommand;
 import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.CommonUtils;
 import hellfrog.settings.SettingsController;
@@ -33,7 +34,6 @@ public abstract class BotCommand
     final private Options control = new Options();
     private String helpUsage = null;
     private String footer = "";
-    private static final Logger log = LogManager.getLogger(BotCommand.class.getSimpleName());
 
     public BotCommand(String botPrefix, String description) {
         super(botPrefix, description);
@@ -84,11 +84,11 @@ public abstract class BotCommand
      * @param anotherLines остальные строки сообщения команды, не являющиеся
      *                     самой командой (расположены на новых строках)
      */
-    public void executeCreateMessageEvent(MessageCreateEvent event, String[] rawCmdline, ArrayList<String> anotherLines) {
+    public void executeCreateMessageEvent(MessageCreateEvent event,
+                                          String[] rawCmdline,
+                                          ArrayList<String> anotherLines) {
 
-        if (super.isUpdateLastUsage()) {
-            SettingsController.getInstance().updateLastCommandUsage();
-        }
+        super.updateLastUsage();
 
         TextChannel channel = event.getChannel();
         if (rawCmdline.length < 2) {

@@ -1,11 +1,11 @@
 package hellfrog.core;
 
-import hellfrog.commands.BotCommand;
+import hellfrog.commands.cmdline.BotCommand;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.UserCachedData;
 import hellfrog.reacts.*;
-import hellfrog.scenarios.ScenariosDispatcher;
+import hellfrog.commands.scenes.Scenario;
 import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
 import org.apache.logging.log4j.LogManager;
@@ -66,8 +66,6 @@ public class EventsListener
 
     private String botInviteUrl = "";
 
-    private final ScenariosDispatcher scenariosDispatcher = new ScenariosDispatcher();
-
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
 
@@ -81,17 +79,19 @@ public class EventsListener
                 System.out.println(e.getDescription()));*/
 
         messageStats.onMessageCreate(event);
-        scenariosDispatcher.onMessageCreate(event);
 
         String strMessage = event.getMessageContent();
         Optional<Server> mayBeServer = event.getServer();
+
+        String botMentionTag = event.getApi().getYourself().getMentionTag();
 
         if (mayBeServer.isPresent()) {
             Server server = mayBeServer.get();
             String serverBotPrefixNoSep = SettingsController
                     .getInstance()
                     .getBotPrefix(server.getId());
-            if (strMessage.startsWith(serverBotPrefixNoSep)) {
+            if (strMessage.startsWith(serverBotPrefixNoSep)
+                || strMessage.startsWith(botMentionTag)) {
                 parseCmdLine(event);
                 isPlainMessage = false;
             }
@@ -99,7 +99,8 @@ public class EventsListener
             String globalBotPrefixNoSep = SettingsController
                     .getInstance()
                     .getGlobalCommonPrefix();
-            if (strMessage.startsWith(globalBotPrefixNoSep)) {
+            if (strMessage.startsWith(globalBotPrefixNoSep)
+                || strMessage.startsWith(botMentionTag)) {
                 parseCmdLine(event);
                 isPlainMessage = false;
             }
@@ -128,14 +129,26 @@ public class EventsListener
                 new ArrayList<>(inputLines.subList(1, inputLines.size())) : new ArrayList<>(0);
 
         SettingsController settingsController = SettingsController.getInstance();
+        String botMentionTag = event.getApi().getYourself().getMentionTag();
+        String botPrefix;
         String withoutCommonPrefix;
-        if (mayBeServer.isPresent()) {
+        if (inputLines.get(0).startsWith(botMentionTag)) {
+            botPrefix = botMentionTag;
+        } else if (mayBeServer.isPresent()) {
             Server server = mayBeServer.get();
-            String serverBotPrefixNoSep = settingsController.getBotPrefix(server.getId());
-            withoutCommonPrefix = getCmdlineWithoutPrefix(serverBotPrefixNoSep, inputLines.get(0));
+            botPrefix = settingsController.getBotPrefix(server.getId());
         } else {
-            String globalBotPrefixNoSep = settingsController.getGlobalCommonPrefix();
-            withoutCommonPrefix = getCmdlineWithoutPrefix(globalBotPrefixNoSep, inputLines.get(0));
+            botPrefix = settingsController.getGlobalCommonPrefix();
+        }
+        withoutCommonPrefix = getCmdlineWithoutPrefix(botPrefix, inputLines.get(0));
+
+        boolean scenarioIsRun = Scenario.all().stream()
+                .filter(scenario -> scenario.canExecute(withoutCommonPrefix))
+                .findFirst()
+                .map(scenario -> scenario.runScenario(event))
+                .orElse(false);
+        if (scenarioIsRun) {
+            return;
         }
 
         String[] rawCmdline = Commandline.translateCommandline(withoutCommonPrefix);
@@ -162,6 +175,11 @@ public class EventsListener
                         .append("The following commands are available:", MessageDecoration.BOLD)
                         .appendNewLine();
 
+                Scenario.all()
+                        .forEach(s -> embedMessageText.append(s.getPrefix())
+                                .append(" - ")
+                                .append(s.getCommandDescription())
+                                .appendNewLine());
                 BotCommand.all()
                         .forEach(c -> embedMessageText.append(c.getPrefix())
                                 .append(" - ")
@@ -236,7 +254,6 @@ public class EventsListener
         reactReaction.parseReaction(event, true);
         asVoteReaction.parseAction(event);
         communityControlReaction.parseReaction(event);
-        scenariosDispatcher.onReactionAdd(event);
     }
 
     @Override
@@ -254,7 +271,6 @@ public class EventsListener
     public void onReactionRemove(ReactionRemoveEvent event) {
         reactReaction.parseReaction(event, false);
         communityControlReaction.parseReaction(event);
-        scenariosDispatcher.onReactionRemove(event);
     }
 
     void onReady() {

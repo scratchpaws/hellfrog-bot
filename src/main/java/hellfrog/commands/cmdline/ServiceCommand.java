@@ -1,4 +1,4 @@
-package hellfrog.commands;
+package hellfrog.commands.cmdline;
 
 import groovy.lang.GroovyShell;
 import hellfrog.common.BroadCast;

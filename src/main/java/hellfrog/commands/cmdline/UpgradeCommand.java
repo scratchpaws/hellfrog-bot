@@ -1,4 +1,4 @@
-package hellfrog.commands;
+package hellfrog.commands.cmdline;
 
 import hellfrog.common.BroadCast;
 import hellfrog.common.CodeSourceUtils;

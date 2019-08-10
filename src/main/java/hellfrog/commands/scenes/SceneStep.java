@@ -1,6 +1,4 @@
-package hellfrog.scenarios;
-
-import org.jetbrains.annotations.Contract;
+package hellfrog.commands.scenes;
 
 public class SceneStep {
 

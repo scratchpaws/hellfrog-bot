@@ -1,4 +1,4 @@
-package hellfrog.scenarios;
+package hellfrog.commands.scenes;
 
 public enum StepType {
 

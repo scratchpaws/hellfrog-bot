@@ -94,7 +94,7 @@ public abstract class ACLCommand {
         return description;
     }
 
-    Messageable getMessageTargetByRights(MessageCreateEvent event) {
+    protected Messageable getMessageTargetByRights(MessageCreateEvent event) {
         return canShowMessageByRights(event) ? event.getChannel() : event.getMessageAuthor()
                 .asUser().orElse(event.getApi().getOwner().join());
     }
@@ -182,6 +182,12 @@ public abstract class ACLCommand {
                 }
                 showEmbedMessage(textMessage, alternatePrivateTarget, null, type);
             }
+        }
+    }
+
+    protected void updateLastUsage() {
+        if (updateLastUsage) {
+            SettingsController.getInstance().updateLastCommandUsage();
         }
     }
 }

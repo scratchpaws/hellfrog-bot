@@ -2,8 +2,8 @@
 <Configuration status="INFO">
     <Appenders>
         <RollingFile name="plainLogger"
-                     fileName="hellfrog_common.log"
-                     filePattern="hellfrog_common_%d{yyyy-MM-dd}_%i.log.gz"
+                     fileName="logs/hellfrog_common.log"
+                     filePattern="logs/hellfrog_common_%d{yyyy-MM-dd}_%i.log.gz"
                      append="true">
             <PatternLayout>
                 <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%t] [%logger{36}] %msg%n</Pattern>
@@ -14,8 +14,8 @@
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
         <RollingFile name="cmdLogger"
-                     fileName="hellfrog_cmds.log"
-                     filePattern="hellfrog_cmds_%d{yyyy-MM-dd}_%i.log.gz"
+                     fileName="logs/hellfrog_cmds.log"
+                     filePattern="logs/hellfrog_cmds_%d{yyyy-MM-dd}_%i.log.gz"
                      append="true">
             <PatternLayout>
                 <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] %msg%n</Pattern>
@@ -26,8 +26,8 @@
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
         <RollingFile name="hibernateLogger"
-                     fileName="hellfrog_sql.log"
-                     filePattern="hellfrog_sql_%d{yyyy-MM-dd}_%i.log.gz"
+                     fileName="logs/hellfrog_sql.log"
+                     filePattern="logs/hellfrog_sql_%d{yyyy-MM-dd}_%i.log.gz"
                      append="true">
             <PatternLayout>
                 <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%t] [%logger{36}] %msg%n</Pattern>

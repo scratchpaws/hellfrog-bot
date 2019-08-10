@@ -1,4 +1,4 @@
-package hellfrog.commands;
+package hellfrog.commands.cmdline;
 
 import hellfrog.settings.SettingsController;
 import org.apache.commons.cli.CommandLine;

@@ -1,4 +1,4 @@
-package hellfrog.commands;
+package hellfrog.commands.cmdline;
 
 import hellfrog.common.CommonUtils;
 import hellfrog.core.ServerSideResolver;
