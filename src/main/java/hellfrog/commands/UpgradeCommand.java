@@ -69,18 +69,18 @@ public class UpgradeCommand
                                                    CommandLine cmdline, ArrayList<String> cmdlineArgs,
                                                    TextChannel channel, MessageCreateEvent event,
                                                    ArrayList<String> anotherLines) {
-        commandAction(cmdline, channel, event);
+        commandAction(cmdline, event);
     }
 
     @Override
     protected void executeCreateMessageEventDirect(CommandLine cmdline, ArrayList<String> cmdlineArgs,
                                                    TextChannel channel, MessageCreateEvent event,
                                                    ArrayList<String> anotherLines) {
-        commandAction(cmdline, channel, event);
+        commandAction(cmdline, event);
     }
 
     private void commandAction(CommandLine cmdline,
-                               TextChannel channel, MessageCreateEvent event) {
+                               MessageCreateEvent event) {
         if (!canExecuteGlobalCommand(event)) {
             showAccessDeniedGlobalMessage(event);
             return;

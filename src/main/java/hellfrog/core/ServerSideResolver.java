@@ -1,6 +1,8 @@
 package hellfrog.core;
 
 import hellfrog.common.CommonUtils;
+import org.javacord.api.entity.channel.ChannelCategory;
+import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.permission.PermissionType;
@@ -113,7 +115,19 @@ public class ServerSideResolver {
                 return textChannel;
         }
         // 4. И наконец просто по имени канала
-        return CommonUtils.getFirstOrEmpty(server.getTextChannelsByName(rawValue));
+        return CommonUtils.getFirstOrEmpty(server.getTextChannelsByNameIgnoreCase(rawValue));
+    }
+
+    public static Optional<ChannelCategory> resolveCategory(Server server, String rawValue) {
+        // 1. Вначале ищем по явному ID канала
+        if (CommonUtils.isLong(rawValue)) {
+            long unresolvedCategoryId = CommonUtils.onlyNumbersToLong(rawValue);
+            Optional<ChannelCategory> channelCategory = server.getChannelCategoryById(unresolvedCategoryId);
+            if (channelCategory.isPresent())
+                return channelCategory;
+        }
+        // 2. Далее ищем по имени категории
+        return CommonUtils.getFirstOrEmpty(server.getChannelCategoriesByNameIgnoreCase(rawValue));
     }
 
     public static Optional<KnownCustomEmoji> resolveCustomEmoji(Server server, String rawText) {
@@ -181,7 +195,8 @@ public class ServerSideResolver {
         return result;
     }
 
-    public static ParseResult<ServerTextChannel> resolveTextChannelsList(Server server, @NotNull List<String> rawTextChannelList) {
+    public static ParseResult<ServerTextChannel> resolveTextChannelsList(Server server,
+                                                                         @NotNull List<String> rawTextChannelList) {
         ParseResult<ServerTextChannel> result = new ParseResult<>();
         List<ServerTextChannel> resolvedChannels = new ArrayList<>(rawTextChannelList.size());
         List<String> unresolvedChannels = new ArrayList<>(rawTextChannelList.size());
@@ -198,7 +213,31 @@ public class ServerSideResolver {
         return result;
     }
 
-    public static ParseResult<KnownCustomEmoji> resolveKnownEmojiList(Server server, @NotNull List<String> rawEmojiList) {
+    public static ParseResult<ServerChannel> resolveTextChannelsAndCategoriesList(Server server,
+                                                                                  @NotNull List<String> rawChannelsList) {
+        ParseResult<ServerChannel> result = new ParseResult<>();
+        List<ServerChannel> resolvedChannels = new ArrayList<>(rawChannelsList.size());
+        List<String> unresolvedChannels = new ArrayList<>(rawChannelsList.size());
+        rawChannelsList.forEach((rawChannel) -> {
+            Optional<ServerTextChannel> mayBeTextChannel = ServerSideResolver.resolveChannel(server, rawChannel);
+            if (mayBeTextChannel.isPresent()) {
+                resolvedChannels.add(mayBeTextChannel.get());
+            } else {
+                Optional<ChannelCategory> mayBeCategory = ServerSideResolver.resolveCategory(server, rawChannel);
+                if (mayBeCategory.isPresent()) {
+                    resolvedChannels.add(mayBeCategory.get());
+                } else {
+                    unresolvedChannels.add(rawChannel);
+                }
+            }
+        });
+        result.setFound(resolvedChannels);
+        result.setNotFound(unresolvedChannels);
+        return result;
+    }
+
+    public static ParseResult<KnownCustomEmoji> resolveKnownEmojiList(Server server,
+                                                                      @NotNull List<String> rawEmojiList) {
         ParseResult<KnownCustomEmoji> result = new ParseResult<>();
         List<KnownCustomEmoji> resolvedEmoji = new ArrayList<>(rawEmojiList.size());
         List<String> unresolvedEmoji = new ArrayList<>(rawEmojiList.size());

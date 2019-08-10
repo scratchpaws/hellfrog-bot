@@ -8,6 +8,7 @@ import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
+import org.javacord.api.entity.channel.ChannelCategory;
 import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
@@ -17,6 +18,7 @@ import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -221,7 +223,7 @@ public class RightsCommand
 
             ServerSideResolver.ParseResult<User> parsedUsers = ServerSideResolver.emptyResult();
             ServerSideResolver.ParseResult<Role> parsedRoles = ServerSideResolver.emptyResult();
-            ServerSideResolver.ParseResult<ServerTextChannel> parsedChannels = ServerSideResolver.emptyResult();
+            ServerSideResolver.ParseResult<ServerChannel> parsedChannels = ServerSideResolver.emptyResult();
 
             if (userModify) {
                 parsedUsers = ServerSideResolver.resolveUsersList(server, usersList);
@@ -230,7 +232,7 @@ public class RightsCommand
                 parsedRoles = ServerSideResolver.resolveRolesList(server, rolesList);
             }
             if (channelsModify) {
-                parsedChannels = ServerSideResolver.resolveTextChannelsList(server, channelsList);
+                parsedChannels = ServerSideResolver.resolveTextChannelsAndCategoriesList(server, channelsList);
                 if (modifyThisChannel && (channel instanceof ServerTextChannel)) {
                     ServerTextChannel itsChannel = (ServerTextChannel) channel;
                     parsedChannels.getFound().add(itsChannel);
@@ -250,7 +252,7 @@ public class RightsCommand
                         .appendNewLine();
 
             if (parsedChannels.hasNotFound())
-                resultMessage.append("This channels cannot be resolve: ")
+                resultMessage.append("This channels or categories cannot be resolve: ")
                         .append(parsedChannels.getNotFoundStringList())
                         .appendNewLine();
 
@@ -265,8 +267,8 @@ public class RightsCommand
             List<Role> rolesChanged = new ArrayList<>(parsedRoles.getFound().size());
             List<Role> rolesNoChanged = new ArrayList<>(rolesChanged.size());
 
-            List<ServerTextChannel> channelsChanged = new ArrayList<>(parsedChannels.getFound().size());
-            List<ServerTextChannel> channelsNoChanged = new ArrayList<>(channelsChanged.size());
+            List<ServerChannel> channelsChanged = new ArrayList<>(parsedChannels.getFound().size());
+            List<ServerChannel> channelsNoChanged = new ArrayList<>(channelsChanged.size());
 
             for (User user : parsedUsers.getFound()) {
                 commandRightsList.stream().map((commandRights) -> allowMode ?
@@ -292,7 +294,7 @@ public class RightsCommand
                 });
             }
 
-            for (ServerTextChannel rChannel : parsedChannels.getFound()) {
+            for (ServerChannel rChannel : parsedChannels.getFound()) {
                 commandRightsList.stream().map((commandRights) -> allowMode ?
                         commandRights.addAllowChannel(rChannel.getId()) :
                         commandRights.delAllowChannel(rChannel.getId())).forEachOrdered((result) -> {
@@ -352,7 +354,7 @@ public class RightsCommand
                                 settingsController.saveServerSideParameters(server.getId());
                                 return "[leaved-user, now removed from settings] (id: " + userId + ")";
                             }
-                        }).reduce((user1, user2) -> user1 + ", " + user2);
+                        }).reduce(CommonUtils::reduceConcat);
                 resolvedAllowedUsers.ifPresent(s -> msgBuilder.append("  * allow for users: ")
                         .append(s)
                         .appendNewLine());
@@ -368,63 +370,108 @@ public class RightsCommand
                                 settingsController.saveServerSideParameters(server.getId());
                                 return "[removed role, now removed from settings] (id: " + roleId + ")";
                             }
-                        }).reduce((role1, role2) -> role1 + ", " + role2);
+                        }).reduce(CommonUtils::reduceConcat);
                 resolvedAllowedRoles.ifPresent(s -> msgBuilder.append("  * allow for roles: ")
                         .append(s)
                         .appendNewLine());
 
                 Optional<String> resolvedAllowedChannels = commandRights.getAllowChannels().stream()
                         .map(channelId -> {
-                            Optional<ServerChannel> mayBeChannel = server.getChannelById(channelId);
+                            Optional<ServerTextChannel> mayBeChannel = server.getTextChannelById(channelId);
                             if (mayBeChannel.isPresent()) {
-                                ServerChannel serverChannel = mayBeChannel.get();
-                                return serverChannel.getName() + " (id: " + channelId + ")";
+                                return this.getChannelNameAndId(mayBeChannel.get());
                             } else {
-                                commandRights.delAllowChannel(channelId);
-                                settingsController.saveServerSideParameters(server.getId());
-                                return "[removed channel, now removed from settings] (id: " + channel + ")";
+                                Optional<ChannelCategory> mayBeCategory = server.getChannelCategoryById(channelId);
+                                if (mayBeCategory.isEmpty()) {
+                                    commandRights.delAllowChannel(channelId);
+                                    settingsController.saveServerSideParameters(server.getId());
+                                    return "[removed channel/category, now removed from settings] (id: " + channelId + ")";
+                                } else {
+                                    return "";
+                                }
                             }
-                        }).reduce((ch1, ch2) -> ch1 + ", " + ch2);
+                        })
+                        .filter(s -> !CommonUtils.isTrStringEmpty(s))
+                        .reduce(CommonUtils::reduceConcat);
                 resolvedAllowedChannels.ifPresent(s -> msgBuilder.append("  * allow for channels: ")
                         .append(s)
                         .appendNewLine());
+
+                Optional<String> resolvedAllowedCategories = commandRights.getAllowChannels().stream()
+                        .map(channelId -> {
+                            Optional<ChannelCategory> mayBeCategory = server.getChannelCategoryById(channelId);
+                            if (mayBeCategory.isPresent()) {
+                                return this.getChannelNameAndId(mayBeCategory.get());
+                            } else {
+                                Optional<ServerTextChannel> mayBeChannel = server.getTextChannelById(channelId);
+                                if (mayBeChannel.isEmpty()) {
+                                    commandRights.delAllowChannel(channelId);
+                                    settingsController.saveServerSideParameters(server.getId());
+                                    return "[removed channel/category, now removed from settings] (id: " + channelId + ")";
+                                } else {
+                                    return "";
+                                }
+                            }
+                        })
+                        .filter(s -> !CommonUtils.isTrStringEmpty(s))
+                        .reduce(CommonUtils::reduceConcat);
+                resolvedAllowedCategories.ifPresent(s -> msgBuilder.append("  * allowed for categories: ")
+                        .append(s)
+                        .appendNewLine());
+
                 if (resolvedAllowedUsers.isEmpty() &&
                         resolvedAllowedRoles.isEmpty() &&
-                        resolvedAllowedChannels.isEmpty())
+                        resolvedAllowedChannels.isEmpty() &&
+                        resolvedAllowedCategories.isEmpty())
                     msgBuilder.append("  * No rights were specified for the command.");
                 showInfoMessage(msgBuilder.getStringBuilder().toString(), event);
             }
         }
     }
 
-    private void addUsersListToMessage(MessageBuilder resultMessage, List<User> users) {
+    private void addUsersListToMessage(MessageBuilder resultMessage, @NotNull List<User> users) {
         users.stream()
                 .map(u -> u.getDiscriminatedName() + " (id: " + u.getIdAsString() + ")")
-                .reduce((u1, u2) -> u1 + ", " + u2)
+                .reduce(CommonUtils::reduceConcat)
                 .ifPresent(usrlist -> resultMessage
                         .append("Users: ")
                         .append(usrlist)
                         .appendNewLine());
     }
 
-    private void addRolesListToMessage(MessageBuilder resultMessage, List<Role> roles) {
+    private void addRolesListToMessage(MessageBuilder resultMessage, @NotNull List<Role> roles) {
         roles.stream()
                 .map(r -> r.getName() + " (id: " + r.getIdAsString() + ")")
-                .reduce((r1, r2) -> r1 + ", " + r2)
+                .reduce(CommonUtils::reduceConcat)
                 .ifPresent(rlist -> resultMessage
                         .append("Roles: ")
                         .append(rlist)
                         .appendNewLine());
     }
 
-    private void addServerTextChannelsListToMessage(MessageBuilder resultMessage, List<ServerTextChannel> channels) {
+    private void addServerTextChannelsListToMessage(@NotNull MessageBuilder resultMessage,
+                                                    @NotNull List<ServerChannel> channels) {
         channels.stream()
-                .map(c -> c.getName() + " (id: " + c.getIdAsString() + ")")
-                .reduce((c1, c2) -> c1 + ", " + c2)
+                .filter(c -> c instanceof ServerTextChannel)
+                .map(this::getChannelNameAndId)
+                .reduce(CommonUtils::reduceConcat)
                 .ifPresent(clist -> resultMessage
                         .append("For channels: ")
                         .append(clist)
                         .appendNewLine());
+        channels.stream()
+                .filter(c -> c instanceof ChannelCategory)
+                .map(this::getChannelNameAndId)
+                .reduce(CommonUtils::reduceConcat)
+                .ifPresent(cliet -> resultMessage
+                        .append("For categories: ")
+                        .append(cliet)
+                        .appendNewLine());
+    }
+
+    @NotNull
+    private String getChannelNameAndId(@NotNull ServerChannel channel) {
+        return channel.getName() + " (id: " + channel.getIdAsString() + ")";
     }
 
     /**

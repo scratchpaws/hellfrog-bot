@@ -5,6 +5,7 @@ import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.UserCachedData;
 import hellfrog.reacts.*;
+import hellfrog.scenarios.ScenariosDispatcher;
 import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
 import org.apache.logging.log4j.LogManager;
@@ -65,6 +66,8 @@ public class EventsListener
 
     private String botInviteUrl = "";
 
+    private final ScenariosDispatcher scenariosDispatcher = new ScenariosDispatcher();
+
     @Override
     public void onMessageCreate(MessageCreateEvent event) {
 
@@ -78,6 +81,7 @@ public class EventsListener
                 System.out.println(e.getDescription()));*/
 
         messageStats.onMessageCreate(event);
+        scenariosDispatcher.onMessageCreate(event);
 
         String strMessage = event.getMessageContent();
         Optional<Server> mayBeServer = event.getServer();
@@ -232,6 +236,7 @@ public class EventsListener
         reactReaction.parseReaction(event, true);
         asVoteReaction.parseAction(event);
         communityControlReaction.parseReaction(event);
+        scenariosDispatcher.onReactionAdd(event);
     }
 
     @Override
@@ -249,6 +254,7 @@ public class EventsListener
     public void onReactionRemove(ReactionRemoveEvent event) {
         reactReaction.parseReaction(event, false);
         communityControlReaction.parseReaction(event);
+        scenariosDispatcher.onReactionRemove(event);
     }
 
     void onReady() {

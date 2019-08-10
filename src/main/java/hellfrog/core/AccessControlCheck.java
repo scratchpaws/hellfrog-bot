@@ -2,6 +2,8 @@ package hellfrog.core;
 
 import hellfrog.settings.CommandRights;
 import hellfrog.settings.SettingsController;
+import org.javacord.api.entity.channel.ChannelCategory;
+import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
@@ -16,8 +18,8 @@ import java.util.stream.Collectors;
 public class AccessControlCheck {
 
     private static boolean canExecuteOnServer(@NotNull String commandPrefix, @NotNull User user,
-                                      @NotNull Server server, @NotNull TextChannel channel,
-                                      boolean strictByChannels, long... anotherTargetChannel) {
+                                              @NotNull Server server, @NotNull TextChannel channel,
+                                              boolean strictByChannels, long... anotherTargetChannel) {
 
         SettingsController settingsController = SettingsController.getInstance();
 
@@ -47,10 +49,12 @@ public class AccessControlCheck {
         if (strictByChannels && allowChannelsListNotEmpty) {
             if (anotherTargetChannelsNotEmpty) {
                 for (long anotherChannelId : anotherTargetChannel) {
-                    isAllowedForChannel &= commandRights.isAllowChat(anotherChannelId);
+                    isAllowedForChannel &= isAllowChatOrCategory(server, commandRights, channelId);
+                    //commandRights.isAllowChat(anotherChannelId);
                 }
             } else {
-                isAllowedForChannel = commandRights.isAllowChat(channelId);
+                isAllowedForChannel = isAllowChatOrCategory(server, commandRights, channelId);
+                //commandRights.isAllowChat(channelId);
             }
         } else if (strictByChannels && isNewAclMode) {
             isAllowedForChannel = false;
@@ -59,6 +63,21 @@ public class AccessControlCheck {
                 // дополнение к логике ACL, new mode
                 || (isNewAclMode && strictByChannels && isAllowedForChannel && !hasAllowedRolesOrUsers)
                 || isServerAdmin;
+    }
+
+    private static boolean isAllowChatOrCategory(@NotNull Server server,
+                                                 @NotNull CommandRights commandRights,
+                                                 long channelId) {
+        if (commandRights.isAllowChat(channelId)) {
+            return true;
+        }
+        return server.getTextChannelById(channelId)
+                .map(ServerTextChannel::getCategory)
+                .map(mayBeCategory ->
+                        mayBeCategory.map(ChannelCategory::getId)
+                                .map(commandRights::isAllowChat)
+                                .orElse(false)
+                ).orElse(false);
     }
 
     public static boolean canExecuteOnServer(@NotNull String commandPrefix, @NotNull MessageCreateEvent event,

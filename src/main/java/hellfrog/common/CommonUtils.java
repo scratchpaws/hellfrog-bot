@@ -163,7 +163,9 @@ public class CommonUtils {
 
     @NotNull
     @Contract(pure = true)
-    public static String reduceConcat(final String s1, final String s2) {
-        return s1 + ", " + s2;
+    public static String reduceConcat(final @Nullable String s1, final @Nullable String s2) {
+        return (s1 != null ? s1 : "(?)")
+                + ", "
+                + (s2 != null ? s2 : "(?)");
     }
 }
