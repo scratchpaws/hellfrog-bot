@@ -35,4 +35,14 @@ public class ScenarioState {
             return null;
         }
     }
+
+    public long getStepId() {
+        return stepId;
+    }
+
+    public ScenarioState cloneWithStepId(long newStepId) {
+        ScenarioState cloned = new ScenarioState(newStepId);
+        this.objectsMap.forEach(cloned.objectsMap::put);
+        return cloned;
+    }
 }

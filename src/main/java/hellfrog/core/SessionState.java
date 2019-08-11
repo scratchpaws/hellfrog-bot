@@ -2,7 +2,6 @@ package hellfrog.core;
 
 import hellfrog.commands.scenes.Scenario;
 import hellfrog.commands.scenes.ScenarioState;
-import hellfrog.settings.SettingsController;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.user.User;
@@ -15,7 +14,6 @@ import org.jetbrains.annotations.Nullable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -132,7 +130,7 @@ public class SessionState {
         private Message message = null;
         private boolean removeReaction = false;
         private final Scenario scenario;
-        private final ScenarioState scenarioState;
+        private ScenarioState scenarioState;
 
         ClonedBuilder(long userId,
                       long textChannelId,
@@ -162,7 +160,13 @@ public class SessionState {
             return this;
         }
 
+        public ClonedBuilder changeScenarioStateId(long newId) {
+            this.scenarioState = scenarioState.cloneWithStepId(newId);
+            return this;
+        }
+
         public SessionState build() {
+            Objects.requireNonNull(scenarioState, "Scenario state cannot be a null");
             return new SessionState(userId, textChannelId, message, removeReaction, scenario, scenarioState);
         }
     }

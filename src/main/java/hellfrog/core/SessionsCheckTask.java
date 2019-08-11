@@ -1,6 +1,7 @@
 package hellfrog.core;
 
 import hellfrog.settings.SettingsController;
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.user.User;
@@ -37,6 +38,8 @@ public class SessionsCheckTask
                                                 .setColor(Color.RED)
                                                 .setDescription(user.getMentionTag() + ", your response time is up"))
                                         .send(textChannel);
+                                textChannel.getMessageById(sessionState.getMessageId())
+                                        .thenAccept(Message::removeAllReactions);
                             })
                     );
                 });

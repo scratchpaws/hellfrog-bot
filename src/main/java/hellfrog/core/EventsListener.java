@@ -272,6 +272,10 @@ public class EventsListener
                     SessionState.all().remove(sessionState);
                     sessionState.getScenario().executeReactionStep(event, sessionState);
                     break;
+                } else {
+                    if (sessionState.getMessageId() == event.getMessageId()) {
+                        event.removeReaction();
+                    }
                 }
             }
         }

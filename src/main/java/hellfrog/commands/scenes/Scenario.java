@@ -196,4 +196,11 @@ public abstract class Scenario
     public void commitState(@NotNull SessionState sessionState) {
         SessionState.all().add(sessionState);
     }
+
+    protected boolean equalsUnicodeReaction(@NotNull SingleReactionEvent event,
+                                            @NotNull String unicodeEmoji) {
+        return event.getEmoji().asUnicodeEmoji()
+                .map(unicodeEmoji::equals)
+                .orElse(false);
+    }
 }

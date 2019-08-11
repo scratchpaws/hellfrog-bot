@@ -168,4 +168,15 @@ public class CommonUtils {
                 + ", "
                 + (s2 != null ? s2 : "(?)");
     }
+
+    @SafeVarargs
+    public static<T> boolean in(T that, T... there) {
+        if (that == null || there == null) return false;
+        for (T item : there) {
+            if (that.equals(item)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

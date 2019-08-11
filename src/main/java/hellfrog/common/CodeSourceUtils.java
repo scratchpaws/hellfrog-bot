@@ -91,7 +91,9 @@ public final class CodeSourceUtils {
                             Class childClass = Class.forName(name);
                             Object instance = childClass.getDeclaredConstructor()
                                     .newInstance();
-                            collectedCommandsList.add((T) instance);
+                            if (superClassFQDN.isInstance(instance)) {
+                                collectedCommandsList.add(superClassFQDN.cast(instance));
+                            }
                             successList.add(childClass.getName());
                         } catch (Exception err) {
                             failList.add(name + ": " + err);
