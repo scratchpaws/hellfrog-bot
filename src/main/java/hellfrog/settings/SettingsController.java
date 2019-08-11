@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import hellfrog.common.CommonUtils;
 import hellfrog.core.ServerStatisticTask;
+import hellfrog.core.SessionsCheckTask;
 import hellfrog.core.VoteController;
 import org.javacord.api.DiscordApi;
 
@@ -38,6 +39,7 @@ public class SettingsController {
     private final ReentrantLock serverStatSaveLock = new ReentrantLock();
     private final VoteController voteController;
     private final ServerStatisticTask serverStatisticTask;
+    private final SessionsCheckTask sessionsCheckTask;
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
     private volatile Instant lastCommandUsage = null;
@@ -47,6 +49,7 @@ public class SettingsController {
         loadServersSettings();
         voteController = new VoteController();
         serverStatisticTask = new ServerStatisticTask();
+        sessionsCheckTask = new SessionsCheckTask();
     }
 
     public static SettingsController getInstance() {
@@ -371,5 +374,9 @@ public class SettingsController {
 
     public void setServerTextChatTransfer(Long serverTextChatTransfer) {
         commonPreferences.setServerTextChatTransfer(serverTextChatTransfer);
+    }
+
+    public SessionsCheckTask getSessionsCheckTask() {
+        return sessionsCheckTask;
     }
 }

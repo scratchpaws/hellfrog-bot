@@ -1,5 +1,8 @@
 package hellfrog.core;
 
+import hellfrog.commands.cmdline.BotCommand;
+import hellfrog.commands.scenes.Scenario;
+import hellfrog.reacts.MsgCreateReaction;
 import hellfrog.settings.SettingsController;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.javacord.api.DiscordApiBuilder;
@@ -9,6 +12,9 @@ public class Loader {
 
     public static void main(String... args) {
         EventsListener eventsListener = new EventsListener();
+        BotCommand.all(); // заранее инициируем поиск и инстантинацию классов команд
+        MsgCreateReaction.all();
+        Scenario.all();
 
         new DiscordApiBuilder()
                 .setToken(SettingsController.getInstance().getApiKey())

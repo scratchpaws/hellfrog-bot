@@ -79,6 +79,7 @@ public final class CodeSourceUtils {
         List<String> failList = new ArrayList<>();
         try (ScanResult scanResult = new ClassGraph()
                 .enableAllInfo()
+                .whitelistPackages("hellfrog")
                 .scan()) {
             scanResult.getAllClasses().stream()
                     .filter(ci -> ci.extendsSuperclass(superClassFQDN.getName()))

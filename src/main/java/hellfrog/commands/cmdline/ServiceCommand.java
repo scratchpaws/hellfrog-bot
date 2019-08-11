@@ -21,6 +21,7 @@ import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -285,18 +286,14 @@ public class ServiceCommand
         }
     }
 
-    private void doStopAction(MessageCreateEvent event) {
+    private void doStopAction(@NotNull MessageCreateEvent event) {
 
         SettingsController settingsController = SettingsController.getInstance();
 
-        settingsController
-                .getVoteController()
-                .stop();
-        settingsController
-                .getServerStatisticTask()
-                .stop();
-        settingsController
-                .saveCommonPreferences();
+        settingsController.getVoteController().stop();
+        settingsController.getServerStatisticTask().stop();
+        settingsController.getSessionsCheckTask().stop();
+        settingsController.saveCommonPreferences();
         settingsController.getServerListWithConfig()
                 .forEach(settingsController::saveServerSideParameters);
         settingsController.getServerListWithStatistic()

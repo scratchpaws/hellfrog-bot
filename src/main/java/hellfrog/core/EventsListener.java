@@ -1,11 +1,11 @@
 package hellfrog.core;
 
 import hellfrog.commands.cmdline.BotCommand;
+import hellfrog.commands.scenes.Scenario;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.UserCachedData;
 import hellfrog.reacts.*;
-import hellfrog.commands.scenes.Scenario;
 import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
 import org.apache.logging.log4j.LogManager;
@@ -39,6 +39,7 @@ import org.javacord.api.listener.server.member.ServerMemberJoinListener;
 import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
 import org.javacord.api.listener.server.member.ServerMemberUnbanListener;
 import org.javacord.core.entity.permission.PermissionsImpl;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.time.Instant;
@@ -71,38 +72,35 @@ public class EventsListener
 
         boolean isPlainMessage = true;
 
-       /* // это дебаг всех сообщений его выключить перед коммитом,
-        // иначе лог разойдётся до космических величин
-        String content = event.getMessageContent();
-        System.out.println(content);
-        event.getMessage().getEmbeds().forEach(e ->
-                System.out.println(e.getDescription()));*/
-
         messageStats.onMessageCreate(event);
 
         String strMessage = event.getMessageContent();
         Optional<Server> mayBeServer = event.getServer();
+        Optional<User> mayBeUser = event.getMessageAuthor().asUser();
 
         String botMentionTag = event.getApi().getYourself().getMentionTag();
-
+        String botPrefix;
         if (mayBeServer.isPresent()) {
             Server server = mayBeServer.get();
-            String serverBotPrefixNoSep = SettingsController
-                    .getInstance()
+            botPrefix = SettingsController.getInstance()
                     .getBotPrefix(server.getId());
-            if (strMessage.startsWith(serverBotPrefixNoSep)
-                || strMessage.startsWith(botMentionTag)) {
-                parseCmdLine(event);
-                isPlainMessage = false;
-            }
         } else {
-            String globalBotPrefixNoSep = SettingsController
-                    .getInstance()
+            botPrefix = SettingsController.getInstance()
                     .getGlobalCommonPrefix();
-            if (strMessage.startsWith(globalBotPrefixNoSep)
-                || strMessage.startsWith(botMentionTag)) {
-                parseCmdLine(event);
-                isPlainMessage = false;
+        }
+        boolean startedNewScenario = false;
+        if (strMessage.startsWith(botPrefix) || strMessage.startsWith(botMentionTag)) {
+            startedNewScenario = parseCmdLine(event);
+            isPlainMessage = false;
+        }
+
+        if (!startedNewScenario && mayBeUser.isPresent() && !mayBeUser.get().isBot()) {
+            for (SessionState sessionState : SessionState.all()) {
+                if (sessionState.isAccept(event)) {
+                    SessionState.all().remove(sessionState);
+                    sessionState.getScenario().executeMessageStep(event, sessionState);
+                    return;
+                }
             }
         }
 
@@ -118,13 +116,23 @@ public class EventsListener
             twoPhaseTransfer.transferAction(event);
     }
 
-    private void parseCmdLine(MessageCreateEvent event) {
+    private boolean parseCmdLine(@NotNull MessageCreateEvent event) {
+
+        Optional<User> mayBeUser = event.getMessageAuthor().asUser();
+        if (mayBeUser.isPresent() && !mayBeUser.get().isBot()) {
+            for (SessionState sessionState : SessionState.all()) {
+                if (sessionState.isAccept(event)) {
+                    return false;
+                }
+            }
+        }
+
         String cmdlineString = event.getMessageContent();
-        if (CommonUtils.isTrStringEmpty(cmdlineString)) return;
+        if (CommonUtils.isTrStringEmpty(cmdlineString)) return false;
         Optional<Server> mayBeServer = event.getServer();
 
         List<String> inputLines = Arrays.asList(cmdlineString.split("(\\r\\n|\\r|\\n)"));
-        if (inputLines.isEmpty()) return;
+        if (inputLines.isEmpty()) return false;
         ArrayList<String> anotherStrings = inputLines.size() > 1 ?
                 new ArrayList<>(inputLines.subList(1, inputLines.size())) : new ArrayList<>(0);
 
@@ -142,13 +150,13 @@ public class EventsListener
         }
         withoutCommonPrefix = getCmdlineWithoutPrefix(botPrefix, inputLines.get(0));
 
-        boolean scenarioIsRun = Scenario.all().stream()
-                .filter(scenario -> scenario.canExecute(withoutCommonPrefix))
-                .findFirst()
-                .map(scenario -> scenario.runScenario(event))
-                .orElse(false);
-        if (scenarioIsRun) {
-            return;
+        if (mayBeUser.isPresent() && !mayBeUser.get().isBot()) {
+            for (Scenario scenario : Scenario.all()) {
+                if (scenario.canExecute(withoutCommonPrefix)) {
+                    scenario.firstRun(event);
+                    return true;
+                }
+            }
         }
 
         String[] rawCmdline = Commandline.translateCommandline(withoutCommonPrefix);
@@ -210,6 +218,7 @@ public class EventsListener
                         .send(user));
             }
         }
+        return false;
     }
 
     public String getCmdlineWithoutPrefix(String prefixNoSep, String cmdLine) {
@@ -254,6 +263,18 @@ public class EventsListener
         reactReaction.parseReaction(event, true);
         asVoteReaction.parseAction(event);
         communityControlReaction.parseReaction(event);
+        if (!event.getUser().isBot()) {
+            for (SessionState sessionState : SessionState.all()) {
+                if (sessionState.isAccept(event)) {
+                    if (sessionState.isRemoveReaction()) {
+                        event.removeReaction();
+                    }
+                    SessionState.all().remove(sessionState);
+                    sessionState.getScenario().executeReactionStep(event, sessionState);
+                    break;
+                }
+            }
+        }
     }
 
     @Override
@@ -271,32 +292,24 @@ public class EventsListener
     public void onReactionRemove(ReactionRemoveEvent event) {
         reactReaction.parseReaction(event, false);
         communityControlReaction.parseReaction(event);
+        if (!event.getUser().isBot()) {
+            for (SessionState sessionState : SessionState.all()) {
+                if (sessionState.isAccept(event)) {
+                    SessionState.all().remove(sessionState);
+                    sessionState.getScenario().executeReactionStep(event, sessionState);
+                    break;
+                }
+            }
+        }
     }
 
     void onReady() {
-        BotCommand.all(); // заранее инициируем поиск и инстантинацию классов команд
-        MsgCreateReaction.all();
         DiscordApi api = SettingsController.getInstance().getDiscordApi();
         botInviteUrl = api != null ? api.createBotInvite(new PermissionsImpl(67497153)) : "";
         String invite = "Invite url: " + botInviteUrl;
         String readyMsg = "Bot started. " + invite;
         log.info(readyMsg);
         BroadCast.sendBroadcastToAllBotOwners(readyMsg);
-
-        // выключать в продуктиве. будет спамить
-        // нужно для отладки логгирования входов/выходов. см JoinLogCommand
-        /*Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
-            if (api != null)
-            api.getServerById(525287388818178048L) // test_ground.
-                    .ifPresent(s -> {
-                        List<User> memberList = new ArrayList<>(s.getMembers());
-                        if (memberList.size() == 0) return;
-                        User selected = memberList.get(ThreadLocalRandom.current()
-                            .nextInt(0, memberList.size()));
-                        ServerMemberJoinEvent je = new ServerMemberJoinEventImpl(s, selected);
-                        serverMemberStateDisplay(je, MemberEventCode.JOIN);
-                    });
-        }, 10L, 15L, TimeUnit.SECONDS);*/
     }
 
     @Override
@@ -306,8 +319,8 @@ public class EventsListener
         ServerPreferences preferences = SettingsController.getInstance()
                 .getServerPreferences(event.getServer().getId());
         if (preferences.getAutoPromoteEnabled()
-            && preferences.getAutoPromoteRoleId() != null
-            && server.getRoleById(preferences.getAutoPromoteRoleId()).isPresent()) {
+                && preferences.getAutoPromoteRoleId() != null
+                && server.getRoleById(preferences.getAutoPromoteRoleId()).isPresent()) {
 
             final long timeout = preferences.getAutoPromoteTimeout();
             final long userId = event.getUser().getId();
@@ -323,10 +336,11 @@ public class EventsListener
                         api.getServerById(serverId).ifPresent(srv ->
                                 srv.getMemberById(userId).ifPresent(member ->
                                         srv.getRoleById(roleId).ifPresent(role ->
-                                            autoAssignRole(srv, member, role)
+                                                autoAssignRole(srv, member, role)
                                         )));
                     }
-                } catch (InterruptedException ignore) {}
+                } catch (InterruptedException ignore) {
+                }
             });
         }
     }
