@@ -5,6 +5,7 @@ import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.core.SessionState;
+import hellfrog.core.SessionsCheckTask;
 import hellfrog.settings.SettingsController;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.PrivateChannel;
@@ -233,6 +234,41 @@ public abstract class Scenario
             log.error("Unable to send message: " + err.getMessage(), err);
             return Optional.empty();
         }
+    }
+
+    protected Optional<Message> rewriteMessage(@NotNull EmbedBuilder embedBuilder,
+                                               @NotNull SessionState sessionState) {
+        Optional<DiscordApi> mayBeApi = Optional.ofNullable(SettingsController.getInstance().getDiscordApi());
+        if (mayBeApi.isPresent()) {
+            DiscordApi discordApi = mayBeApi.get();
+            embedBuilder.setTimestampToNow();
+            embedBuilder.setAuthor(discordApi.getYourself());
+            embedBuilder.setColor(Color.green);
+            Optional<TextChannel> mayBeTextChannel = discordApi.getTextChannelById(sessionState.getMessageId());
+            if (mayBeTextChannel.isPresent()) {
+                TextChannel textChannel = mayBeTextChannel.get();
+                try {
+                    Message message = textChannel.getMessageById(sessionState.getMessageId())
+                            .get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS);
+                    try {
+                        message.removeAllReactions().get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS);
+                    } catch (Exception delErr) {
+                        log.error("Unable to send message: " + delErr.getMessage(), delErr);
+                        return Optional.empty();
+                    }
+                    try {
+                        message.edit(embedBuilder).get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS);
+                        return Optional.of(message);
+                    } catch (Exception sendErr) {
+                        log.error("Unable to send message: " + sendErr.getMessage(), sendErr);
+                        return Optional.empty();
+                    }
+                } catch (Exception err) {
+                    log.error("Unable to send message: " + err.getMessage(), err);
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     /**
