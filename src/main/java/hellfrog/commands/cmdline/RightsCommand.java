@@ -1,5 +1,6 @@
 package hellfrog.commands.cmdline;
 
+import hellfrog.commands.scenes.Scenario;
 import hellfrog.common.CommonUtils;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.reacts.MsgCreateReaction;
@@ -20,7 +21,10 @@ import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class RightsCommand
@@ -167,22 +171,19 @@ public class RightsCommand
         for (int i = 0; i < commands.length; i++)
             commands[i] = commands[i].toLowerCase();
 
-        Map<String, MsgCreateReaction> knownReactionsWithAcl = new HashMap<>(); //// AAAAAAA why map?
-        MsgCreateReaction.all().stream()
-                .filter(MsgCreateReaction::isAccessControl)
-                .forEach(r -> knownReactionsWithAcl.put(r.getCommandPrefix(), r));
+        String unknownCommandsString = Arrays.stream(commands)
+                .filter(command -> MsgCreateReaction.all().stream()
+                        .filter(MsgCreateReaction::isAccessControl)
+                        .noneMatch(msgCreateReaction -> msgCreateReaction.getCommandPrefix().equals(command)) &&
+                        BotCommand.all().stream()
+                                .noneMatch(botCommand -> botCommand.getPrefix().equals(command)) &&
+                        Scenario.all().stream()
+                                .noneMatch(scenario -> scenario.canExecute(command))
+                ).reduce(CommonUtils::reduceConcat)
+                .orElse("");
 
-        List<String> unknownCommands = new ArrayList<>(commands.length);// todo AAAAAAAA
-        for (String cmd : commands) {
-            if (BotCommand.all().stream().noneMatch(c -> c.getPrefix().equals(cmd))
-                    && !knownReactionsWithAcl.containsKey(cmd))
-                unknownCommands.add(cmd);
-        }
-
-        if (unknownCommands.size() > 0) {
-            unknownCommands.stream()
-                    .reduce((cmd1, cmd2) -> cmd1 + ", " + cmd2)
-                    .ifPresent(res -> showErrorMessage("These commands are not recognized:" + res, event));
+        if (!CommonUtils.isTrStringEmpty(unknownCommandsString)) {
+            showErrorMessage("These commands are not recognized: " + unknownCommandsString, event);
             return;
         }
 

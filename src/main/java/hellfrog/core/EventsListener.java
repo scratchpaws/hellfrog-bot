@@ -79,6 +79,7 @@ public class EventsListener
         Optional<User> mayBeUser = event.getMessageAuthor().asUser();
 
         String botMentionTag = event.getApi().getYourself().getMentionTag();
+        String botMentionNicknameTag = event.getApi().getYourself().getNicknameMentionTag();
         String botPrefix;
         if (mayBeServer.isPresent()) {
             Server server = mayBeServer.get();
@@ -89,7 +90,8 @@ public class EventsListener
                     .getGlobalCommonPrefix();
         }
         boolean startedNewScenario = false;
-        if (strMessage.startsWith(botPrefix) || strMessage.startsWith(botMentionTag)) {
+        if (strMessage.startsWith(botPrefix) || strMessage.startsWith(botMentionTag)
+            || strMessage.startsWith(botMentionNicknameTag)) {
             startedNewScenario = parseCmdLine(event);
             isPlainMessage = false;
         }
@@ -138,10 +140,13 @@ public class EventsListener
 
         SettingsController settingsController = SettingsController.getInstance();
         String botMentionTag = event.getApi().getYourself().getMentionTag();
+        String botMentionNicknameTag = event.getApi().getYourself().getNicknameMentionTag();
         String botPrefix;
         String withoutCommonPrefix;
         if (inputLines.get(0).startsWith(botMentionTag)) {
             botPrefix = botMentionTag;
+        } else if (inputLines.get(0).startsWith(botMentionNicknameTag)) {
+            botPrefix = botMentionNicknameTag;
         } else if (mayBeServer.isPresent()) {
             Server server = mayBeServer.get();
             botPrefix = settingsController.getBotPrefix(server.getId());

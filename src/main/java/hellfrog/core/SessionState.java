@@ -269,8 +269,6 @@ public class SessionState {
         }
 
         public SessionState build() {
-            if (stepId == 0L)
-                throw new IllegalArgumentException("Step ID cannot be empty");
             if (userId == 0L)
                 throw new IllegalArgumentException("User cannot be empty");
             if (textChannelId == 0L)

@@ -50,7 +50,7 @@ public abstract class Scenario
                 && rawCommand.strip().equalsIgnoreCase(super.getPrefix());
     }
 
-    public final void firstRun(@NotNull MessageCreateEvent event) {
+    public final void firstRun(final @NotNull MessageCreateEvent event) {
 
         super.updateLastUsage();
 
@@ -106,6 +106,7 @@ public abstract class Scenario
                 ServerTextChannel serverTextChannel = mayBeServerChannel.get();
                 Server server = serverTextChannel.getServer();
                 if (!canExecuteServerCommand(event, server)) {
+                    dropPreviousStateEmoji(sessionState);
                     showAccessDeniedServerMessage(event);
                     doRollback = false;
                 } else {
@@ -161,6 +162,7 @@ public abstract class Scenario
             ServerTextChannel serverTextChannel = mayBeServerChannel.get();
             Server server = serverTextChannel.getServer();
             if (!canExecuteServerCommand(event, server)) {
+                dropPreviousStateEmoji(sessionState);
                 showAccessDeniedServerMessage(event);
                 if (isAddReaction) {
                     ((ReactionAddEvent)event).removeReaction();
