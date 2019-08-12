@@ -13,6 +13,8 @@ import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
+import org.javacord.api.event.message.MessageEvent;
+import org.javacord.api.event.message.reaction.SingleReactionEvent;
 import org.javacord.api.exception.MissingPermissionsException;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -77,11 +79,20 @@ public abstract class ACLCommand {
     }
 
     public boolean canExecuteServerCommand(MessageCreateEvent event, Server server,
-                                    long... anotherTargetChannel) {
+                                           long... anotherTargetChannel) {
+        return AccessControlCheck.canExecuteOnServer(getPrefix(), event, server, strictByChannels, anotherTargetChannel);
+    }
+
+    public boolean canExecuteServerCommand(SingleReactionEvent event, Server server,
+                                           long... anotherTargetChannel) {
         return AccessControlCheck.canExecuteOnServer(getPrefix(), event, server, strictByChannels, anotherTargetChannel);
     }
 
     protected boolean canExecuteGlobalCommand(@NotNull MessageCreateEvent event) {
+        return AccessControlCheck.canExecuteGlobalCommand(event);
+    }
+
+    protected boolean canExecuteGlobalCommand(@NotNull SingleReactionEvent event) {
         return AccessControlCheck.canExecuteGlobalCommand(event);
     }
 
@@ -107,7 +118,15 @@ public abstract class ACLCommand {
         showErrorMessage("Only allowed users and roles can do it.", event);
     }
 
+    public void showAccessDeniedServerMessage(SingleReactionEvent event) {
+        showErrorMessage("Only allowed users and roles can do it.", event);
+    }
+
     public void showErrorMessage(String textMessage, MessageCreateEvent event) {
+        resolveMessageEmbedByRights(textMessage, event, ERROR_MESSAGE);
+    }
+
+    public void showErrorMessage(String textMessage, SingleReactionEvent event) {
         resolveMessageEmbedByRights(textMessage, event, ERROR_MESSAGE);
     }
 
@@ -116,9 +135,23 @@ public abstract class ACLCommand {
     }
 
     private void resolveMessageEmbedByRights(@NotNull String textMessage, @NotNull MessageCreateEvent event, int type) {
-        event.getMessageAuthor().asUser().ifPresentOrElse(user -> event.getServer().ifPresentOrElse(server ->
+        event.getMessageAuthor().asUser().ifPresentOrElse(user ->
+                        resolveMessageEmbedByRights(textMessage, event, user, type),
+                () -> log.warn("Receive message from {}", event.getMessageAuthor()));
+    }
+
+    private void resolveMessageEmbedByRights(@NotNull String textMessage, @NotNull SingleReactionEvent event, int type) {
+        User user = event.getUser();
+        resolveMessageEmbedByRights(textMessage, event, user, type);
+    }
+
+    private void resolveMessageEmbedByRights(@NotNull String textMessage,
+                                             @NotNull MessageEvent event,
+                                             @NotNull User user,
+                                             int type) {
+        event.getServer().ifPresentOrElse(server ->
                         event.getServerTextChannel().ifPresentOrElse(serverTextChannel -> {
-                            boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, event, server, strictByChannels);
+                            boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, user, server, serverTextChannel, strictByChannels);
                             boolean canWriteToChannel = serverTextChannel.canYouWrite();
                             if (hasRights && canWriteToChannel) {
                                 showEmbedMessage(textMessage, serverTextChannel, user, type);
@@ -126,8 +159,7 @@ public abstract class ACLCommand {
                                 showEmbedMessage(textMessage, user, null, type);
                             }
                         }, () -> showEmbedMessage(textMessage, user, null, type)),
-                () -> showEmbedMessage(textMessage, user, null, type)),
-                () -> log.warn("Receive message from {}", event.getMessageAuthor()));
+                () -> showEmbedMessage(textMessage, user, null, type));
     }
 
     @Contract("null -> false")

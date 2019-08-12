@@ -1,7 +1,8 @@
 package hellfrog.core;
 
 import hellfrog.commands.scenes.Scenario;
-import hellfrog.commands.scenes.ScenarioState;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.user.User;
@@ -15,53 +16,45 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SessionState {
 
+    private static final Logger log = LogManager.getLogger(SessionState.class.getSimpleName());
     private final long userId;
     private final long textChannelId;
     private final long messageId;
     private final boolean removeReaction;
     private final Scenario scenario;
     private final Instant timeoutAt;
-    private final ScenarioState scenarioState;
+    private final long stepId;
+
     private static final long MAX_SESSION_TIMEOUT = 150L;
 
     private static final ConcurrentLinkedQueue<SessionState> ALL_STATES = new ConcurrentLinkedQueue<>();
+    private final ConcurrentHashMap<String, Object> objectsMap;
 
     @Contract(pure = true)
     public static Queue<SessionState> all() {
         return ALL_STATES;
     }
 
-    SessionState(@NotNull User user,
-                        @NotNull TextChannel textChannel,
-                        @Nullable Message message,
-                        boolean removeReaction,
-                        @NotNull Scenario scenario,
-                        @NotNull ScenarioState scenarioState) {
-        this.userId = user.getId();
-        this.textChannelId = textChannel.getId();
-        this.messageId = message != null ? message.getId() : 0L;
-        this.removeReaction = removeReaction;
+    private SessionState(@NotNull final Scenario scenario,
+                         final long stepId,
+                         final long userId,
+                         final long textChannelId,
+                         final long messageId,
+                         final boolean removeReaction,
+                         @NotNull final ConcurrentHashMap<String, Object> objectsMap
+    ) {
         this.scenario = scenario;
-        this.scenarioState = scenarioState;
-        this.timeoutAt = Instant.now().plus(Duration.ofSeconds(MAX_SESSION_TIMEOUT));
-    }
-
-    SessionState(long userId,
-                 long textChannelId,
-                 @Nullable Message message,
-                 boolean removeReaction,
-                 @NotNull Scenario scenario,
-                 @NotNull ScenarioState scenarioState) {
+        this.stepId = stepId;
         this.userId = userId;
         this.textChannelId = textChannelId;
-        this.messageId = message != null ? message.getId() : 0L;
+        this.messageId = messageId;
         this.removeReaction = removeReaction;
-        this.scenario = scenario;
-        this.scenarioState = scenarioState;
+        this.objectsMap = objectsMap;
         this.timeoutAt = Instant.now().plus(Duration.ofSeconds(MAX_SESSION_TIMEOUT));
     }
 
@@ -86,10 +79,6 @@ public class SessionState {
         return scenario;
     }
 
-    public ScenarioState getScenarioState() {
-        return scenarioState;
-    }
-
     public long getTextChannelId() {
         return textChannelId;
     }
@@ -102,147 +91,192 @@ public class SessionState {
         return removeReaction;
     }
 
-    public static SessionStateBuilder forScenario(Scenario scenario) {
-        return new SessionStateBuilder()
-                .setScenario(scenario);
-    }
-
-    public void putStateObject(String key, Object value) {
-        scenarioState.put(key, value);
-    }
-
-    public <T> T getStateObject(String key, Class<T> type) {
-        return scenarioState.get(key, type);
-    }
-
     public long getMessageId() {
         return messageId;
     }
 
-    public ClonedBuilder toBuilder() {
-        return new ClonedBuilder(userId, textChannelId, scenario, scenarioState)
-                .setRemoveReaction(removeReaction);
+    public static Builder forScenario(@NotNull final Scenario scenario, final long stepId) {
+        return new Builder()
+                .setStepId(stepId)
+                .setScenario(scenario);
     }
 
-    public static class ClonedBuilder {
-        private final long userId;
-        private final long textChannelId;
-        private Message message = null;
-        private boolean removeReaction = false;
-        private final Scenario scenario;
-        private ScenarioState scenarioState;
+    public long getStepId() {
+        return stepId;
+    }
 
-        ClonedBuilder(long userId,
-                      long textChannelId,
-                      Scenario scenario,
-                      ScenarioState scenarioState) {
-            this.userId = userId;
-            this.textChannelId = textChannelId;
-            this.scenario = scenario;
-            this.scenarioState = scenarioState;
-        }
+    public void putValue(String key, Object value) {
+        objectsMap.put(key, value);
+    }
 
-        public Message getMessage() {
-            return message;
-        }
-
-        public ClonedBuilder setMessage(Message message) {
-            this.message = message;
-            return this;
-        }
-
-        public boolean isRemoveReaction() {
-            return removeReaction;
-        }
-
-        public ClonedBuilder setRemoveReaction(boolean removeReaction) {
-            this.removeReaction = removeReaction;
-            return this;
-        }
-
-        public ClonedBuilder changeScenarioStateId(long newId) {
-            this.scenarioState = scenarioState.cloneWithStepId(newId);
-            return this;
-        }
-
-        public SessionState build() {
-            Objects.requireNonNull(scenarioState, "Scenario state cannot be a null");
-            return new SessionState(userId, textChannelId, message, removeReaction, scenario, scenarioState);
+    public <T> T getValue(String key, Class<T> type) {
+        Object obj = objectsMap.get(key);
+        if (obj == null) return null;
+        if (type.isInstance(obj)) {
+            try {
+                return type.cast(obj);
+            } catch (ClassCastException err) {
+                log.error("Unable cast object with key " + key + " to " + type.getName()
+                        + ", step id: " + stepId, err);
+                return null;
+            }
+        } else {
+            return null;
         }
     }
 
-    public static class SessionStateBuilder {
+    public boolean stepIdIs(long that) {
+        return stepId == that;
+    }
+
+    public boolean stepIdIs(long that1, long that2) {
+        return stepId == that1
+                || stepId == that2;
+    }
+
+    public Builder toBuilder() {
+        return new Builder(objectsMap)
+                .setStepId(stepId)
+                .setUserId(userId)
+                .setTextChannelId(textChannelId)
+                .setMessageId(messageId)
+                .setRemoveReaction(removeReaction)
+                .setScenario(scenario);
+    }
+
+    public Builder toBuilderWithStepId(long newStepId) {
+        return new Builder(objectsMap)
+                .setStepId(newStepId)
+                .setUserId(userId)
+                .setTextChannelId(textChannelId)
+                .setMessageId(messageId)
+                .setRemoveReaction(removeReaction)
+                .setScenario(scenario);
+    }
+
+    public SessionState resetTimeout() {
+        return new SessionState(scenario, stepId, userId, textChannelId, messageId, removeReaction, objectsMap);
+    }
+
+    public static class Builder {
+
+        private long stepId = 0L;
+        private long userId = 0L;
+        private long textChannelId = 0L;
+        private long messageId = 0L;
+        private boolean removeReaction = true;
+        private Scenario scenario = null;
+        private ConcurrentHashMap<String, Object> objectsMap;
 
         @Contract(pure = true)
-        SessionStateBuilder() {}
-
-        private User user = null;
-        private TextChannel textChannel = null;
-        private Message message = null;
-        private boolean removeReaction = false;
-        private Scenario scenario = null;
-        private ScenarioState scenarioState = null;
-
-        public User getUser() {
-            return user;
+        private Builder() {
+            this.objectsMap = new ConcurrentHashMap<>();
         }
 
-        public SessionStateBuilder setUser(User user) {
-            this.user = user;
+        @Contract(pure = true)
+        private Builder(@NotNull final ConcurrentHashMap<String, Object> objectsMap) {
+            this.objectsMap = objectsMap;
+        }
+
+        public long getStepId() {
+            return stepId;
+        }
+
+        public Builder setStepId(long stepId) {
+            this.stepId = stepId;
             return this;
         }
 
-        public TextChannel getTextChannel() {
-            return textChannel;
+        public long getUserId() {
+            return userId;
         }
 
-        public SessionStateBuilder setTextChannel(TextChannel textChannel) {
-            this.textChannel = textChannel;
-            return this;
-        }
-
-        public Message getMessage() {
-            return message;
-        }
-
-        public SessionStateBuilder setMessage(Message message) {
-            this.message = message;
+        Builder setUserId(long userId) {
+            this.userId = userId;
             return this;
         }
 
         public boolean isRemoveReaction() {
             return removeReaction;
-        }
-
-        public SessionStateBuilder setRemoveReaction(boolean removeReaction) {
-            this.removeReaction = removeReaction;
-            return this;
         }
 
         public Scenario getScenario() {
             return scenario;
         }
 
-        public SessionStateBuilder setScenario(Scenario scenario) {
+        public long getTextChannelId() {
+            return textChannelId;
+        }
+
+        Builder setTextChannelId(long textChannelId) {
+            this.textChannelId = textChannelId;
+            return this;
+        }
+
+        public long getMessageId() {
+            return messageId;
+        }
+
+        Builder setMessageId(long messageId) {
+            this.messageId = messageId;
+            return this;
+        }
+
+        public Builder setUser(@Nullable final User user) {
+            this.userId = user != null ? user.getId() : 0L;
+            return this;
+        }
+
+        public Builder setTextChannel(final @Nullable TextChannel textChannel) {
+            this.textChannelId = textChannel != null ? textChannel.getId() : 0L;
+            return this;
+        }
+
+        public Builder setMessage(final @Nullable Message message) {
+            this.messageId = message != null ? message.getId() : 0L;
+            return this;
+        }
+
+        public Builder setRemoveReaction(boolean removeReaction) {
+            this.removeReaction = removeReaction;
+            return this;
+        }
+
+        Builder setScenario(final @NotNull Scenario scenario) {
             this.scenario = scenario;
             return this;
         }
 
-        public ScenarioState getScenarioState() {
-            return scenarioState;
-        }
-
-        public SessionStateBuilder setScenarioState(ScenarioState scenarioState) {
-            this.scenarioState = scenarioState;
+        public Builder putValue(String key, Object value) {
+            objectsMap.put(key, value);
             return this;
         }
 
+        public <T> T getValue(String key, Class<T> type) {
+            Object obj = objectsMap.get(key);
+            if (obj == null) return null;
+            if (type.isInstance(obj)) {
+                try {
+                    return type.cast(obj);
+                } catch (ClassCastException err) {
+                    log.error("Unable cast object with key " + key + " to " + type.getName()
+                            + ", step id: " + stepId, err);
+                    return null;
+                }
+            } else {
+                return null;
+            }
+        }
+
         public SessionState build() {
-            Objects.requireNonNull(user, "User cannot be null");
-            Objects.requireNonNull(textChannel, "Text channel cannot be null");
+            if (stepId == 0L)
+                throw new IllegalArgumentException("Step ID cannot be empty");
+            if (userId == 0L)
+                throw new IllegalArgumentException("User cannot be empty");
+            if (textChannelId == 0L)
+                throw new IllegalArgumentException("Text channel cannot be empty");
             Objects.requireNonNull(scenario, "Scenario cannot be null");
-            Objects.requireNonNull(scenarioState, "Scenario state cannot be null");
-            return new SessionState(user, textChannel, message, removeReaction, scenario, scenarioState);
+            return new SessionState(scenario, stepId, userId, textChannelId, messageId, removeReaction, objectsMap);
         }
     }
 }

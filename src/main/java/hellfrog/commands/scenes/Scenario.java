@@ -7,13 +7,18 @@ import hellfrog.common.CommonUtils;
 import hellfrog.core.SessionState;
 import hellfrog.settings.SettingsController;
 import org.javacord.api.DiscordApi;
+import org.javacord.api.entity.channel.PrivateChannel;
+import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.Messageable;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
+import org.javacord.api.event.message.reaction.ReactionAddEvent;
 import org.javacord.api.event.message.reaction.SingleReactionEvent;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -35,44 +40,50 @@ public abstract class Scenario
         super(prefix, description);
     }
 
-    public boolean canExecute(String rawCommand) {
-        return !CommonUtils.isTrStringEmpty(rawCommand)
-                && rawCommand.strip().equalsIgnoreCase(super.getPrefix());
-    }
-
     @Contract(pure = true)
     public static List<Scenario> all() {
         return ALL;
     }
 
-    public boolean firstRun(@NotNull MessageCreateEvent event) {
+    public boolean canExecute(String rawCommand) {
+        return !CommonUtils.isTrStringEmpty(rawCommand)
+                && rawCommand.strip().equalsIgnoreCase(super.getPrefix());
+    }
+
+    public final void firstRun(@NotNull MessageCreateEvent event) {
 
         super.updateLastUsage();
 
-        boolean canAccess = event.getServer()
-                .map(server -> canExecuteServerCommand(event, server))
-                .orElse(true);
-        if (!canAccess) {
-            showAccessDeniedServerMessage(event);
-            return RUN_SCENARIO_RESULT;
-        }
+        boolean isBotOwner = canExecuteGlobalCommand(event);
 
-        if (isOnlyServerCommand() && !event.isServerMessage()) {
-            showErrorMessage("This command can't be run into private channel", event);
-            return RUN_SCENARIO_RESULT;
-        }
-
-        executeFirstRun(event);
-        return RUN_SCENARIO_RESULT;
+        event.getMessageAuthor().asUser().ifPresent(user -> {
+            event.getServerTextChannel().ifPresent(serverTextChannel -> {
+                if (!canExecuteServerCommand(event, serverTextChannel.getServer())) {
+                    showAccessDeniedServerMessage(event);
+                    return;
+                }
+                executeServerFirstRun(event, serverTextChannel.getServer(), serverTextChannel, user, isBotOwner);
+            });
+            event.getPrivateChannel().ifPresent(privateChannel -> {
+                if (isOnlyServerCommand()) {
+                    showErrorMessage("This command can't be run into private channel", event);
+                    return;
+                }
+                executePrivateFirstRun(event, privateChannel, user, isBotOwner);
+            });
+        });
     }
 
-    /**
-     * Инициализация выполнения сценария. Вызывается при вводе соответствующей команды,
-     * соответствующей префиксу сценария
-     *
-     * @param event событие нового сообщения
-     */
-    protected abstract void executeFirstRun(@NotNull MessageCreateEvent event);
+    protected abstract void executePrivateFirstRun(@NotNull MessageCreateEvent event,
+                                                   @NotNull PrivateChannel privateChannel,
+                                                   @NotNull User user,
+                                                   boolean isBotOwner);
+
+    protected abstract void executeServerFirstRun(@NotNull MessageCreateEvent event,
+                                                  @NotNull Server server,
+                                                  @NotNull ServerTextChannel serverTextChannel,
+                                                  @NotNull User user,
+                                                  boolean isBotOwner);
 
     /**
      * Последующее выполнение сценария. Вызывается при поступлении сообщения в чате
@@ -80,8 +91,55 @@ public abstract class Scenario
      * @param event        событие нового сообщения
      * @param sessionState состояние запущенного для пользователя сценария в текстовом чате
      */
-    public abstract void executeMessageStep(@NotNull MessageCreateEvent event,
-                                            @NotNull SessionState sessionState);
+    public final void executeMessageStep(@NotNull MessageCreateEvent event,
+                                         @NotNull SessionState sessionState) {
+        super.updateLastUsage();
+
+        boolean doRollback = true;
+        boolean isBotOwner = canExecuteGlobalCommand(event);
+
+        Optional<User> mayBeUser = event.getMessageAuthor().asUser();
+        if (mayBeUser.isPresent()) {
+            User user = mayBeUser.get();
+            Optional<ServerTextChannel> mayBeServerChannel = event.getServerTextChannel();
+            if (mayBeServerChannel.isPresent()) {
+                ServerTextChannel serverTextChannel = mayBeServerChannel.get();
+                Server server = serverTextChannel.getServer();
+                if (!canExecuteServerCommand(event, server)) {
+                    showAccessDeniedServerMessage(event);
+                    doRollback = false;
+                } else {
+                    if (serverMessageStep(event, server, serverTextChannel, user, sessionState, isBotOwner)) {
+                        doRollback = false;
+                    }
+                }
+            }
+            Optional<PrivateChannel> mayBePrivateChannel = event.getPrivateChannel();
+            if (mayBePrivateChannel.isPresent()) {
+                PrivateChannel privateChannel = mayBePrivateChannel.get();
+                if (privateMessageStep(event, privateChannel, user, sessionState, isBotOwner)) {
+                    doRollback = false;
+                }
+            }
+        }
+
+        if (doRollback) {
+            rollbackState(sessionState);
+        }
+    }
+
+    protected abstract boolean privateMessageStep(@NotNull MessageCreateEvent event,
+                                                  @NotNull PrivateChannel privateChannel,
+                                                  @NotNull User user,
+                                                  @NotNull SessionState sessionState,
+                                                  boolean isBotOwner);
+
+    protected abstract boolean serverMessageStep(@NotNull MessageCreateEvent event,
+                                                 @NotNull Server server,
+                                                 @NotNull ServerTextChannel serverTextChannel,
+                                                 @NotNull User user,
+                                                 @NotNull SessionState sessionState,
+                                                 boolean isBotOwner);
 
     /**
      * Последующее выполнение сценария. Вызывается при добалении либо удалении эмодзи в текстовом чате
@@ -90,8 +148,61 @@ public abstract class Scenario
      * @param event        событие реакции (добавление/удаление)
      * @param sessionState состояние запущенного для пользователя сценария в текстовом чате
      */
-    public abstract void executeReactionStep(@NotNull SingleReactionEvent event,
-                                             @NotNull SessionState sessionState);
+    public final void executeReactionStep(@NotNull SingleReactionEvent event,
+                                          @NotNull SessionState sessionState) {
+        super.updateLastUsage();
+        boolean isAddReaction = event instanceof ReactionAddEvent;
+        boolean isBotOwner = canExecuteGlobalCommand(event);
+        User user = event.getUser();
+        boolean doRollback = true;
+
+        Optional<ServerTextChannel> mayBeServerChannel = event.getServerTextChannel();
+        if (mayBeServerChannel.isPresent()) {
+            ServerTextChannel serverTextChannel = mayBeServerChannel.get();
+            Server server = serverTextChannel.getServer();
+            if (!canExecuteServerCommand(event, server)) {
+                showAccessDeniedServerMessage(event);
+                if (isAddReaction) {
+                    ((ReactionAddEvent)event).removeReaction();
+                }
+                doRollback = false;
+            } else {
+                if (serverReactionStep(isAddReaction, event, server, serverTextChannel,
+                        user, sessionState, isBotOwner)) {
+                    doRollback = false;
+                }
+            }
+        }
+        Optional<PrivateChannel> mayBePrivateChannel = event.getPrivateChannel();
+        if (mayBePrivateChannel.isPresent()) {
+            PrivateChannel privateChannel = mayBePrivateChannel.get();
+            if (privateReactionStep(isAddReaction, event, privateChannel, user, sessionState, isBotOwner)) {
+                doRollback = false;
+            }
+        }
+
+        if (doRollback) {
+            rollbackState(sessionState);
+            if (isAddReaction) {
+                ((ReactionAddEvent)event).removeReaction();
+            }
+        }
+    }
+
+    protected abstract boolean privateReactionStep(boolean isAddReaction,
+                                                   @NotNull SingleReactionEvent event,
+                                                   @NotNull PrivateChannel privateChannel,
+                                                   @NotNull User user,
+                                                   @NotNull SessionState sessionState,
+                                                   boolean isBotOwner);
+
+    protected abstract boolean serverReactionStep(boolean isAddReaction,
+                                                  @NotNull SingleReactionEvent event,
+                                                  @NotNull Server server,
+                                                  @NotNull ServerTextChannel serverTextChannel,
+                                                  @NotNull User user,
+                                                  @NotNull SessionState sessionState,
+                                                  boolean isBotOwner);
 
     /**
      * Отправка Embed внутри нового сообщения, с ожиданием получения сообщения каналом.
@@ -193,8 +304,12 @@ public abstract class Scenario
         return false;
     }
 
-    public void commitState(@NotNull SessionState sessionState) {
+    protected void commitState(@NotNull SessionState sessionState) {
         SessionState.all().add(sessionState);
+    }
+
+    protected void rollbackState(@NotNull SessionState sessionState) {
+        SessionState.all().add(sessionState.resetTimeout());
     }
 
     protected boolean equalsUnicodeReaction(@NotNull SingleReactionEvent event,
@@ -202,5 +317,11 @@ public abstract class Scenario
         return event.getEmoji().asUnicodeEmoji()
                 .map(unicodeEmoji::equals)
                 .orElse(false);
+    }
+
+    protected boolean equalsUnicodeReactions(@NotNull SingleReactionEvent event,
+                                             @NotNull String firstEmoji, @NotNull String secondEmoji) {
+        return this.equalsUnicodeReaction(event, firstEmoji)
+                || this.equalsUnicodeReaction(event, secondEmoji);
     }
 }

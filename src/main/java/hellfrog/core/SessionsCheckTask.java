@@ -5,6 +5,7 @@ import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.user.User;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.util.Optional;
@@ -26,24 +27,28 @@ public class SessionsCheckTask
     public void run() {
         SessionState.all().forEach(sessionState -> {
             if (!sessionState.inTimeout()) {
-                SessionState.all().remove(sessionState);
-                Optional.ofNullable(SettingsController.getInstance().getDiscordApi()).ifPresent(api -> {
-                    api.getUserById(sessionState.getUserId()).thenAccept(user ->
-                            api.getTextChannelById(sessionState.getTextChannelId()).ifPresent(textChannel -> {
-                                User yourSelf = api.getYourself();
-                                new MessageBuilder()
-                                        .setEmbed(new EmbedBuilder()
-                                                .setTimestampToNow()
-                                                .setAuthor(yourSelf)
-                                                .setColor(Color.RED)
-                                                .setDescription(user.getMentionTag() + ", your response time is up"))
-                                        .send(textChannel);
-                                textChannel.getMessageById(sessionState.getMessageId())
-                                        .thenAccept(Message::removeAllReactions);
-                            })
-                    );
-                });
+                terminateSessionState(sessionState);
             }
+        });
+    }
+
+    public static void terminateSessionState(@NotNull SessionState sessionState) {
+        SessionState.all().remove(sessionState);
+        Optional.ofNullable(SettingsController.getInstance().getDiscordApi()).ifPresent(api -> {
+            api.getUserById(sessionState.getUserId()).thenAccept(user ->
+                    api.getTextChannelById(sessionState.getTextChannelId()).ifPresent(textChannel -> {
+                        User yourSelf = api.getYourself();
+                        new MessageBuilder()
+                                .setEmbed(new EmbedBuilder()
+                                        .setTimestampToNow()
+                                        .setAuthor(yourSelf)
+                                        .setColor(Color.RED)
+                                        .setDescription(user.getMentionTag() + ", your response time is up"))
+                                .send(textChannel);
+                        textChannel.getMessageById(sessionState.getMessageId())
+                                .thenAccept(Message::removeAllReactions);
+                    })
+            );
         });
     }
 

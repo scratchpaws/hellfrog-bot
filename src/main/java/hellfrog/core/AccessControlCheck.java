@@ -9,15 +9,15 @@ import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
+import org.javacord.api.event.message.reaction.SingleReactionEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class AccessControlCheck {
 
-    private static boolean canExecuteOnServer(@NotNull String commandPrefix, @NotNull User user,
+    public static boolean canExecuteOnServer(@NotNull String commandPrefix, @NotNull User user,
                                               @NotNull Server server, @NotNull TextChannel channel,
                                               boolean strictByChannels, long... anotherTargetChannel) {
 
@@ -49,7 +49,7 @@ public class AccessControlCheck {
         if (strictByChannels && allowChannelsListNotEmpty) {
             if (anotherTargetChannelsNotEmpty) {
                 for (long anotherChannelId : anotherTargetChannel) {
-                    isAllowedForChannel &= isAllowChatOrCategory(server, commandRights, channelId);
+                    isAllowedForChannel &= isAllowChatOrCategory(server, commandRights, anotherChannelId);
                     //commandRights.isAllowChat(anotherChannelId);
                 }
             } else {
@@ -82,17 +82,30 @@ public class AccessControlCheck {
 
     public static boolean canExecuteOnServer(@NotNull String commandPrefix, @NotNull MessageCreateEvent event,
                                              @NotNull Server server,
-                                             boolean strictByChannels, long... anotherTargetChannel) {
-        Optional<User> mayBeUser = event.getMessageAuthor().asUser();
-        return mayBeUser.filter(user ->
+                                             boolean strictByChannels, long... anotherTargetChannels) {
+        return event.getMessageAuthor().asUser().map(user ->
                 canExecuteOnServer(commandPrefix, user, server,
                         event.getChannel(), strictByChannels,
-                        anotherTargetChannel)
-        ).isPresent();
+                        anotherTargetChannels)
+        ).orElse(false);
+    }
+
+    public static boolean canExecuteOnServer(@NotNull String commandPrefix, @NotNull SingleReactionEvent event,
+                                             @NotNull Server server,
+                                             boolean strictByChannels, long... anotherTargetChannels) {
+        return canExecuteOnServer(commandPrefix, event.getUser(), server,
+                event.getChannel(), strictByChannels,
+                anotherTargetChannels);
     }
 
     public static boolean canExecuteGlobalCommand(@NotNull MessageCreateEvent event) {
         long userId = event.getMessageAuthor().getId();
+        long botOwner = event.getApi().getOwnerId();
+        return SettingsController.getInstance().isGlobalBotOwner(userId) || userId == botOwner;
+    }
+
+    public static boolean canExecuteGlobalCommand(@NotNull SingleReactionEvent event) {
+        long userId = event.getUser().getId();
         long botOwner = event.getApi().getOwnerId();
         return SettingsController.getInstance().isGlobalBotOwner(userId) || userId == botOwner;
     }

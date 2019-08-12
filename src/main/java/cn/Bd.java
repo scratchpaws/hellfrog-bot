@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import hellfrog.common.*;
+import hellfrog.core.SessionState;
+import hellfrog.core.SessionsCheckTask;
 import hellfrog.settings.ServerStatistic;
 import hellfrog.settings.SettingsController;
 import org.javacord.api.DiscordApi;
@@ -354,6 +356,13 @@ public class Bd {
             return "Unable to generate stats: " + err.getMessage();
         }
 
+        return "OK";
+    }
+
+    @MethodInfo("Terminate immediately all users scenario sessions")
+    @NotNull
+    public static String rstat() {
+        SessionState.all().forEach(SessionsCheckTask::terminateSessionState);
         return "OK";
     }
 }
