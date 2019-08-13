@@ -590,7 +590,7 @@ public abstract class Scenario
      *
      * @param sessionState сохранённое состояние сценарция в виде сессии
      */
-    protected void commitState(@NotNull SessionState sessionState) {
+    protected final void commitState(@NotNull SessionState sessionState) {
         SessionState.all().add(sessionState);
     }
 
@@ -601,7 +601,7 @@ public abstract class Scenario
      *
      * @param sessionState сохранённое состояние сценария в виде сессии
      */
-    protected void rollbackState(@NotNull SessionState sessionState) {
+    private void rollbackState(@NotNull SessionState sessionState) {
         SessionState.all().add(sessionState.resetTimeout());
     }
 
