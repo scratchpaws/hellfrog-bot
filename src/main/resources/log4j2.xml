@@ -9,7 +9,7 @@
                 <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%t] [%logger{36}] %msg%n</Pattern>
             </PatternLayout>
             <Policies>
-                <CronTriggeringPolicy schedule="0 0 * * * ?"/>
+                <CronTriggeringPolicy schedule="0 0 0 * * ?" evaluateOnStartup="true"/>
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
@@ -21,7 +21,7 @@
                 <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] %msg%n</Pattern>
             </PatternLayout>
             <Policies>
-                <CronTriggeringPolicy schedule="0 0 * * * ?"/>
+                <CronTriggeringPolicy schedule="0 0 0 * * ?" evaluateOnStartup="true"/>
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
@@ -33,7 +33,7 @@
                 <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%t] [%logger{36}] %msg%n</Pattern>
             </PatternLayout>
             <Policies>
-                <CronTriggeringPolicy schedule="0 0 * * * ?"/>
+                <CronTriggeringPolicy schedule="0 0 0 * * ?" evaluateOnStartup="true"/>
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
