@@ -22,6 +22,7 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.reaction.SingleReactionEvent;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -64,16 +65,29 @@ public class RightsScenario
     private static final String EMOJI_REPEAT = EmojiParser.parseToUnicode(":repeat:");
     private static final String EMOJI_PLUS = EmojiParser.parseToUnicode(":white_check_mark:");
     private static final String EMOJI_MINUS = EmojiParser.parseToUnicode(":negative_squared_cross_mark:");
-    private static final List<String> TITLE_EMOJI_LIST = List.of(EMOJI_QUESTION, EMOJI_REPEAT, EMOJI_CLOSE);
-    private static final List<String> HELP_PAGE_EMOJI_LIST = List.of(EMOJI_ARROW_LEFT, EMOJI_CLOSE);
+    private static final String EMOJI_LETTER_U = EmojiParser.parseToUnicode(":regional_indicator_symbol_u:");
+    private static final String EMOJI_LETTER_R = EmojiParser.parseToUnicode(":regional_indicator_symbol_r:");
+    private static final String EMOJI_LETTER_T = EmojiParser.parseToUnicode(":regional_indicator_symbol_t:");
+    private static final String EMOJI_LETTER_C = EmojiParser.parseToUnicode(":regional_indicator_symbol_c:");
+
+    private static final List<String> TITLE_EMOJI_LIST =
+            List.of(EMOJI_QUESTION, EMOJI_REPEAT, EMOJI_CLOSE);
+    private static final List<String> HELP_PAGE_EMOJI_LIST =
+            List.of(EMOJI_ARROW_LEFT, EMOJI_CLOSE);
     private static final List<String> ADD_ONLY_EMOJI_LIST =
             List.of(EMOJI_PLUS, EMOJI_ARROW_LEFT, EMOJI_CLOSE);
     private static final List<String> ADD_AND_REMOVE_EMOJI_LIST =
             List.of(EMOJI_PLUS, EMOJI_MINUS, EMOJI_ARROW_LEFT, EMOJI_CLOSE);
+    private static final List<String> SELECT_ADD_EMOJI_LIST =
+            List.of(EMOJI_LETTER_U, EMOJI_LETTER_R, EMOJI_ARROW_LEFT, EMOJI_CLOSE);
+    private static final List<String> SELECT_ADD_WITH_CHAT_EMOJI_LIST =
+            List.of(EMOJI_LETTER_U, EMOJI_LETTER_R, EMOJI_LETTER_T, EMOJI_LETTER_C, EMOJI_ARROW_LEFT, EMOJI_CLOSE);
 
     private static final long STATE_ON_TITLE_SCREEN = 0L;
     private static final long STATE_ON_HELP_SCREEN = 1L;
     private static final long STATE_ON_COMMAND_EDIT_SCREEN = 2L;
+    private static final long STATE_ON_ADDITION_SELECT_SCREEN = 3L;
+    private static final long STATE_ON_DELETION_SELECT_SCREEN = 4L;
 
     private static final String ENTERED_COMMAND_KEY = "command.name";
 
@@ -107,7 +121,7 @@ public class RightsScenario
         boolean onTitleStep = sessionState.stepIdIs(STATE_ON_TITLE_SCREEN);
         if (onTitleStep) {
             super.dropPreviousStateEmoji(sessionState);
-            return checkEnteredCommand(event, server, serverTextChannel, user, sessionState);
+            return checkEnteredCommand(event, server, serverTextChannel, user);
         }
         return false;
     }
@@ -115,8 +129,7 @@ public class RightsScenario
     private boolean checkEnteredCommand(@NotNull MessageCreateEvent event,
                                         @NotNull Server server,
                                         @NotNull ServerTextChannel serverTextChannel,
-                                        @NotNull User user,
-                                        @NotNull SessionState sessionState) {
+                                        @NotNull User user) {
 
         String rawInput = event.getReadableMessageContent().strip();
         Stream<String> scenarioPrefixes = Scenario.all().stream().map(Scenario::getPrefix);
@@ -169,9 +182,9 @@ public class RightsScenario
                 .getServerPreferences(server.getId())
                 .getRightsForCommand(rawInput);
 
-        descriptionText.append("Command: `")
+        descriptionText.append("Command: __")
                 .append(rawInput)
-                .append("`:\n");
+                .append("__:\n");
 
         Optional<String> allowedUsers = commandRights.getAllowUsers().stream()
                 .map(userId -> {
@@ -324,6 +337,10 @@ public class RightsScenario
         boolean onTitleStep = sessionState.stepIdIs(STATE_ON_TITLE_SCREEN);
         boolean onHelpScreen = sessionState.stepIdIs(STATE_ON_HELP_SCREEN);
         boolean onCommandEditScreen = sessionState.stepIdIs(STATE_ON_COMMAND_EDIT_SCREEN);
+        boolean onAdditionSelectScreen = sessionState.stepIdIs(STATE_ON_ADDITION_SELECT_SCREEN)
+                && sessionState.getValue(ENTERED_COMMAND_KEY, String.class) != null;
+        boolean onDeletionSelectScreen = sessionState.stepIdIs(STATE_ON_DELETION_SELECT_SCREEN)
+                && sessionState.getValue(ENTERED_COMMAND_KEY, String.class) != null;
         boolean userPressHelp = super.equalsUnicodeReaction(event, EMOJI_QUESTION);
         boolean userPressClose = super.equalsUnicodeReaction(event, EMOJI_CLOSE);
         boolean userPressArrowLeft = super.equalsUnicodeReaction(event, EMOJI_ARROW_LEFT);
@@ -349,8 +366,163 @@ public class RightsScenario
             serverPreferences.setNewAclMode(!serverPreferences.getNewAclMode());
             settingsController.saveServerSideParameters(server.getId());
             return showTitleScreen(serverTextChannel, user);
+        } else if (onCommandEditScreen && userPressAdd) {
+            super.dropPreviousStateEmoji(sessionState);
+            return selectAddition(serverTextChannel, sessionState);
+        } else if (onCommandEditScreen && userPressRemove) {
+            super.dropPreviousStateEmoji(sessionState);
+            return selectDeletion(server, serverTextChannel, sessionState);
+        } else if ((onAdditionSelectScreen || onDeletionSelectScreen) && userPressArrowLeft) {
+            String rawCommandName = sessionState.getValue(ENTERED_COMMAND_KEY, String.class);
+            if (!CommonUtils.isTrStringEmpty(rawCommandName)) {
+                super.dropPreviousStateEmoji(sessionState);
+                return displayIfValidCommand(rawCommandName, server, serverTextChannel, user);
+            }
         }
         return false;
+    }
+
+    private boolean selectAddition(@NotNull ServerTextChannel serverTextChannel,
+                                   @NotNull SessionState sessionState) {
+        String enteredCommandName = sessionState.getValue(ENTERED_COMMAND_KEY, String.class);
+        if (CommonUtils.isTrStringEmpty(enteredCommandName)) {
+            return false;
+        }
+
+        boolean isStrictByChannels = checkCommandStrictByChannel(enteredCommandName);
+        List<String> additionEmojiList = isStrictByChannels
+                ? SELECT_ADD_WITH_CHAT_EMOJI_LIST
+                : SELECT_ADD_EMOJI_LIST;
+        StringBuilder descriptionText = new StringBuilder()
+                .append("Command: __").append(enteredCommandName).append("__\n");
+        if (isStrictByChannels) {
+            descriptionText.append("For this command, the chat restriction is set or the chat category in ")
+                    .append("which it can be executed.\n");
+        }
+        descriptionText.append("Select for which entity you want to **set** permission ")
+                .append("to execute the command:\n")
+                .append(EMOJI_LETTER_U).append(" - for user, ")
+                .append(EMOJI_LETTER_R).append(" - for role");
+        if (isStrictByChannels) {
+            descriptionText.append(", ").append(EMOJI_LETTER_T).append(" - for text chat, ")
+                    .append(EMOJI_LETTER_C).append(" - for category");
+        }
+        descriptionText.append(".\nYou can also click on ").append(EMOJI_ARROW_LEFT)
+                .append(" to return to return to the previous menu and ")
+                .append("click on ").append(EMOJI_CLOSE).append(" to close the editor.");
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+                .setTitle(TITLE)
+                .setDescription(descriptionText.toString());
+        return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
+            if (super.addReactions(message, null, additionEmojiList)) {
+                SessionState newState = sessionState.toBuilderWithStepId(STATE_ON_ADDITION_SELECT_SCREEN)
+                        .setMessage(message)
+                        .build();
+                super.commitState(newState);
+                return true;
+            } else {
+                return false;
+            }
+        }).orElse(false);
+    }
+
+    private boolean selectDeletion(@NotNull Server server,
+                                   @NotNull ServerTextChannel serverTextChannel,
+                                   @NotNull SessionState sessionState) {
+        String enteredCommandName = sessionState.getValue(ENTERED_COMMAND_KEY, String.class);
+        if (CommonUtils.isTrStringEmpty(enteredCommandName)) {
+            return false;
+        }
+
+        boolean isStrictByChannels = checkCommandStrictByChannel(enteredCommandName);
+        List<String> emojiToAddition = new ArrayList<>();
+        StringBuilder descriptionText = new StringBuilder()
+                .append("Command: __").append(enteredCommandName).append("__\n");
+        if (isStrictByChannels) {
+            descriptionText.append("For this command, the chat restriction is set or the chat category in ")
+                    .append("which it can be executed.\n");
+        }
+        descriptionText.append("Select for which entity you want to **remove** permission ")
+                .append("to execute the command:\n");
+        CommandRights commandRights = SettingsController.getInstance()
+                .getServerPreferences(server.getId())
+                .getRightsForCommand(enteredCommandName);
+        boolean hasUsers = !commandRights.getAllowUsers().isEmpty()
+                && commandRights.getAllowUsers().stream()
+                .map(server::getMemberById)
+                .anyMatch(Optional::isPresent);
+        boolean hasRoles = !commandRights.getAllowRoles().isEmpty()
+                && commandRights.getAllowRoles().stream()
+                .map(server::getRoleById)
+                .anyMatch(Optional::isPresent);
+        boolean hasTextChannels = !commandRights.getAllowChannels().isEmpty()
+                && commandRights.getAllowChannels().stream()
+                .map(server::getTextChannelById)
+                .anyMatch(Optional::isPresent);
+        boolean hasChannelCategories = !commandRights.getAllowChannels().isEmpty()
+                && commandRights.getAllowChannels().stream()
+                .map(server::getChannelCategoryById)
+                .anyMatch(Optional::isPresent);
+        boolean addSeparator = false;
+        if (hasUsers) {
+            descriptionText.append(EMOJI_LETTER_U).append(" - for user");
+            emojiToAddition.add(EMOJI_LETTER_U);
+            addSeparator = true;
+        }
+        if (hasRoles) {
+            if (addSeparator)
+                descriptionText.append(", ");
+            descriptionText.append(EMOJI_LETTER_R).append(" - for role");
+            emojiToAddition.add(EMOJI_LETTER_R);
+            addSeparator = true;
+        }
+        if (hasTextChannels) {
+            if (addSeparator)
+                descriptionText.append(", ");
+            descriptionText.append(EMOJI_LETTER_T).append(" - for text channel");
+            emojiToAddition.add(EMOJI_LETTER_T);
+            addSeparator = true;
+        }
+        if (hasChannelCategories) {
+            if (addSeparator)
+                descriptionText.append(", ");
+            descriptionText.append(EMOJI_LETTER_C).append(" - for channels category");
+            emojiToAddition.add(EMOJI_LETTER_C);
+        }
+        descriptionText.append(".\nYou can also click on ").append(EMOJI_ARROW_LEFT)
+                .append(" to return to return to the previous menu and ")
+                .append("click on ").append(EMOJI_CLOSE).append(" to close the editor.");
+        emojiToAddition.add(EMOJI_ARROW_LEFT);
+        emojiToAddition.add(EMOJI_CLOSE);
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+                .setTitle(TITLE)
+                .setDescription(descriptionText.toString());
+        return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
+            if (super.addReactions(message, null, emojiToAddition)) {
+                SessionState newState = sessionState.toBuilderWithStepId(STATE_ON_DELETION_SELECT_SCREEN)
+                        .setMessage(message)
+                        .build();
+                super.commitState(newState);
+                return true;
+            } else {
+                return false;
+            }
+        }).orElse(false);
+    }
+
+    private boolean checkCommandStrictByChannel(@NotNull String commandName) {
+        return Scenario.all().stream()
+                .filter(Scenario::isStrictByChannels)
+                .map(Scenario::getPrefix)
+                .anyMatch(s -> s.equalsIgnoreCase(commandName))
+                || BotCommand.all().stream()
+                .filter(BotCommand::isStrictByChannels)
+                .map(BotCommand::getPrefix)
+                .anyMatch(s -> s.equalsIgnoreCase(commandName))
+                || MsgCreateReaction.all().stream()
+                .filter(MsgCreateReaction::isAccessControl)
+                .map(MsgCreateReaction::getCommandPrefix)
+                .anyMatch(s -> s.equalsIgnoreCase(commandName));
     }
 
     private boolean showTitleScreen(@NotNull ServerTextChannel serverTextChannel,
