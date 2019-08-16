@@ -1,5 +1,6 @@
 package hellfrog.core;
 
+import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import org.javacord.api.entity.channel.ChannelCategory;
 import org.javacord.api.entity.channel.ServerChannel;
@@ -21,7 +22,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ServerSideResolver {
+public class ServerSideResolver
+    implements CommonConstants {
 
     private static final Pattern USER_TAG_REGEXP = Pattern.compile("^<@!?[0-9]+>$"); // <@!516251605864153099>
     private static final Pattern USER_TAG_SEARCH = Pattern.compile("<@!?[0-9]+>", Pattern.MULTILINE);
@@ -53,12 +55,12 @@ public class ServerSideResolver {
         // 3. Затем по discriminated name
         matcher = USER_LOGIN_WITH_DISCRIMINATE_REGEXP.matcher(rawValue);
         if (matcher.find()) {
-            Optional<User> member = server.getMemberByDiscriminatedName(rawValue);
+            Optional<User> member = server.getMemberByDiscriminatedNameIgnoreCase(rawValue);
             if (member.isPresent())
                 return member;
         }
         // 4. Затем просто по name
-        Optional<User> member = CommonUtils.getFirstOrEmpty(server.getMembersByName(rawValue));
+        Optional<User> member = CommonUtils.getFirstOrEmpty(server.getMembersByNameIgnoreCase(rawValue));
         if (member.isPresent()) {
             return member;
         }
@@ -67,11 +69,11 @@ public class ServerSideResolver {
         if (member.isPresent()) {
             return member;
         }
-        // 6. Пытаемся отыскать по глобальному нику
+        // 6. Пытаемся отыскать по глобальному id
         try {
             User found = server.getApi()
                     .getUserById(CommonUtils.onlyNumbersToLong(rawValue))
-                    .get(10_000L, TimeUnit.SECONDS);
+                    .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
             return Optional.ofNullable(found);
         } catch (Exception err) {
             return Optional.empty();

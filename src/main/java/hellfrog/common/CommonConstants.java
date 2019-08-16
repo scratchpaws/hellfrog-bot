@@ -1,5 +1,7 @@
 package hellfrog.common;
 
+import java.util.concurrent.TimeUnit;
+
 public interface CommonConstants {
 
     /**
@@ -11,4 +13,9 @@ public interface CommonConstants {
      * Максимальное время ожидания скачивания/редактирования/отправки сообщений
      */
     long OP_WAITING_TIMEOUT = 10_000L;
+
+    /**
+     * Единица времени ожидания
+     */
+    TimeUnit OP_TIME_UNIT = TimeUnit.MILLISECONDS;
 }

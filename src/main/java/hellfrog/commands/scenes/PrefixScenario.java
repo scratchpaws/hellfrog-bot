@@ -266,7 +266,7 @@ public class PrefixScenario
 
     private boolean isCloseReaction(@NotNull SingleReactionEvent event,
                                     @NotNull SessionState sessionState) {
-        if (super.equalsUnicodeReaction(event, EMOJI_CLOSE)) {
+        if (equalsUnicodeReaction(event, EMOJI_CLOSE)) {
             super.dropPreviousStateEmoji(sessionState);
             EmbedBuilder embedBuilder = new EmbedBuilder()
                     .setTitle("Bot commands prefix editor")

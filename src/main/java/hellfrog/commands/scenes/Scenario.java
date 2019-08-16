@@ -612,7 +612,7 @@ public abstract class Scenario
      * @param unicodeEmoji unicode-эмодзи
      * @return соответствие
      */
-    protected boolean equalsUnicodeReaction(@NotNull SingleReactionEvent event,
+    protected static boolean equalsUnicodeReaction(@NotNull SingleReactionEvent event,
                                             @NotNull String unicodeEmoji) {
         return event.getEmoji().asUnicodeEmoji()
                 .map(unicodeEmoji::equals)

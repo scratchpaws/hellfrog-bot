@@ -72,7 +72,7 @@ public class RightsScenario
 
     private static final List<String> TITLE_EMOJI_LIST =
             List.of(EMOJI_QUESTION, EMOJI_REPEAT, EMOJI_CLOSE);
-    private static final List<String> HELP_PAGE_EMOJI_LIST =
+    private static final List<String> GO_BACK_OR_CLOSE_EMOJI_LIST =
             List.of(EMOJI_ARROW_LEFT, EMOJI_CLOSE);
     private static final List<String> ADD_ONLY_EMOJI_LIST =
             List.of(EMOJI_PLUS, EMOJI_ARROW_LEFT, EMOJI_CLOSE);
@@ -88,8 +88,36 @@ public class RightsScenario
     private static final long STATE_ON_COMMAND_EDIT_SCREEN = 2L;
     private static final long STATE_ON_ADDITION_SELECT_SCREEN = 3L;
     private static final long STATE_ON_DELETION_SELECT_SCREEN = 4L;
+    private static final long STATE_ON_ENTER_ADD_RIGHT_ENTITY = 5L;
+    private static final long STATE_ON_ENTER_DEL_RIGHT_ENTITY = 6L;
 
     private static final String ENTERED_COMMAND_KEY = "command.name";
+    private static final String ADD_TYPE_KEY = "add.type";
+
+    private enum RightType {
+        TYPE_NONE, TYPE_USER, TYPE_ROLE, TYPE_TEXT_CHAT, TYPE_CATEGORY;
+
+        static RightType ofEmoji(@NotNull SingleReactionEvent event) {
+            boolean userPressUserLetter = equalsUnicodeReaction(event, EMOJI_LETTER_U);
+            boolean userPressRoleLetter = equalsUnicodeReaction(event, EMOJI_LETTER_R);
+            boolean userPressTextChatLetter = equalsUnicodeReaction(event, EMOJI_LETTER_T);
+            boolean userPressCategoryLetter = equalsUnicodeReaction(event, EMOJI_LETTER_C);
+            if (userPressUserLetter)
+                return TYPE_USER;
+            if (userPressRoleLetter)
+                return TYPE_ROLE;
+            if (userPressTextChatLetter)
+                return TYPE_TEXT_CHAT;
+            if (userPressCategoryLetter)
+                return TYPE_CATEGORY;
+
+            return TYPE_NONE;
+        }
+
+        boolean in(@NotNull RightType that1, @NotNull RightType that2) {
+            return this.equals(that1) || this.equals(that2);
+        }
+    }
 
     public RightsScenario() {
         super(PREFIX, DESCRIPTION);
@@ -334,19 +362,28 @@ public class RightsScenario
                                          @NotNull User user,
                                          @NotNull SessionState sessionState,
                                          boolean isBotOwner) {
+
+        boolean hasSavedCommand = sessionState.getValue(ENTERED_COMMAND_KEY, String.class) != null;
+        boolean hasSavedAddEntityType = sessionState.getValue(ADD_TYPE_KEY, RightType.class) != null;
+
         boolean onTitleStep = sessionState.stepIdIs(STATE_ON_TITLE_SCREEN);
         boolean onHelpScreen = sessionState.stepIdIs(STATE_ON_HELP_SCREEN);
         boolean onCommandEditScreen = sessionState.stepIdIs(STATE_ON_COMMAND_EDIT_SCREEN);
         boolean onAdditionSelectScreen = sessionState.stepIdIs(STATE_ON_ADDITION_SELECT_SCREEN)
-                && sessionState.getValue(ENTERED_COMMAND_KEY, String.class) != null;
+                && hasSavedCommand;
         boolean onDeletionSelectScreen = sessionState.stepIdIs(STATE_ON_DELETION_SELECT_SCREEN)
-                && sessionState.getValue(ENTERED_COMMAND_KEY, String.class) != null;
-        boolean userPressHelp = super.equalsUnicodeReaction(event, EMOJI_QUESTION);
-        boolean userPressClose = super.equalsUnicodeReaction(event, EMOJI_CLOSE);
-        boolean userPressArrowLeft = super.equalsUnicodeReaction(event, EMOJI_ARROW_LEFT);
-        boolean userPressRepeat = super.equalsUnicodeReaction(event, EMOJI_REPEAT);
-        boolean userPressAdd = super.equalsUnicodeReaction(event, EMOJI_PLUS);
-        boolean userPressRemove = super.equalsUnicodeReaction(event, EMOJI_MINUS);
+                && hasSavedCommand;
+        boolean onAddRightEntityScreen = sessionState.stepIdIs(STATE_ON_ENTER_ADD_RIGHT_ENTITY)
+                && hasSavedCommand && hasSavedAddEntityType;
+
+        boolean userPressHelp = equalsUnicodeReaction(event, EMOJI_QUESTION);
+        boolean userPressClose = equalsUnicodeReaction(event, EMOJI_CLOSE);
+        boolean userPressArrowLeft = equalsUnicodeReaction(event, EMOJI_ARROW_LEFT);
+        boolean userPressRepeat = equalsUnicodeReaction(event, EMOJI_REPEAT);
+        boolean userPressAdd = equalsUnicodeReaction(event, EMOJI_PLUS);
+        boolean userPressRemove = equalsUnicodeReaction(event, EMOJI_MINUS);
+
+        RightType rightType = RightType.ofEmoji(event);
 
         if (userPressClose) {
             super.dropPreviousStateEmoji(sessionState);
@@ -378,6 +415,13 @@ public class RightsScenario
                 super.dropPreviousStateEmoji(sessionState);
                 return displayIfValidCommand(rawCommandName, server, serverTextChannel, user);
             }
+        } else if (onAdditionSelectScreen && !rightType.equals(RightType.TYPE_NONE)) {
+            super.dropPreviousStateEmoji(sessionState);
+            return showAddScreen(serverTextChannel, sessionState, rightType);
+        } else if (onAddRightEntityScreen && userPressArrowLeft) {
+            super.dropPreviousStateEmoji(sessionState);
+            sessionState.putValue(ADD_TYPE_KEY, RightType.TYPE_NONE);
+            return selectAddition(serverTextChannel, sessionState);
         }
         return false;
     }
@@ -510,6 +554,78 @@ public class RightsScenario
         }).orElse(false);
     }
 
+    private boolean showAddScreen(@NotNull ServerTextChannel serverTextChannel,
+                                  @NotNull SessionState sessionState,
+                                  @NotNull RightType rightType) {
+        String enteredCommandName = sessionState.getValue(ENTERED_COMMAND_KEY, String.class);
+        if (CommonUtils.isTrStringEmpty(enteredCommandName)) {
+            return false;
+        }
+        boolean isStrictByChannel = checkCommandStrictByChannel(enteredCommandName);
+        if (!isStrictByChannel && rightType.in(RightType.TYPE_TEXT_CHAT, RightType.TYPE_CATEGORY)) {
+            return false;
+        }
+        StringBuilder descriptionText = new StringBuilder();
+        switch (rightType) {
+
+            case TYPE_USER:
+                descriptionText.append("Enter the user to whom you want to grant access to the specified " +
+                        "command. You can specify (listed in priority order when performing " +
+                        "a user search with a bot): user ID, its mention, discriminating name " +
+                        "(i.e. global\\_username#user\\_tag), global username " +
+                        "(i.e. without #user\\_tag), nickname on this server.");
+                break;
+
+            case TYPE_ROLE:
+                descriptionText.append("Enter the role that you want to grant access to the specified " +
+                        "command. You can specify (listed in order of priority when " +
+                        "performing a search for a role by a bot): role ID, its mention, " +
+                        "role name.");
+                break;
+
+            case TYPE_TEXT_CHAT:
+                descriptionText.append("Enter the text channel that you want to allow the execution of the " +
+                        "specified command. You can specify (listed in order of priority when " +
+                        "performing a channel search with a bot): channel ID, its mention, " +
+                        "channel name.");
+                break;
+
+            case TYPE_CATEGORY:
+                descriptionText.append("Enter the channel category in which you want to allow the execution " +
+                        "of the specified command. Keep in mind that the permission applies " +
+                        "to all channels in this category (it is impossible to selectively " +
+                        "prohibit the execution of a command on any channel in this " +
+                        "category while the permission is valid for the entire category). You " +
+                        "can specify (listed in order of priority when performing a channel " +
+                        "search with a bot): category ID, category name.");
+                break;
+
+            default:
+                return false;
+        }
+
+        descriptionText.append("\nEntering a value is not case sensitive.")
+                .append("\nYou can also click on ").append(EMOJI_ARROW_LEFT)
+                .append(" to return to return to the previous menu and ")
+                .append("click on ").append(EMOJI_CLOSE).append(" to close the editor.");
+
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+                .setTitle(TITLE)
+                .setDescription(descriptionText.toString());
+        return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
+            if (super.addReactions(message, null, GO_BACK_OR_CLOSE_EMOJI_LIST)) {
+                SessionState newState = sessionState.toBuilderWithStepId(STATE_ON_ENTER_ADD_RIGHT_ENTITY)
+                        .putValue(ADD_TYPE_KEY, rightType)
+                        .setMessage(message)
+                        .build();
+                super.commitState(newState);
+                return true;
+            } else {
+                return false;
+            }
+        }).orElse(false);
+    }
+
     private boolean checkCommandStrictByChannel(@NotNull String commandName) {
         return Scenario.all().stream()
                 .filter(Scenario::isStrictByChannels)
@@ -583,7 +699,7 @@ public class RightsScenario
         super.dropPreviousStateEmoji(sessionState);
         EmbedBuilder embedBuilder = new EmbedBuilder()
                 .setTitle(TITLE)
-                .setDescription("Canceled");
+                .setDescription("Goodbye.");
         super.displayMessage(embedBuilder, serverTextChannel);
     }
 
@@ -597,7 +713,7 @@ public class RightsScenario
                 "Or click on the " + EMOJI_CLOSE + " to close the editor.";
         embedBuilder.setDescription(descriptionText);
         return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
-            if (super.addReactions(message, null, HELP_PAGE_EMOJI_LIST)) {
+            if (super.addReactions(message, null, GO_BACK_OR_CLOSE_EMOJI_LIST)) {
                 SessionState newState = sessionState.toBuilderWithStepId(STATE_ON_HELP_SCREEN)
                         .setMessage(message)
                         .build();
