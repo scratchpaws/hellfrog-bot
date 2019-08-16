@@ -4,6 +4,7 @@ import com.vdurmont.emoji.EmojiParser;
 import hellfrog.commands.cmdline.BotCommand;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
+import hellfrog.core.ServerSideResolver;
 import hellfrog.core.SessionState;
 import hellfrog.reacts.MsgCreateReaction;
 import hellfrog.settings.CommandRights;
@@ -22,9 +23,8 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.reaction.SingleReactionEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class RightsScenario
@@ -146,10 +146,28 @@ public class RightsScenario
                                         @NotNull User user,
                                         @NotNull SessionState sessionState,
                                         boolean isBotOwner) {
+
+        String rawInput = event.getMessageContent();
+        boolean rawInputNotEmpty = CommonUtils.isTrStringNotEmpty(rawInput);
+
+        boolean sessionHasSavedCommand = sessionState.getValue(ENTERED_COMMAND_KEY, String.class) != null;
+        boolean sessionHasSavedRightType = sessionState.getValue(MODIFY_TYPE_KEY, RightType.class) != null
+                && !sessionState.getValue(MODIFY_TYPE_KEY, RightType.class).equals(RightType.TYPE_NONE);
+
         boolean onTitleStep = sessionState.stepIdIs(STATE_ON_TITLE_SCREEN);
+        boolean onAddRightEntityScreen = sessionState.stepIdIs(STATE_ON_ENTER_ADD_RIGHT_ENTITY)
+                && sessionHasSavedCommand && sessionHasSavedRightType;
+        boolean onDelRightEntityScreen = sessionState.stepIdIs(STATE_ON_ENTER_DEL_RIGHT_ENTITY)
+                && sessionHasSavedCommand && sessionHasSavedRightType;
+
         if (onTitleStep) {
             super.dropPreviousStateEmoji(sessionState);
             return checkEnteredCommand(event, server, serverTextChannel, user);
+        } else if (onAddRightEntityScreen && rawInputNotEmpty) {
+            super.dropPreviousStateEmoji(sessionState);
+            return parseAdditionRightsEntity(server, serverTextChannel, sessionState, rawInput);
+        } else if (onDelRightEntityScreen && rawInputNotEmpty) {
+
         }
         return false;
     }
@@ -218,9 +236,7 @@ public class RightsScenario
                 .map(userId -> {
                     Optional<User> mayBeUser = server.getMemberById(userId);
                     if (mayBeUser.isPresent()) {
-                        User user = mayBeUser.get();
-                        return server.getDisplayName(user)
-                                + " (" + user.getDiscriminatedName() + ", id: " + userId + ")";
+                        return getUserNameAndId(server, mayBeUser.get());
                     } else {
                         commandRights.delAllowUser(userId);
                         settingsController.saveServerSideParameters(server.getId());
@@ -349,6 +365,205 @@ public class RightsScenario
     @NotNull
     private String getChannelNameAndId(@NotNull ServerChannel channel) {
         return channel.getName() + " (id: " + channel.getIdAsString() + ")";
+    }
+
+    @NotNull
+    private String getUserNameAndId(@NotNull Server server, @NotNull User user) {
+        return server.getDisplayName(user)
+                + " (" + user.getDiscriminatedName() + ", id: " + user.getId() + ")";
+    }
+
+    @NotNull
+    private String getRoleNameAndId(@NotNull Role role) {
+        return role.getName() + " (id: " + role.getId() + ")";
+    }
+
+    private boolean parseAdditionRightsEntity(@NotNull Server server,
+                                              @NotNull ServerTextChannel serverTextChannel,
+                                              @NotNull SessionState sessionState,
+                                              @NotNull String rawInput) {
+
+        String enteredCommandName = sessionState.getValue(ENTERED_COMMAND_KEY, String.class);
+        if (CommonUtils.isTrStringEmpty(enteredCommandName)) {
+            return false;
+        }
+
+        RightType rightType = sessionState.getValue(MODIFY_TYPE_KEY, RightType.class);
+        if (rightType == null || rightType.equals(RightType.TYPE_NONE)) {
+            return false;
+        }
+
+        List<String> entityNames = Arrays.stream(rawInput.split("\n"))
+                .map(String::trim)
+                .filter(CommonUtils::isTrStringNotEmpty)
+                .collect(Collectors.toUnmodifiableList());
+
+        if (entityNames.isEmpty()) {
+            return displayAdditionError(serverTextChannel, sessionState,
+                    "You have entered an empty name (or an empty list of names).");
+        }
+
+        SettingsController settingsController = SettingsController.getInstance();
+        ServerPreferences serverPreferences = settingsController.getServerPreferences(server.getId());
+        CommandRights commandRights = serverPreferences.getRightsForCommand(enteredCommandName);
+
+        String resultMessage = "";
+
+        switch (rightType) {
+
+            case TYPE_USER:
+                ServerSideResolver.ParseResult<User> userParseResult =
+                        ServerSideResolver.resolveUsersList(server, entityNames);
+                if (userParseResult.hasNotFound()) {
+                    return displayAdditionError(serverTextChannel, sessionState,
+                            "These users cannot be found: "
+                                    + userParseResult.getNotFoundStringList());
+                }
+                Collection<User> members = server.getMembers();
+                Optional<String> nonServerUsers = userParseResult.getFound().stream()
+                        .filter(parsedUser -> !members.contains(parsedUser))
+                        .map(User::getDiscriminatedName)
+                        .reduce(CommonUtils::reduceConcat);
+                if (nonServerUsers.isPresent()) {
+                    return displayAdditionError(serverTextChannel, sessionState,
+                            "These users are not present on this server: "
+                                    + nonServerUsers.get());
+                }
+                Optional<String> alreadyAssigned = userParseResult.getFound().stream()
+                        .filter(parsedUser -> commandRights.isAllowUser(parsedUser.getId()))
+                        .map(parsedUser -> getUserNameAndId(server, parsedUser))
+                        .reduce(CommonUtils::reduceConcat);
+                if (alreadyAssigned.isPresent()) {
+                    return displayAdditionError(serverTextChannel, sessionState,
+                            "These users are already allowed to execute the command __"
+                                    + enteredCommandName + "__: " + alreadyAssigned.get());
+                }
+                userParseResult.getFound().forEach(user -> commandRights.getAllowUsers().add(user.getId()));
+                settingsController.saveServerSideParameters(server.getId());
+                String usersList = userParseResult.getFound().stream()
+                        .map(user -> getUserNameAndId(server, user))
+                        .reduce(CommonUtils::reduceConcat)
+                        .orElse("");
+                resultMessage = "The following users are allowed to execute the command __"
+                        + enteredCommandName + "__: " + usersList;
+                break;
+
+            case TYPE_ROLE:
+                ServerSideResolver.ParseResult<Role> roleParseResult =
+                        ServerSideResolver.resolveRolesList(server, entityNames);
+                if (roleParseResult.hasNotFound()) {
+                    return displayAdditionError(serverTextChannel, sessionState,
+                            "These roles cannot be found: "
+                                    + roleParseResult.getNotFoundStringList());
+                }
+                alreadyAssigned = roleParseResult.getFound().stream()
+                        .filter(role -> commandRights.isAllowRole(role.getId()))
+                        .map(this::getRoleNameAndId)
+                        .reduce(CommonUtils::reduceConcat);
+                if (alreadyAssigned.isPresent()) {
+                    return displayAdditionError(serverTextChannel, sessionState,
+                            "These roles are already allowed to execute the command __"
+                                    + enteredCommandName + "__: " + alreadyAssigned.get());
+                }
+                roleParseResult.getFound().forEach(role -> commandRights.getAllowRoles().add(role.getId()));
+                settingsController.saveServerSideParameters(server.getId());
+                String rolesList = roleParseResult.getFound().stream()
+                        .map(this::getRoleNameAndId)
+                        .reduce(CommonUtils::reduceConcat)
+                        .orElse("");
+                resultMessage = "The following roles are allowed to execute the command __"
+                        + enteredCommandName + "__: " + rolesList;
+                break;
+
+            case TYPE_TEXT_CHAT:
+                ServerSideResolver.ParseResult<ServerTextChannel> textChannelParseResult =
+                        ServerSideResolver.resolveTextChannelsList(server, entityNames);
+                if (textChannelParseResult.hasNotFound()) {
+                    return displayAdditionError(serverTextChannel, sessionState,
+                            "These text channels cannot be found: "
+                                    + textChannelParseResult.getNotFoundStringList());
+                }
+                alreadyAssigned = textChannelParseResult.getFound().stream()
+                        .filter(textChannel -> commandRights.isAllowChat(textChannel.getId()))
+                        .map(this::getChannelNameAndId)
+                        .reduce(CommonUtils::reduceConcat);
+                if (alreadyAssigned.isPresent()) {
+                    return displayAdditionError(serverTextChannel, sessionState,
+                            "These text channels are already allowed to execute the command __"
+                                    + enteredCommandName + "__: " + alreadyAssigned.get());
+                }
+                textChannelParseResult.getFound().forEach(textChannel ->
+                        commandRights.addAllowChannel(textChannel.getId()));
+                settingsController.saveServerSideParameters(server.getId());
+                String channelsList = textChannelParseResult.getFound().stream()
+                        .map(this::getChannelNameAndId)
+                        .reduce(CommonUtils::reduceConcat)
+                        .orElse("");
+                resultMessage = "The following text channels allow to execute the command __"
+                        + enteredCommandName + "__: " + channelsList;
+                break;
+
+            case TYPE_CATEGORY:
+                ServerSideResolver.ParseResult<ChannelCategory> categoryParseResult =
+                        ServerSideResolver.resolveChannelCategoriesList(server, entityNames);
+                if (categoryParseResult.hasNotFound()) {
+                    return displayAdditionError(serverTextChannel, sessionState,
+                            "These channel categories cannot be found: "
+                                    + categoryParseResult.getNotFoundStringList());
+                }
+                alreadyAssigned = categoryParseResult.getFound().stream()
+                        .filter(channelCategory -> commandRights.isAllowChat(channelCategory.getId()))
+                        .map(this::getChannelNameAndId)
+                        .reduce(CommonUtils::reduceConcat);
+                if (alreadyAssigned.isPresent()) {
+                    return displayAdditionError(serverTextChannel, sessionState,
+                            "These channel categories are already allowed to execute the command __"
+                                    + enteredCommandName + "__: " + alreadyAssigned.get());
+                }
+                categoryParseResult.getFound().forEach(channelCategory ->
+                        commandRights.addAllowChannel(channelCategory.getId()));
+                String categoriesList = categoryParseResult.getFound().stream()
+                        .map(this::getChannelNameAndId)
+                        .reduce(CommonUtils::reduceConcat)
+                        .orElse("");
+                resultMessage = "For text channels included in these channel categories, " +
+                        "allowed to execute the command __" + enteredCommandName + "__: " + categoriesList;
+                break;
+        }
+
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+                .setTitle(TITLE)
+                .setDescription(resultMessage);
+        return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
+            sessionState.putValue(MODIFY_TYPE_KEY, RightType.TYPE_NONE);
+            return selectAddition(serverTextChannel, sessionState);
+        }).orElse(false);
+    }
+
+    private boolean displayAdditionError(@NotNull ServerTextChannel serverTextChannel,
+                                         @NotNull SessionState sessionState,
+                                         @NotNull String errorText) {
+
+        super.dropPreviousStateEmoji(sessionState);
+        String descriptionMessage = errorText +
+                ". Please try again.\nYou can also click on " + EMOJI_ARROW_LEFT +
+                " to return to return to the previous menu and " +
+                "click on " + EMOJI_CLOSE + " to close the editor.";
+
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+                .setTitle(TITLE)
+                .setDescription(descriptionMessage);
+        return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
+            if (super.addReactions(message, null, GO_BACK_OR_CLOSE_EMOJI_LIST)) {
+                SessionState newState = sessionState.toBuilder()
+                        .setMessage(message)
+                        .build();
+                super.commitState(newState);
+                return true;
+            } else {
+                return false;
+            }
+        }).orElse(false);
     }
 
     /**
@@ -638,7 +853,7 @@ public class RightsScenario
             }
             embedBuilder.setDescription(descriptionText.toString());
             return super.displayMessage(embedBuilder, serverTextChannel).map(message ->
-                selectDeletion(server, serverTextChannel, sessionState)
+                    selectDeletion(server, serverTextChannel, sessionState)
             ).orElse(false);
         } else {
             addRightAddDelDescription(descriptionText, rightType, false);
@@ -716,7 +931,10 @@ public class RightsScenario
                 break;
         }
 
-        descriptionText.append("\nEntering a value is not case sensitive.")
+        descriptionText.append("\nEntering a value is not case sensitive. ")
+                .append("If there are two of the same name, the first one will be selected. ")
+                .append("You can list several at once, on each line individually. ")
+                .append("Use `Shift`+`Enter` to jump to a new line.")
                 .append("\nYou can also click on ").append(EMOJI_ARROW_LEFT)
                 .append(" to return to return to the previous menu and ")
                 .append("click on ").append(EMOJI_CLOSE).append(" to close the editor.");

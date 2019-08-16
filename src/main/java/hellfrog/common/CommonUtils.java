@@ -13,7 +13,12 @@ public class CommonUtils {
 
     @Contract("null -> true")
     public static boolean isTrStringEmpty(CharSequence str) {
-        return str == null || str.toString().trim().length() == 0;
+        return str == null || str.toString().trim().isEmpty();
+    }
+
+    @Contract("null -> false")
+    public static boolean isTrStringNotEmpty(@Nullable CharSequence str) {
+        return str != null && !str.toString().trim().isEmpty();
     }
 
     public static String cutLeftString(String source, String cut) {

@@ -197,6 +197,7 @@ public class ServerSideResolver
         return result;
     }
 
+    @NotNull
     public static ParseResult<ServerTextChannel> resolveTextChannelsList(Server server,
                                                                          @NotNull List<String> rawTextChannelList) {
         ParseResult<ServerTextChannel> result = new ParseResult<>();
@@ -215,6 +216,26 @@ public class ServerSideResolver
         return result;
     }
 
+    @NotNull
+    public static ParseResult<ChannelCategory> resolveChannelCategoriesList(Server server,
+                                                                            @NotNull List<String> rawTextCategoriesList) {
+        ParseResult<ChannelCategory> result = new ParseResult<>();
+        List<ChannelCategory> resolvedCategories = new ArrayList<>(rawTextCategoriesList.size());
+        List<String> unresolvedCategories = new ArrayList<>(rawTextCategoriesList.size());
+        rawTextCategoriesList.forEach(rawCategory -> {
+            Optional<ChannelCategory> mayBeCategory = ServerSideResolver.resolveCategory(server, rawCategory);
+            if (mayBeCategory.isPresent()) {
+                resolvedCategories.add(mayBeCategory.get());
+            } else {
+                unresolvedCategories.add(rawCategory);
+            }
+        });
+        result.setFound(resolvedCategories);
+        result.setNotFound(unresolvedCategories);
+        return result;
+    }
+
+    @NotNull
     public static ParseResult<ServerChannel> resolveTextChannelsAndCategoriesList(Server server,
                                                                                   @NotNull List<String> rawChannelsList) {
         ParseResult<ServerChannel> result = new ParseResult<>();

@@ -9,6 +9,33 @@ import java.util.*;
 public class CommonUtilsTest {
 
     @Test
+    public void trStringEmptyTest() {
+        String input1 = null;
+        String input2 = "";
+        String input3 = " \t ";
+
+        Assertions.assertTrue(CommonUtils.isTrStringEmpty(input1));
+        Assertions.assertTrue(CommonUtils.isTrStringEmpty(input2));
+        Assertions.assertTrue(CommonUtils.isTrStringEmpty(input3));
+
+        Assertions.assertFalse(CommonUtils.isTrStringNotEmpty(input1));
+        Assertions.assertFalse(CommonUtils.isTrStringNotEmpty(input2));
+        Assertions.assertFalse(CommonUtils.isTrStringNotEmpty(input3));
+
+        input1 = "one";
+        input2 = " two ";
+        input3 = " three\t";
+
+        Assertions.assertTrue(CommonUtils.isTrStringNotEmpty(input1));
+        Assertions.assertTrue(CommonUtils.isTrStringNotEmpty(input2));
+        Assertions.assertTrue(CommonUtils.isTrStringNotEmpty(input3));
+
+        Assertions.assertFalse(CommonUtils.isTrStringEmpty(input1));
+        Assertions.assertFalse(CommonUtils.isTrStringEmpty(input2));
+        Assertions.assertFalse(CommonUtils.isTrStringEmpty(input3));
+    }
+
+    @Test
     public void cutLeftStringTest() {
         String input = "r!b one two";
         String cut = "r!b";
