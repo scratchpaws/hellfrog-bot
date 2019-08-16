@@ -92,7 +92,7 @@ public class RightsScenario
     private static final long STATE_ON_ENTER_DEL_RIGHT_ENTITY = 6L;
 
     private static final String ENTERED_COMMAND_KEY = "command.name";
-    private static final String ADD_TYPE_KEY = "add.type";
+    private static final String MODIFY_TYPE_KEY = "modify.right.type";
 
     private enum RightType {
         TYPE_NONE, TYPE_USER, TYPE_ROLE, TYPE_TEXT_CHAT, TYPE_CATEGORY;
@@ -363,18 +363,21 @@ public class RightsScenario
                                          @NotNull SessionState sessionState,
                                          boolean isBotOwner) {
 
-        boolean hasSavedCommand = sessionState.getValue(ENTERED_COMMAND_KEY, String.class) != null;
-        boolean hasSavedAddEntityType = sessionState.getValue(ADD_TYPE_KEY, RightType.class) != null;
+        boolean sessionHasSavedCommand = sessionState.getValue(ENTERED_COMMAND_KEY, String.class) != null;
+        boolean sessionHasSavedRightType = sessionState.getValue(MODIFY_TYPE_KEY, RightType.class) != null
+                && !sessionState.getValue(MODIFY_TYPE_KEY, RightType.class).equals(RightType.TYPE_NONE);
 
         boolean onTitleStep = sessionState.stepIdIs(STATE_ON_TITLE_SCREEN);
         boolean onHelpScreen = sessionState.stepIdIs(STATE_ON_HELP_SCREEN);
         boolean onCommandEditScreen = sessionState.stepIdIs(STATE_ON_COMMAND_EDIT_SCREEN);
         boolean onAdditionSelectScreen = sessionState.stepIdIs(STATE_ON_ADDITION_SELECT_SCREEN)
-                && hasSavedCommand;
+                && sessionHasSavedCommand;
         boolean onDeletionSelectScreen = sessionState.stepIdIs(STATE_ON_DELETION_SELECT_SCREEN)
-                && hasSavedCommand;
+                && sessionHasSavedCommand;
         boolean onAddRightEntityScreen = sessionState.stepIdIs(STATE_ON_ENTER_ADD_RIGHT_ENTITY)
-                && hasSavedCommand && hasSavedAddEntityType;
+                && sessionHasSavedCommand && sessionHasSavedRightType;
+        boolean onDelRightEntityScreen = sessionState.stepIdIs(STATE_ON_ENTER_DEL_RIGHT_ENTITY)
+                && sessionHasSavedCommand && sessionHasSavedRightType;
 
         boolean userPressHelp = equalsUnicodeReaction(event, EMOJI_QUESTION);
         boolean userPressClose = equalsUnicodeReaction(event, EMOJI_CLOSE);
@@ -418,10 +421,17 @@ public class RightsScenario
         } else if (onAdditionSelectScreen && !rightType.equals(RightType.TYPE_NONE)) {
             super.dropPreviousStateEmoji(sessionState);
             return showAddScreen(serverTextChannel, sessionState, rightType);
+        } else if (onDeletionSelectScreen && !rightType.equals(RightType.TYPE_NONE)) {
+            super.dropPreviousStateEmoji(sessionState);
+            return showDeleteScreen(server, serverTextChannel, sessionState, rightType);
         } else if (onAddRightEntityScreen && userPressArrowLeft) {
             super.dropPreviousStateEmoji(sessionState);
-            sessionState.putValue(ADD_TYPE_KEY, RightType.TYPE_NONE);
+            sessionState.putValue(MODIFY_TYPE_KEY, RightType.TYPE_NONE);
             return selectAddition(serverTextChannel, sessionState);
+        } else if (onDelRightEntityScreen && userPressArrowLeft) {
+            super.dropPreviousStateEmoji(sessionState);
+            sessionState.putValue(MODIFY_TYPE_KEY, RightType.TYPE_NONE);
+            return selectDeletion(server, serverTextChannel, sessionState);
         }
         return false;
     }
@@ -488,46 +498,28 @@ public class RightsScenario
         }
         descriptionText.append("Select for which entity you want to **remove** permission ")
                 .append("to execute the command:\n");
-        CommandRights commandRights = SettingsController.getInstance()
-                .getServerPreferences(server.getId())
-                .getRightsForCommand(enteredCommandName);
-        boolean hasUsers = !commandRights.getAllowUsers().isEmpty()
-                && commandRights.getAllowUsers().stream()
-                .map(server::getMemberById)
-                .anyMatch(Optional::isPresent);
-        boolean hasRoles = !commandRights.getAllowRoles().isEmpty()
-                && commandRights.getAllowRoles().stream()
-                .map(server::getRoleById)
-                .anyMatch(Optional::isPresent);
-        boolean hasTextChannels = !commandRights.getAllowChannels().isEmpty()
-                && commandRights.getAllowChannels().stream()
-                .map(server::getTextChannelById)
-                .anyMatch(Optional::isPresent);
-        boolean hasChannelCategories = !commandRights.getAllowChannels().isEmpty()
-                && commandRights.getAllowChannels().stream()
-                .map(server::getChannelCategoryById)
-                .anyMatch(Optional::isPresent);
+        ShortRightsInfo rightsInfo = new ShortRightsInfo(server, enteredCommandName);
         boolean addSeparator = false;
-        if (hasUsers) {
+        if (rightsInfo.hasUsers) {
             descriptionText.append(EMOJI_LETTER_U).append(" - for user");
             emojiToAddition.add(EMOJI_LETTER_U);
             addSeparator = true;
         }
-        if (hasRoles) {
+        if (rightsInfo.hasRoles) {
             if (addSeparator)
                 descriptionText.append(", ");
             descriptionText.append(EMOJI_LETTER_R).append(" - for role");
             emojiToAddition.add(EMOJI_LETTER_R);
             addSeparator = true;
         }
-        if (hasTextChannels) {
+        if (rightsInfo.hasTextChannels) {
             if (addSeparator)
                 descriptionText.append(", ");
             descriptionText.append(EMOJI_LETTER_T).append(" - for text channel");
             emojiToAddition.add(EMOJI_LETTER_T);
             addSeparator = true;
         }
-        if (hasChannelCategories) {
+        if (rightsInfo.hasChannelCategories) {
             if (addSeparator)
                 descriptionText.append(", ");
             descriptionText.append(EMOJI_LETTER_C).append(" - for channels category");
@@ -565,49 +557,11 @@ public class RightsScenario
         if (!isStrictByChannel && rightType.in(RightType.TYPE_TEXT_CHAT, RightType.TYPE_CATEGORY)) {
             return false;
         }
-        StringBuilder descriptionText = new StringBuilder();
-        switch (rightType) {
-
-            case TYPE_USER:
-                descriptionText.append("Enter the user to whom you want to grant access to the specified " +
-                        "command. You can specify (listed in priority order when performing " +
-                        "a user search with a bot): user ID, its mention, discriminating name " +
-                        "(i.e. global\\_username#user\\_tag), global username " +
-                        "(i.e. without #user\\_tag), nickname on this server.");
-                break;
-
-            case TYPE_ROLE:
-                descriptionText.append("Enter the role that you want to grant access to the specified " +
-                        "command. You can specify (listed in order of priority when " +
-                        "performing a search for a role by a bot): role ID, its mention, " +
-                        "role name.");
-                break;
-
-            case TYPE_TEXT_CHAT:
-                descriptionText.append("Enter the text channel that you want to allow the execution of the " +
-                        "specified command. You can specify (listed in order of priority when " +
-                        "performing a channel search with a bot): channel ID, its mention, " +
-                        "channel name.");
-                break;
-
-            case TYPE_CATEGORY:
-                descriptionText.append("Enter the channel category in which you want to allow the execution " +
-                        "of the specified command. Keep in mind that the permission applies " +
-                        "to all channels in this category (it is impossible to selectively " +
-                        "prohibit the execution of a command on any channel in this " +
-                        "category while the permission is valid for the entire category). You " +
-                        "can specify (listed in order of priority when performing a channel " +
-                        "search with a bot): category ID, category name.");
-                break;
-
-            default:
-                return false;
+        if (rightType.equals(RightType.TYPE_NONE)) {
+            return false;
         }
-
-        descriptionText.append("\nEntering a value is not case sensitive.")
-                .append("\nYou can also click on ").append(EMOJI_ARROW_LEFT)
-                .append(" to return to return to the previous menu and ")
-                .append("click on ").append(EMOJI_CLOSE).append(" to close the editor.");
+        StringBuilder descriptionText = new StringBuilder();
+        addRightAddDelDescription(descriptionText, rightType, true);
 
         EmbedBuilder embedBuilder = new EmbedBuilder()
                 .setTitle(TITLE)
@@ -615,7 +569,7 @@ public class RightsScenario
         return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
             if (super.addReactions(message, null, GO_BACK_OR_CLOSE_EMOJI_LIST)) {
                 SessionState newState = sessionState.toBuilderWithStepId(STATE_ON_ENTER_ADD_RIGHT_ENTITY)
-                        .putValue(ADD_TYPE_KEY, rightType)
+                        .putValue(MODIFY_TYPE_KEY, rightType)
                         .setMessage(message)
                         .build();
                 super.commitState(newState);
@@ -624,6 +578,148 @@ public class RightsScenario
                 return false;
             }
         }).orElse(false);
+    }
+
+    private boolean showDeleteScreen(@NotNull Server server,
+                                     @NotNull ServerTextChannel serverTextChannel,
+                                     @NotNull SessionState sessionState,
+                                     @NotNull RightType rightType) {
+
+        String enteredCommandName = sessionState.getValue(ENTERED_COMMAND_KEY, String.class);
+        if (CommonUtils.isTrStringEmpty(enteredCommandName)) {
+            return false;
+        }
+        ShortRightsInfo rightsInfo = new ShortRightsInfo(server, enteredCommandName);
+        boolean canDeleteThisType = false;
+        switch (rightType) {
+            case TYPE_USER:
+                if (rightsInfo.hasUsers)
+                    canDeleteThisType = true;
+                break;
+
+            case TYPE_ROLE:
+                if (rightsInfo.hasRoles)
+                    canDeleteThisType = true;
+                break;
+
+            case TYPE_TEXT_CHAT:
+                if (rightsInfo.hasTextChannels)
+                    canDeleteThisType = true;
+                break;
+
+            case TYPE_CATEGORY:
+                if (rightsInfo.hasChannelCategories)
+                    canDeleteThisType = true;
+                break;
+        }
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+                .setTitle(TITLE);
+        StringBuilder descriptionText = new StringBuilder();
+        if (!canDeleteThisType) {
+            descriptionText.append("Unfortunately, but the list of ");
+            switch (rightType) {
+                case TYPE_USER:
+                    descriptionText.append("users who are allowed to run this command is empty.");
+                    break;
+
+                case TYPE_ROLE:
+                    descriptionText.append("roles that are allowed to run this command is empty.");
+                    break;
+
+                case TYPE_TEXT_CHAT:
+                    descriptionText.append("text channels in which the execution of this command " +
+                            "is allowed is empty.");
+                    break;
+
+                case TYPE_CATEGORY:
+                    descriptionText.append("categories in the text channels of which " +
+                            "the execution of this command is allowed is empty.");
+                    break;
+            }
+            embedBuilder.setDescription(descriptionText.toString());
+            return super.displayMessage(embedBuilder, serverTextChannel).map(message ->
+                selectDeletion(server, serverTextChannel, sessionState)
+            ).orElse(false);
+        } else {
+            addRightAddDelDescription(descriptionText, rightType, false);
+            embedBuilder.setDescription(descriptionText.toString());
+            return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
+                if (super.addReactions(message, null, GO_BACK_OR_CLOSE_EMOJI_LIST)) {
+                    SessionState newState = sessionState.toBuilderWithStepId(STATE_ON_ENTER_DEL_RIGHT_ENTITY)
+                            .putValue(MODIFY_TYPE_KEY, rightType)
+                            .setMessage(message)
+                            .build();
+                    super.commitState(newState);
+                    return true;
+                } else {
+                    return false;
+                }
+            }).orElse(false);
+        }
+    }
+
+    private void addRightAddDelDescription(@NotNull StringBuilder descriptionText,
+                                           @NotNull RightType rightType,
+                                           boolean isAdditionRights) {
+
+        final String grant = "**grant**";
+        final String revoke = "**revoke**";
+        String wordReplace = isAdditionRights ? grant : revoke;
+
+        switch (rightType) {
+
+            case TYPE_USER:
+                descriptionText.append("Enter the user to whom you want to ").append(wordReplace)
+                        .append(" access to the specified command. ")
+                        .append("You can specify (listed in priority order when performing ")
+                        .append("a user search with a bot): user ID, its mention, discriminating name ")
+                        .append("(i.e. global\\_username#user\\_tag), global username ")
+                        .append("(i.e. without #user\\_tag), nickname on this server.");
+                break;
+
+            case TYPE_ROLE:
+                descriptionText.append("Enter the role that you want to ").append(wordReplace)
+                        .append(" access to the specified command. ")
+                        .append("You can specify (listed in order of priority when ")
+                        .append("performing a search for a role by a bot): role ID, its mention, ")
+                        .append("role name.");
+                break;
+
+            case TYPE_TEXT_CHAT:
+                descriptionText.append("Enter the text channel that you want to ").append(wordReplace)
+                        .append(" the execution of the specified command. ");
+                if (!isAdditionRights) {
+                    descriptionText.append("Keep in mind that permission to execute commands for a category ")
+                            .append("of text channels override the lack of rights to execute commands ")
+                            .append("for text channels in this category. ");
+                }
+                descriptionText.append("You can specify (listed in order of priority when ")
+                        .append("performing a channel search with a bot): channel ID, its mention, ")
+                        .append("channel name.");
+                break;
+
+            case TYPE_CATEGORY:
+                descriptionText.append("Enter the channel category in which you want to ").append(wordReplace)
+                        .append(" the execution of the specified command. ");
+                if (isAdditionRights) {
+                    descriptionText.append("Keep in mind that the permission applies ")
+                            .append("to all channels in this category (it is impossible to selectively ")
+                            .append("prohibit the execution of a command on any channel in this ")
+                            .append("category while the permission is valid for the entire category). ");
+                } else {
+                    descriptionText.append("Keep in mind that permission to execute commands for a category ")
+                            .append("of text channels override the lack of rights to execute commands ")
+                            .append("for text channels in this category. ");
+                }
+                descriptionText.append("You can specify (listed in order of priority when performing a channel ")
+                        .append("search with a bot): category ID, category name.");
+                break;
+        }
+
+        descriptionText.append("\nEntering a value is not case sensitive.")
+                .append("\nYou can also click on ").append(EMOJI_ARROW_LEFT)
+                .append(" to return to return to the previous menu and ")
+                .append("click on ").append(EMOJI_CLOSE).append(" to close the editor.");
     }
 
     private boolean checkCommandStrictByChannel(@NotNull String commandName) {
@@ -764,5 +860,36 @@ public class RightsScenario
         BroadCast.sendBroadcastToAllBotOwners("Exec of " + RightsScenario.class.getName()
                 + "::privateMessageStep!");
         return true;
+    }
+
+    private class ShortRightsInfo {
+
+        final boolean hasUsers;
+        final boolean hasRoles;
+        final boolean hasTextChannels;
+        final boolean hasChannelCategories;
+
+        ShortRightsInfo(@NotNull Server server,
+                        @NotNull String enteredCommandName) {
+            CommandRights commandRights = SettingsController.getInstance()
+                    .getServerPreferences(server.getId())
+                    .getRightsForCommand(enteredCommandName);
+            this.hasUsers = !commandRights.getAllowUsers().isEmpty()
+                    && commandRights.getAllowUsers().stream()
+                    .map(server::getMemberById)
+                    .anyMatch(Optional::isPresent);
+            this.hasRoles = !commandRights.getAllowRoles().isEmpty()
+                    && commandRights.getAllowRoles().stream()
+                    .map(server::getRoleById)
+                    .anyMatch(Optional::isPresent);
+            this.hasTextChannels = !commandRights.getAllowChannels().isEmpty()
+                    && commandRights.getAllowChannels().stream()
+                    .map(server::getTextChannelById)
+                    .anyMatch(Optional::isPresent);
+            this.hasChannelCategories = !commandRights.getAllowChannels().isEmpty()
+                    && commandRights.getAllowChannels().stream()
+                    .map(server::getChannelCategoryById)
+                    .anyMatch(Optional::isPresent);
+        }
     }
 }
