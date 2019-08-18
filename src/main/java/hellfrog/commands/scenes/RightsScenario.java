@@ -540,6 +540,40 @@ public class RightsScenario
         }).orElse(false);
     }
 
+    private boolean parseDeletionRightsEntity(@NotNull MessageCreateEvent event,
+                                              @NotNull Server server,
+                                              @NotNull ServerTextChannel serverTextChannel,
+                                              @NotNull User user,
+                                              @NotNull SessionState sessionState,
+                                              @NotNull String rawInput) {
+
+        String enteredCommandName = sessionState.getValue(ENTERED_COMMAND_KEY, String.class);
+        if (CommonUtils.isTrStringEmpty(enteredCommandName)) {
+            return false;
+        }
+
+        RightType rightType = sessionState.getValue(MODIFY_TYPE_KEY, RightType.class);
+        if (rightType == null || rightType.equals(RightType.TYPE_NONE)) {
+            return false;
+        }
+
+        List<String> entityNames = Arrays.stream(rawInput.split("\n"))
+                .map(String::trim)
+                .filter(CommonUtils::isTrStringNotEmpty)
+                .collect(Collectors.toUnmodifiableList());
+
+        if (entityNames.isEmpty()) {
+            return displayAdditionError(serverTextChannel, sessionState,
+                    "You have entered an empty name (or an empty list of names).");
+        }
+
+        SettingsController settingsController = SettingsController.getInstance();
+        ServerPreferences serverPreferences = settingsController.getServerPreferences(server.getId());
+        CommandRights commandRights = serverPreferences.getRightsForCommand(enteredCommandName);
+
+        return false;
+    }
+
     private boolean displayAdditionError(@NotNull ServerTextChannel serverTextChannel,
                                          @NotNull SessionState sessionState,
                                          @NotNull String errorText) {

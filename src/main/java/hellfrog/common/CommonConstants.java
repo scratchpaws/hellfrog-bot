@@ -24,16 +24,16 @@ public interface CommonConstants {
      * таких как старт бота, стоп, попытка выполнить обновление каким-либо
      * владельцем, попытка выполнить отладочную команду (srv -r).
      * Что бы оно не спамило мне в приват.
-     * В данный момент это канал на сервере {@link #OFFICIAL_SERVER_INVITE}
+     * В данный момент это канал на сервере {@link #OFFICIAL_SERVER}
      *
      * @see hellfrog.commands.cmdline.ServiceCommand {@link BroadCast}
      */
     long SERVICE_MESSAGES_CHANNEL = 612659329392443422L;
 
     /**
-     * Приглашение на официальный сервер
+     * Официальный сервер
      */
-    String OFFICIAL_SERVER_INVITE = "https://discord.gg/Y5Sjnht";
+    long OFFICIAL_SERVER = 612645599132778517L;
 
     /**
      * ID канала с наборами изображений, используемый при выпадании высоких результатов
