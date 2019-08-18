@@ -1,6 +1,7 @@
 package hellfrog.reacts;
 
 import hellfrog.common.CodeSourceUtils;
+import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.core.AccessControlCheck;
 import org.javacord.api.entity.channel.TextChannel;
@@ -17,7 +18,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public abstract class MsgCreateReaction
-        implements MessageCreateListener {
+        implements MessageCreateListener, CommonConstants {
 
     private static final List<MsgCreateReaction> ALL_MESSAGE_REACTS =
             CodeSourceUtils.childClassInstancesCollector(MsgCreateReaction.class);

@@ -3,6 +3,7 @@ package hellfrog.core;
 import hellfrog.commands.cmdline.BotCommand;
 import hellfrog.commands.scenes.Scenario;
 import hellfrog.common.BroadCast;
+import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.UserCachedData;
 import hellfrog.reacts.*;
@@ -53,7 +54,7 @@ public class EventsListener
         implements MessageCreateListener, MessageEditListener, MessageDeleteListener,
         ReactionAddListener, ReactionRemoveListener, ReactionRemoveAllListener,
         ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
-        ServerMemberBanListener, ServerMemberUnbanListener {
+        ServerMemberBanListener, ServerMemberUnbanListener, CommonConstants {
 
     private static final String VERSION_STRING = "0.1.22b";
 
@@ -313,12 +314,25 @@ public class EventsListener
     }
 
     void onReady() {
-        DiscordApi api = SettingsController.getInstance().getDiscordApi();
-        botInviteUrl = api != null ? api.createBotInvite(new PermissionsImpl(67497153)) : "";
-        String invite = "Invite url: " + botInviteUrl;
-        String readyMsg = "Bot started. " + invite;
-        log.info(readyMsg);
-        BroadCast.sendBroadcastToAllBotOwners(readyMsg);
+        DiceReaction.rebuildRoflIndexes();
+        Optional<DiscordApi> mayBeApi = Optional.ofNullable(SettingsController.getInstance().getDiscordApi());
+        mayBeApi.ifPresentOrElse(discordApi -> {
+            discordApi.getServerTextChannelById(HIGH_ROLL_IMAGES_CHANNEL).ifPresent(textChannel -> {
+                textChannel.addMessageCreateListener(event -> DiceReaction.rebuildRoflIndexes());
+                textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes());
+                textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes());
+            });
+            discordApi.getServerTextChannelById(LOG_ROLL_IMAGES_CHANNEL).ifPresent(textChannel -> {
+                textChannel.addMessageCreateListener(event -> DiceReaction.rebuildRoflIndexes());
+                textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes());
+                textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes());
+            });
+            botInviteUrl = discordApi.createBotInvite(new PermissionsImpl(335932481));
+            String invite = "Invite url: " + botInviteUrl;
+            String readyMsg = "Bot started. " + invite;
+            log.info(readyMsg);
+            BroadCast.sendServiceMessage(readyMsg);
+        }, () -> log.fatal("Unable to start - api is null!"));
     }
 
     @Override
@@ -354,7 +368,7 @@ public class EventsListener
         }
     }
 
-    private void autoAssignRole(Server server, User member, Role role) {
+    private void autoAssignRole(@NotNull Server server, User member, Role role) {
         server.addRoleToUser(member, role).thenAccept(v -> {
             ServerPreferences preferences = SettingsController.getInstance()
                     .getServerPreferences(server.getId());
@@ -400,7 +414,7 @@ public class EventsListener
         serverMemberStateDisplay(event, MemberEventCode.UNBAN);
     }
 
-    private void serverMemberStateDisplay(ServerMemberEvent event, MemberEventCode code) {
+    private void serverMemberStateDisplay(@NotNull ServerMemberEvent event, MemberEventCode code) {
         long serverId = event.getServer().getId();
         ServerPreferences preferences = SettingsController.getInstance()
                 .getServerPreferences(serverId);

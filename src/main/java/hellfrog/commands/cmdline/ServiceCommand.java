@@ -6,7 +6,6 @@ import hellfrog.common.CommonUtils;
 import hellfrog.common.MessageUtils;
 import hellfrog.common.OptionalUtils;
 import hellfrog.core.ServerSideResolver;
-import hellfrog.reacts.DiceReaction;
 import hellfrog.settings.SettingsController;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -19,16 +18,11 @@ import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
-import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -46,71 +40,60 @@ public class ServiceCommand
     private static final String DESCRIPTIONS = "Common bot service commands";
     private GroovyShell groovyShell = new GroovyShell();
     private static final String SHELL_IMPORTS =
-            "import hellfrog.settings.SettingsController;\n" +
-                    "import hellfrog.common.BroadCast;\n" +
-                    "import hellfrog.common.CommonUtils;\n" +
-                    "import hellfrog.common.MessageUtils;\n" +
-                    "import hellfrog.common.OptionalUtils;\n" +
-                    "import hellfrog.core.ServerSideResolver;\n" +
-                    "import org.javacord.api.entity.message.MessageBuilder;\n" +
+            "import hellfrog.settings.SettingsController \n" +
+                    "import hellfrog.common.BroadCast \n" +
+                    "import hellfrog.common.CommonUtils \n" +
+                    "import hellfrog.common.MessageUtils \n" +
+                    "import hellfrog.common.OptionalUtils \n" +
+                    "import hellfrog.core.ServerSideResolver \n" +
+                    "import org.javacord.api.entity.message.MessageBuilder \n" +
                     "import org.javacord.api.DiscordApi\n" +
                     "import org.javacord.api.entity.server.Server\n" +
                     "import org.javacord.api.entity.emoji.*\n" +
                     "import org.javacord.api.entity.channel.*\n" +
-                    "def api = SettingsController.getInstance().getDiscordApi();\n";
+                    "def api = SettingsController.getInstance().getDiscordApi() \n";
+
+    private final Option stopBot = Option.builder("s")
+            .longOpt("stop")
+            .desc("Disconnect and stop bot")
+            .build();
+
+    private final Option memInfo = Option.builder("m")
+            .longOpt("mem")
+            .desc("Memory info")
+            .build();
+
+    private final Option botDate = Option.builder("d")
+            .longOpt("date")
+            .desc("Get bot current local date and time")
+            .build();
+
+    private final Option runGc = Option.builder("g")
+            .longOpt("gc")
+            .desc("Run garbage collector")
+            .build();
+
+    private final Option runtimeShell = Option.builder("r")
+            .longOpt("runtime")
+            .desc("Execute runtime debug module")
+            .build();
+
+    private final Option lastUsage = Option.builder("l")
+            .longOpt("last")
+            .desc("Show last bot usage")
+            .build();
+
+    private final Option secureTransfer = Option.builder("sec")
+            .desc("Enable two-phase transfer from bot private")
+            .hasArg()
+            .optionalArg(true)
+            .argName("text chat")
+            .build();
 
     public ServiceCommand() {
         super(PREF, DESCRIPTIONS);
 
-        Option stopBot = Option.builder("s")
-                .longOpt("stop")
-                .desc("Disconnect and stop bot")
-                .build();
-
-        Option memInfo = Option.builder("m")
-                .longOpt("mem")
-                .desc("Memory info")
-                .build();
-
-        Option botDate = Option.builder("d")
-                .longOpt("date")
-                .desc("Get bot current local date and time")
-                .build();
-
-        Option runGc = Option.builder("g")
-                .longOpt("gc")
-                .desc("Run garbage collector")
-                .build();
-
-        Option runtimeShell = Option.builder("r")
-                .longOpt("runtime")
-                .desc("Execute runtime debug module")
-                .build();
-
-        Option lastUsage = Option.builder("l")
-                .longOpt("last")
-                .desc("Show last bot usage")
-                .build();
-
-        Option uploadFailRofl = Option.builder("f")
-                .longOpt("failrofl")
-                .desc("Upload low dice level rofl file")
-                .build();
-
-        Option uploadWinRofl = Option.builder("w")
-                .longOpt("winforl")
-                .desc("Upload high dice level rofl file")
-                .build();
-
-        Option secureTransfer = Option.builder("sec")
-                .desc("Enable two-phase transfer from bot private")
-                .hasArg()
-                .optionalArg(true)
-                .argName("text chat")
-                .build();
-
-        super.addCmdlineOption(stopBot, memInfo, botDate, runGc, runtimeShell, lastUsage,
-                uploadFailRofl, uploadWinRofl, secureTransfer);
+        super.addCmdlineOption(stopBot, memInfo, botDate, runGc, runtimeShell, lastUsage, secureTransfer);
 
         super.disableUpdateLastCommandUsage();
     }
@@ -157,19 +140,16 @@ public class ServiceCommand
 
         SettingsController settingsController = SettingsController.getInstance();
 
-        boolean stopAction = cmdline.hasOption('s');
-        boolean memInfo = cmdline.hasOption('m');
-        boolean getDate = cmdline.hasOption('d');
-        boolean runGc = cmdline.hasOption('g');
-        boolean runtimeShell = cmdline.hasOption('r');
-        boolean lastUsageAction = cmdline.hasOption('l');
-        boolean uploadFailRofl = cmdline.hasOption('f');
-        boolean uploadWinRofl = cmdline.hasOption('w');
-        boolean secureTransfer = cmdline.hasOption("sec");
-        String transferChat = cmdline.getOptionValue("sec", "");
+        boolean stopAction = cmdline.hasOption(this.stopBot.getOpt());
+        boolean memInfo = cmdline.hasOption(this.memInfo.getOpt());
+        boolean getDate = cmdline.hasOption(this.botDate.getOpt());
+        boolean runGc = cmdline.hasOption(this.runGc.getOpt());
+        boolean runtimeShell = cmdline.hasOption(this.runtimeShell.getOpt());
+        boolean lastUsageAction = cmdline.hasOption(this.lastUsage.getOpt());
+        boolean secureTransfer = cmdline.hasOption(this.secureTransfer.getOpt());
+        String transferChat = cmdline.getOptionValue(this.secureTransfer.getOpt(), "");
 
-        if (stopAction ^ memInfo ^ getDate ^ runGc ^ runtimeShell ^ lastUsageAction ^
-                uploadWinRofl ^ uploadFailRofl ^ secureTransfer) {
+        if (stopAction ^ memInfo ^ getDate ^ runGc ^ runtimeShell ^ lastUsageAction ^ secureTransfer) {
 
             if (stopAction) {
                 doStopAction(event);
@@ -236,10 +216,6 @@ public class ServiceCommand
                 }
             }
 
-            if (uploadWinRofl || uploadFailRofl) {
-                uploadRoflAction(event, uploadWinRofl);
-            }
-
             if (secureTransfer) {
                 MessageUtils.deleteMessageIfCan(event.getMessage());
                 event.getServer().ifPresent(s -> {
@@ -299,21 +275,8 @@ public class ServiceCommand
         settingsController.getServerListWithStatistic()
                 .forEach(settingsController::saveServerSideStatistic);
 
-        User yourself = event.getApi().getYourself();
-        String userData = "Stop called by " + event.getMessageAuthor().getId() +
-                (event.getMessageAuthor().asUser()
-                        .map(user -> " (" + user.getDiscriminatedName() + ") ")
-                        .orElse(" "));
-        new MessageBuilder()
-                .setEmbed(new EmbedBuilder()
-                        .setAuthor(yourself)
-                        .setTimestampToNow()
-                        .setTitle("WARNING")
-                        .setDescription("Bot stopping NOW!")
-                        .setFooter(userData))
-                .send(getMessageTargetByRights(event)).join();
-
         BroadCast.sendBroadcastUnsafeUsageCE("call bot stopping", event);
+        BroadCast.sendServiceMessage("Bot stopping NOW!");
 
         if (settingsController.getDiscordApi() != null) {
             settingsController.getDiscordApi().disconnect();
@@ -420,43 +383,6 @@ public class ServiceCommand
         } finally {
             System.setErr(defaultErr);
             System.setOut(defaultOut);
-        }
-    }
-
-    private void uploadRoflAction(MessageCreateEvent event, boolean isWin) {
-        BroadCast.sendBroadcastUnsafeUsageCE("upload rofl file", event);
-        if (event.getMessageAttachments().isEmpty()) {
-            showErrorMessage("Attach files requred", event);
-            return;
-        }
-        Path targetDirectory = isWin ? DiceReaction.getRoflHighPath() : DiceReaction.getRoflLowPath();
-        try {
-            if (Files.notExists(DiceReaction.getRoflHighPath())) {
-                Files.createDirectories(DiceReaction.getRoflHighPath());
-            }
-            if (Files.notExists(DiceReaction.getRoflLowPath())) {
-                Files.createDirectories(DiceReaction.getRoflLowPath());
-            }
-            for (MessageAttachment attach : event.getMessageAttachments()) {
-                String fileName = attach.getFileName();
-                byte[] fileData = attach.downloadAsByteArray().join();
-                Path tmpFile = Paths.get("./").resolve(fileName);
-                try (BufferedOutputStream buffOut = new BufferedOutputStream(Files.newOutputStream(tmpFile))) {
-                    buffOut.write(fileData);
-                    buffOut.flush();
-                }
-                Path targetFile = targetDirectory.resolve(fileName);
-                Files.move(tmpFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
-
-                showInfoMessage("File " + fileName + " uploaded to " +
-                        (isWin ? "win (high)" : "fail (low)") + " rofl collection.", event);
-            }
-        } catch (Exception err) {
-            new MessageBuilder()
-                    .append("Exception reached while upload rofl file:", MessageDecoration.BOLD)
-                    .appendNewLine()
-                    .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
-                    .send(getMessageTargetByRights(event));
         }
     }
 }

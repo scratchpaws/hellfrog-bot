@@ -1049,7 +1049,7 @@ public class RightsScenario
                                           @NotNull User user,
                                           @NotNull SessionState sessionState,
                                           boolean isBotOwner) {
-        BroadCast.sendBroadcastToAllBotOwners("Exec of " + RightsScenario.class.getName()
+        BroadCast.sendServiceMessage("Exec of " + RightsScenario.class.getName()
                 + "::privateReactionStep!");
         return true;
     }
@@ -1062,7 +1062,7 @@ public class RightsScenario
                                           @NotNull PrivateChannel privateChannel,
                                           @NotNull User user,
                                           boolean isBotOwner) {
-        BroadCast.sendBroadcastToAllBotOwners("Exec of " + RightsScenario.class.getName()
+        BroadCast.sendServiceMessage("Exec of " + RightsScenario.class.getName()
                 + "::executePrivateFirstRun!");
     }
 
@@ -1075,7 +1075,7 @@ public class RightsScenario
                                          @NotNull User user,
                                          @NotNull SessionState sessionState,
                                          boolean isBotOwner) {
-        BroadCast.sendBroadcastToAllBotOwners("Exec of " + RightsScenario.class.getName()
+        BroadCast.sendServiceMessage("Exec of " + RightsScenario.class.getName()
                 + "::privateMessageStep!");
         return true;
     }

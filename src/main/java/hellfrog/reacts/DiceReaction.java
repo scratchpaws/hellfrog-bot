@@ -1,10 +1,14 @@
 package hellfrog.reacts;
 
 import com.vdurmont.emoji.EmojiParser;
+import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.MessageUtils;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
@@ -17,15 +21,14 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
-import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,13 +43,21 @@ public class DiceReaction
             Pattern.MULTILINE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final String DEFAULT_ROLL = "1d20";
 
+    @Deprecated
     private static final Path ROFL_ROOT = Paths.get("./rofls");
+    @Deprecated
     private static final Path ROFL_LOW = ROFL_ROOT.resolve("./min");
+    @Deprecated
     private static final Path ROFL_HIGH = ROFL_ROOT.resolve("./max");
+
+    private static final List<String> LOW_ROFL_LIST = new CopyOnWriteArrayList<>();
+    private static final List<String> HIGH_ROFL_LIST = new CopyOnWriteArrayList<>();
 
     private static final String PREFIX = "dice";
     private static final String DESCRIPTION = "roll dices (use NdN or ll for roll, " +
             "sample: 1d20, ll. \"r\" prefix add pictures for low and high values.";
+
+    private static final Logger log = LogManager.getLogger(DiceReaction.class.getSimpleName());
 
     public DiceReaction() {
         super.setCommandPrefix(PREFIX);
@@ -55,11 +66,13 @@ public class DiceReaction
         super.enableStrictByChannel();
     }
 
+    @Deprecated
     @Contract(pure = true)
     public static Path getRoflLowPath() {
         return ROFL_LOW;
     }
 
+    @Deprecated
     @Contract(pure = true)
     public static Path getRoflHighPath() {
         return ROFL_HIGH;
@@ -208,35 +221,62 @@ public class DiceReaction
     }
 
     private void rofling(final TextChannel textChannel, final long result, final long max) {
-        if (Files.exists(ROFL_LOW) && Files.exists(ROFL_HIGH) && max >= 2) {
+        if (!LOW_ROFL_LIST.isEmpty() && !HIGH_ROFL_LIST.isEmpty()) {
             long lowValue = CommonUtils.getLowValue(max);
             long highValue = CommonUtils.getHighValue(max);
             if (result > lowValue && result < highValue) return;
-            Path where = result >= highValue ? ROFL_HIGH : ROFL_LOW;
-            long count = 0;
-            try (DirectoryStream<Path> listen = Files.newDirectoryStream(where, Files::isRegularFile)) {
-                for (Path ignored : listen) count++;
-            } catch (IOException ignore) {
-                return;
-            }
-            if (count == 0) return;
-            long selectedNumber = ThreadLocalRandom.current()
-                    .nextLong(1, count + 1);
-            long counter = 0;
-            try (DirectoryStream<Path> listen = Files.newDirectoryStream(where, Files::isRegularFile)) {
-                for (Path entry : listen) {
-                    counter++;
-                    if (counter == selectedNumber) {
-                        byte[] readied = Files.readAllBytes(entry);
-                        String fileName = entry.getFileName().toString();
-                        new MessageBuilder()
-                                .addAttachment(readied, fileName)
-                                .send(textChannel);
-                        break;
-                    }
-                }
-            } catch (IOException ignore) {
-            }
+            List<String> where = result >= highValue ? HIGH_ROFL_LIST : LOW_ROFL_LIST;
+            int selectedNumber = ThreadLocalRandom.current()
+                    .nextInt(0, where.size());
+            String imageUrl = where.get(selectedNumber);
+            new MessageBuilder()
+                    .setEmbed(new EmbedBuilder()
+                            .setImage(imageUrl))
+                    .send(textChannel);
         }
+    }
+
+    public static void rebuildRoflIndexes() {
+        Optional<DiscordApi> mayBeApi = Optional.ofNullable(SettingsController.getInstance().getDiscordApi());
+        mayBeApi.ifPresentOrElse(discordApi -> {
+            List<String> highRoflUrls = new ArrayList<>();
+            discordApi.getServerTextChannelById(HIGH_ROLL_IMAGES_CHANNEL).ifPresentOrElse(textChannel -> {
+                if (textChannel.canYouReadMessageHistory()
+                        && textChannel.canYouSee()) {
+                    textChannel.getMessagesAsStream().forEach(message -> {
+                        message.getAttachments().forEach(messageAttachment ->
+                                highRoflUrls.add(messageAttachment.getUrl().toString()));
+                    });
+                    HIGH_ROFL_LIST.clear();
+                    HIGH_ROFL_LIST.addAll(highRoflUrls);
+                    BroadCast.sendServiceMessage("Found " + HIGH_ROFL_LIST.size()
+                            + " URLs images into channel " + textChannel.getName());
+                } else {
+                    BroadCast.sendServiceMessage("Unable to see messages and history for " +
+                            "channel " + textChannel.getName() + " (channel with high rofl images)");
+                }
+            }, () ->
+                    BroadCast.sendServiceMessage("Unable to find server text channel "
+                            + HIGH_ROLL_IMAGES_CHANNEL + " with high rofl images"));
+            List<String> lowRoflUrls = new ArrayList<>();
+            discordApi.getServerTextChannelById(LOG_ROLL_IMAGES_CHANNEL).ifPresentOrElse(textChannel -> {
+                if (textChannel.canYouReadMessageHistory()
+                        && textChannel.canYouSee()) {
+                    textChannel.getMessagesAsStream().forEach(message -> {
+                        message.getAttachments().forEach(messageAttachment ->
+                                lowRoflUrls.add(messageAttachment.getUrl().toString()));
+                    });
+                    LOW_ROFL_LIST.clear();
+                    LOW_ROFL_LIST.addAll(lowRoflUrls);
+                    BroadCast.sendServiceMessage("Found " + LOW_ROFL_LIST.size()
+                            + " URLs images into channel " + textChannel.getName());
+                } else {
+                    BroadCast.sendServiceMessage("Unable to see messages and history for " +
+                            "channel " + textChannel.getName() + " (channel with low rofl images)");
+                }
+            }, () -> BroadCast.sendServiceMessage("Unable to find server text channel "
+                    + LOG_ROLL_IMAGES_CHANNEL + " with low rofl images"));
+
+        }, () -> log.fatal("Unable to rebuild dice reaction rofl indexes - api is null!"));
     }
 }

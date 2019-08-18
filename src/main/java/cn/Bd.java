@@ -196,12 +196,12 @@ public class Bd {
                     zos.write(rawData);
                     zos.closeEntry();
                 }
-                BroadCast.sendBroadcastToAllBotOwners("Grab emoji from " + selectedServer +
+                BroadCast.sendServiceMessage("Grab emoji from " + selectedServer +
                         " complete at file " + tmpZip);
                 successCreate = true;
             } catch (IOException err) {
                 err.printStackTrace();
-                BroadCast.sendBroadcastToAllBotOwners("Grab emoji from " + selectedServer +
+                BroadCast.sendServiceMessage("Grab emoji from " + selectedServer +
                         " terminated with " + err.getMessage());
                 try {
                     Files.deleteIfExists(tmpZip);
@@ -212,7 +212,7 @@ public class Bd {
                 try {
                     byte[] attach = Files.readAllBytes(tmpZip);
                     if (attach.length >= (8 * 1024 * 1024)) {
-                        BroadCast.sendBroadcastToAllBotOwners("Cannot send archive, it" +
+                        BroadCast.sendServiceMessage("Cannot send archive, it" +
                                 "'s very large");
                     } else {
                         new MessageBuilder()
@@ -222,7 +222,7 @@ public class Bd {
                     }
                 } catch (IOException err) {
                     err.printStackTrace();
-                    BroadCast.sendBroadcastToAllBotOwners("Grab emoji from " + selectedServer +
+                    BroadCast.sendServiceMessage("Grab emoji from " + selectedServer +
                             " terminated with" + err.getMessage());
                 }
             }
@@ -251,7 +251,7 @@ public class Bd {
                                         .append(i.getUrl())
                                         .send(_selectedUser))
                                 .exceptionally(th -> {
-                                    BroadCast.sendBroadcastToAllBotOwners("Unable to send" +
+                                    BroadCast.sendServiceMessage("Unable to send" +
                                             " invite to " + _selectedUser + ": " + th);
                                     return null;
                                 });
