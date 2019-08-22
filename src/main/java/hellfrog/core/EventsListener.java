@@ -1,5 +1,6 @@
 package hellfrog.core;
 
+import hellfrog.commands.ACLCommand;
 import hellfrog.commands.cmdline.BotCommand;
 import hellfrog.commands.scenes.Scenario;
 import hellfrog.common.BroadCast;
@@ -56,7 +57,7 @@ public class EventsListener
         ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener, CommonConstants {
 
-    private static final String VERSION_STRING = "0.1.22b";
+    private static final String VERSION_STRING = "0.1.24b";
 
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
@@ -92,7 +93,7 @@ public class EventsListener
         }
         boolean startedNewScenario = false;
         if (strMessage.startsWith(botPrefix) || strMessage.startsWith(botMentionTag)
-            || strMessage.startsWith(botMentionNicknameTag)) {
+                || strMessage.startsWith(botMentionNicknameTag)) {
             startedNewScenario = parseCmdLine(event);
             isPlainMessage = false;
         }
@@ -189,12 +190,14 @@ public class EventsListener
                         .append("The following commands are available:", MessageDecoration.BOLD)
                         .appendNewLine();
 
-                Scenario.all()
-                        .forEach(s -> embedMessageText.append(s.getPrefix())
+                Scenario.all().stream()
+                        .filter(ACLCommand::isNotExpertCommand)
+                        .forEachOrdered(s -> embedMessageText.append(s.getPrefix())
                                 .append(" - ")
                                 .append(s.getCommandDescription())
                                 .appendNewLine());
-                BotCommand.all()
+                BotCommand.all().stream()
+                        .filter(ACLCommand::isNotExpertCommand)
                         .forEach(c -> embedMessageText.append(c.getPrefix())
                                 .append(" - ")
                                 .append(c.getCommandDescription())
@@ -214,6 +217,23 @@ public class EventsListener
                                     .appendNewLine()
                             );
                 }
+
+                embedMessageText.append("The following expert commands are available:",
+                        MessageDecoration.BOLD).appendNewLine();
+
+                Scenario.all().stream()
+                        .filter(ACLCommand::isExpertCommand)
+                        .forEachOrdered(s -> embedMessageText.append(s.getPrefix())
+                                .append(" - ")
+                                .append(s.getCommandDescription())
+                                .appendNewLine());
+                BotCommand.all().stream()
+                        .filter(ACLCommand::isExpertCommand)
+                        .forEach(c -> embedMessageText.append(c.getPrefix())
+                                .append(" - ")
+                                .append(c.getCommandDescription())
+                                .appendNewLine()
+                        );
 
                 event.getMessageAuthor().asUser().ifPresent(user -> new MessageBuilder()
                         .setEmbed(new EmbedBuilder()

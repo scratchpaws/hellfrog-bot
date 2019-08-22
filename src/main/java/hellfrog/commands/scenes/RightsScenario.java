@@ -1,6 +1,7 @@
 package hellfrog.commands.scenes;
 
 import com.vdurmont.emoji.EmojiParser;
+import hellfrog.commands.ACLCommand;
 import hellfrog.commands.cmdline.BotCommand;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
@@ -65,13 +66,14 @@ public class RightsScenario
     private static final String EMOJI_REPEAT = EmojiParser.parseToUnicode(":repeat:");
     private static final String EMOJI_PLUS = EmojiParser.parseToUnicode(":white_check_mark:");
     private static final String EMOJI_MINUS = EmojiParser.parseToUnicode(":negative_squared_cross_mark:");
+    private static final String EMOJI_SCROLL = EmojiParser.parseToUnicode(":scroll:");
     private static final String EMOJI_LETTER_U = EmojiParser.parseToUnicode(":regional_indicator_symbol_u:");
     private static final String EMOJI_LETTER_R = EmojiParser.parseToUnicode(":regional_indicator_symbol_r:");
     private static final String EMOJI_LETTER_T = EmojiParser.parseToUnicode(":regional_indicator_symbol_t:");
     private static final String EMOJI_LETTER_C = EmojiParser.parseToUnicode(":regional_indicator_symbol_c:");
 
     private static final List<String> TITLE_EMOJI_LIST =
-            List.of(EMOJI_QUESTION, EMOJI_REPEAT, EMOJI_CLOSE);
+            List.of(EMOJI_QUESTION, EMOJI_SCROLL, EMOJI_REPEAT, EMOJI_CLOSE);
     private static final List<String> GO_BACK_OR_CLOSE_EMOJI_LIST =
             List.of(EMOJI_ARROW_LEFT, EMOJI_CLOSE);
     private static final List<String> ADD_ONLY_EMOJI_LIST =
@@ -167,7 +169,8 @@ public class RightsScenario
             super.dropPreviousStateEmoji(sessionState);
             return parseAdditionRightsEntity(server, serverTextChannel, sessionState, rawInput);
         } else if (onDelRightEntityScreen && rawInputNotEmpty) {
-
+            super.dropPreviousStateEmoji(sessionState);
+            return parseDeletionRightsEntity(server, serverTextChannel, user, sessionState, rawInput);
         }
         return false;
     }
@@ -224,12 +227,68 @@ public class RightsScenario
                                           @NotNull User msgUser) {
         StringBuilder descriptionText = new StringBuilder();
         SettingsController settingsController = SettingsController.getInstance();
+
+        boolean isNotPermissionsSet = appendCommandRightsInfo(descriptionText,
+                settingsController, server, rawInput);
+
+        List<String> emojiToAdd;
+        if (isNotPermissionsSet) {
+            descriptionText.append("  * No permissions set. A command can only be executed")
+                    .append(" by administrators and the owner of the server.\n");
+            emojiToAdd = ADD_ONLY_EMOJI_LIST;
+        } else {
+            emojiToAdd = ADD_AND_REMOVE_EMOJI_LIST;
+        }
+        descriptionText.append("Click on ").append(EMOJI_PLUS).append(" to add permission. ");
+        if (!isNotPermissionsSet) {
+            descriptionText.append("Click on ").append(EMOJI_MINUS).append(" to remove. ");
+        }
+        descriptionText.append("Click on ").append(EMOJI_ARROW_LEFT)
+                .append(" to return to the input of another command. ")
+                .append("Click on ").append(EMOJI_CLOSE).append(" to close the editor.");
+
+        List<String> listOfMessagesText = CommonUtils.splitEqually(descriptionText.toString(), 1999);
+        Message latest = null;
+        for (String msgText : listOfMessagesText) {
+            EmbedBuilder embedBuilder = new EmbedBuilder()
+                    .setTitle(TITLE)
+                    .setDescription(msgText);
+            Optional<Message> msg = super.displayMessage(embedBuilder, serverTextChannel);
+            if (msg.isPresent()) {
+                latest = msg.get();
+            } else {
+                return false;
+            }
+        }
+        if (latest == null) {
+            return false;
+        }
+
+        if (super.addReactions(latest, null, emojiToAdd)) {
+            SessionState sessionState = SessionState.forScenario(this, STATE_ON_COMMAND_EDIT_SCREEN)
+                    .setTextChannel(serverTextChannel)
+                    .setMessage(latest)
+                    .setUser(msgUser)
+                    .putValue(ENTERED_COMMAND_KEY, rawInput)
+                    .build();
+            super.commitState(sessionState);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private boolean appendCommandRightsInfo(@NotNull StringBuilder descriptionText,
+                                            @NotNull SettingsController settingsController,
+                                            @NotNull Server server,
+                                            @NotNull String commandName) {
+
         CommandRights commandRights = settingsController
                 .getServerPreferences(server.getId())
-                .getRightsForCommand(rawInput);
+                .getRightsForCommand(commandName);
 
         descriptionText.append("Command: __")
-                .append(rawInput)
+                .append(commandName)
                 .append("__:\n");
 
         Optional<String> allowedUsers = commandRights.getAllowUsers().stream()
@@ -311,55 +370,10 @@ public class RightsScenario
                 .append(s)
                 .append('\n'));
 
-        boolean isNotPermissionsSet = allowedUsers.isEmpty()
+        return allowedUsers.isEmpty()
                 && allowedRoles.isEmpty()
                 && allowedChannels.isEmpty()
                 && allowedCategories.isEmpty();
-        List<String> emojiToAdd;
-        if (isNotPermissionsSet) {
-            descriptionText.append("  * No permissions set. A command can only be executed")
-                    .append(" by administrators and the owner of the server.\n");
-            emojiToAdd = ADD_ONLY_EMOJI_LIST;
-        } else {
-            emojiToAdd = ADD_AND_REMOVE_EMOJI_LIST;
-        }
-        descriptionText.append("Click on ").append(EMOJI_PLUS).append(" to add permission. ");
-        if (!isNotPermissionsSet) {
-            descriptionText.append("Click on ").append(EMOJI_MINUS).append(" to remove. ");
-        }
-        descriptionText.append("Click on ").append(EMOJI_ARROW_LEFT)
-                .append(" to return to the input of another command. ")
-                .append("Click on ").append(EMOJI_CLOSE).append(" to close the editor.");
-
-        List<String> listOfMessagesText = CommonUtils.splitEqually(descriptionText.toString(), 1999);
-        Message latest = null;
-        for (String msgText : listOfMessagesText) {
-            EmbedBuilder embedBuilder = new EmbedBuilder()
-                    .setTitle(TITLE)
-                    .setDescription(msgText);
-            Optional<Message> msg = super.displayMessage(embedBuilder, serverTextChannel);
-            if (msg.isPresent()) {
-                latest = msg.get();
-            } else {
-                return false;
-            }
-        }
-        if (latest == null) {
-            return false;
-        }
-
-        if (super.addReactions(latest, null, emojiToAdd)) {
-            SessionState sessionState = SessionState.forScenario(this, STATE_ON_COMMAND_EDIT_SCREEN)
-                    .setTextChannel(serverTextChannel)
-                    .setMessage(latest)
-                    .setUser(msgUser)
-                    .putValue(ENTERED_COMMAND_KEY, rawInput)
-                    .build();
-            super.commitState(sessionState);
-            return true;
-        } else {
-            return false;
-        }
     }
 
     @NotNull
@@ -399,7 +413,7 @@ public class RightsScenario
                 .collect(Collectors.toUnmodifiableList());
 
         if (entityNames.isEmpty()) {
-            return displayAdditionError(serverTextChannel, sessionState,
+            return displayEnterEntityError(serverTextChannel, sessionState,
                     "You have entered an empty name (or an empty list of names).");
         }
 
@@ -415,7 +429,7 @@ public class RightsScenario
                 ServerSideResolver.ParseResult<User> userParseResult =
                         ServerSideResolver.resolveUsersList(server, entityNames);
                 if (userParseResult.hasNotFound()) {
-                    return displayAdditionError(serverTextChannel, sessionState,
+                    return displayEnterEntityError(serverTextChannel, sessionState,
                             "These users cannot be found: "
                                     + userParseResult.getNotFoundStringList());
                 }
@@ -425,7 +439,7 @@ public class RightsScenario
                         .map(User::getDiscriminatedName)
                         .reduce(CommonUtils::reduceConcat);
                 if (nonServerUsers.isPresent()) {
-                    return displayAdditionError(serverTextChannel, sessionState,
+                    return displayEnterEntityError(serverTextChannel, sessionState,
                             "These users are not present on this server: "
                                     + nonServerUsers.get());
                 }
@@ -434,7 +448,7 @@ public class RightsScenario
                         .map(parsedUser -> getUserNameAndId(server, parsedUser))
                         .reduce(CommonUtils::reduceConcat);
                 if (alreadyAssigned.isPresent()) {
-                    return displayAdditionError(serverTextChannel, sessionState,
+                    return displayEnterEntityError(serverTextChannel, sessionState,
                             "These users are already allowed to execute the command __"
                                     + enteredCommandName + "__: " + alreadyAssigned.get());
                 }
@@ -452,7 +466,7 @@ public class RightsScenario
                 ServerSideResolver.ParseResult<Role> roleParseResult =
                         ServerSideResolver.resolveRolesList(server, entityNames);
                 if (roleParseResult.hasNotFound()) {
-                    return displayAdditionError(serverTextChannel, sessionState,
+                    return displayEnterEntityError(serverTextChannel, sessionState,
                             "These roles cannot be found: "
                                     + roleParseResult.getNotFoundStringList());
                 }
@@ -461,7 +475,7 @@ public class RightsScenario
                         .map(this::getRoleNameAndId)
                         .reduce(CommonUtils::reduceConcat);
                 if (alreadyAssigned.isPresent()) {
-                    return displayAdditionError(serverTextChannel, sessionState,
+                    return displayEnterEntityError(serverTextChannel, sessionState,
                             "These roles are already allowed to execute the command __"
                                     + enteredCommandName + "__: " + alreadyAssigned.get());
                 }
@@ -479,7 +493,7 @@ public class RightsScenario
                 ServerSideResolver.ParseResult<ServerTextChannel> textChannelParseResult =
                         ServerSideResolver.resolveTextChannelsList(server, entityNames);
                 if (textChannelParseResult.hasNotFound()) {
-                    return displayAdditionError(serverTextChannel, sessionState,
+                    return displayEnterEntityError(serverTextChannel, sessionState,
                             "These text channels cannot be found: "
                                     + textChannelParseResult.getNotFoundStringList());
                 }
@@ -488,7 +502,7 @@ public class RightsScenario
                         .map(this::getChannelNameAndId)
                         .reduce(CommonUtils::reduceConcat);
                 if (alreadyAssigned.isPresent()) {
-                    return displayAdditionError(serverTextChannel, sessionState,
+                    return displayEnterEntityError(serverTextChannel, sessionState,
                             "These text channels are already allowed to execute the command __"
                                     + enteredCommandName + "__: " + alreadyAssigned.get());
                 }
@@ -507,7 +521,7 @@ public class RightsScenario
                 ServerSideResolver.ParseResult<ChannelCategory> categoryParseResult =
                         ServerSideResolver.resolveChannelCategoriesList(server, entityNames);
                 if (categoryParseResult.hasNotFound()) {
-                    return displayAdditionError(serverTextChannel, sessionState,
+                    return displayEnterEntityError(serverTextChannel, sessionState,
                             "These channel categories cannot be found: "
                                     + categoryParseResult.getNotFoundStringList());
                 }
@@ -516,12 +530,13 @@ public class RightsScenario
                         .map(this::getChannelNameAndId)
                         .reduce(CommonUtils::reduceConcat);
                 if (alreadyAssigned.isPresent()) {
-                    return displayAdditionError(serverTextChannel, sessionState,
+                    return displayEnterEntityError(serverTextChannel, sessionState,
                             "These channel categories are already allowed to execute the command __"
                                     + enteredCommandName + "__: " + alreadyAssigned.get());
                 }
                 categoryParseResult.getFound().forEach(channelCategory ->
                         commandRights.addAllowChannel(channelCategory.getId()));
+                settingsController.saveServerSideParameters(server.getId());
                 String categoriesList = categoryParseResult.getFound().stream()
                         .map(this::getChannelNameAndId)
                         .reduce(CommonUtils::reduceConcat)
@@ -535,15 +550,16 @@ public class RightsScenario
                 .setTitle(TITLE)
                 .setDescription(resultMessage);
         return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
-            sessionState.putValue(MODIFY_TYPE_KEY, RightType.TYPE_NONE);
-            return selectAddition(serverTextChannel, sessionState);
+            SessionState newSessionState = sessionState.toBuilderWithStepId(STATE_ON_COMMAND_EDIT_SCREEN)
+                    .putValue(MODIFY_TYPE_KEY, RightType.TYPE_NONE)
+                    .build();
+            return selectAddition(serverTextChannel, newSessionState);
         }).orElse(false);
     }
 
-    private boolean parseDeletionRightsEntity(@NotNull MessageCreateEvent event,
-                                              @NotNull Server server,
+    private boolean parseDeletionRightsEntity(@NotNull Server server,
                                               @NotNull ServerTextChannel serverTextChannel,
-                                              @NotNull User user,
+                                              @NotNull User messageAuthorUser,
                                               @NotNull SessionState sessionState,
                                               @NotNull String rawInput) {
 
@@ -563,22 +579,195 @@ public class RightsScenario
                 .collect(Collectors.toUnmodifiableList());
 
         if (entityNames.isEmpty()) {
-            return displayAdditionError(serverTextChannel, sessionState,
+            return displayEnterEntityError(serverTextChannel, sessionState,
                     "You have entered an empty name (or an empty list of names).");
         }
 
         SettingsController settingsController = SettingsController.getInstance();
         ServerPreferences serverPreferences = settingsController.getServerPreferences(server.getId());
         CommandRights commandRights = serverPreferences.getRightsForCommand(enteredCommandName);
+        ShortRightsInfo rightsInfo = new ShortRightsInfo(server, enteredCommandName);
 
-        return false;
+        if (!rightsInfo.isThereAnything) {
+            super.dropPreviousStateEmoji(sessionState);
+            String descriptionMessage = "There are currently no users, roles, or text chat (categories) that are " +
+                    "allowed to run this command.";
+            EmbedBuilder embedBuilder = new EmbedBuilder()
+                    .setTitle(TITLE)
+                    .setDescription(descriptionMessage);
+            return super.displayMessage(embedBuilder, serverTextChannel).map(message ->
+                    displayIfValidCommand(enteredCommandName, server, serverTextChannel, messageAuthorUser)
+            ).orElse(false);
+        }
+
+        String resultMessage = "";
+
+        switch (rightType) {
+            case TYPE_USER:
+                if (!rightsInfo.hasUsers) {
+                    String message = "There are currently no users who are allowed to execute this command.";
+                    return displayErrorNoEntityForDelete(server, serverTextChannel, sessionState, message);
+                }
+                ServerSideResolver.ParseResult<User> userParseResult =
+                        ServerSideResolver.resolveUsersList(server, entityNames);
+                if (userParseResult.hasNotFound()) {
+                    return displayEnterEntityError(serverTextChannel, sessionState,
+                            "These users cannot be found: "
+                                    + userParseResult.getNotFoundStringList());
+                }
+                Collection<User> members = server.getMembers();
+                Optional<String> nonServerUsers = userParseResult.getFound().stream()
+                        .filter(parsedUser -> !members.contains(parsedUser))
+                        .map(User::getDiscriminatedName)
+                        .reduce(CommonUtils::reduceConcat);
+                if (nonServerUsers.isPresent()) {
+                    return displayEnterEntityError(serverTextChannel, sessionState,
+                            "These users are not present on this server: "
+                                    + nonServerUsers.get());
+                }
+                Optional<String> alreadyNotAllowed = userParseResult.getFound().stream()
+                        .filter(parsedUser -> !commandRights.isAllowUser(parsedUser.getId()))
+                        .map(parsedUser -> getUserNameAndId(server, parsedUser))
+                        .reduce(CommonUtils::reduceConcat);
+                if (alreadyNotAllowed.isPresent()) {
+                    return displayEnterEntityError(serverTextChannel, sessionState,
+                            "These users are already **not** allowed to execute the command __"
+                                    + enteredCommandName + "__: " + alreadyNotAllowed.get());
+                }
+                List<Long> toRemoveIds = userParseResult.getFound().stream()
+                        .map(User::getId)
+                        .collect(Collectors.toUnmodifiableList());
+                commandRights.getAllowUsers().removeAll(toRemoveIds);
+                settingsController.saveServerSideParameters(server.getId());
+                String usersList = userParseResult.getFound().stream()
+                        .map(user -> getUserNameAndId(server, user))
+                        .reduce(CommonUtils::reduceConcat)
+                        .orElse("");
+                resultMessage = "The right to execute the command __" + enteredCommandName
+                        + "__ was revoked for the following users: " + usersList;
+                break;
+
+            case TYPE_ROLE:
+                if (!rightsInfo.hasRoles) {
+                    String message = "There are currently no roles who are allowed to execute this command.";
+                    return displayErrorNoEntityForDelete(server, serverTextChannel, sessionState, message);
+                }
+                ServerSideResolver.ParseResult<Role> roleParseResult =
+                        ServerSideResolver.resolveRolesList(server, entityNames);
+                if (roleParseResult.hasNotFound()) {
+                    return displayEnterEntityError(serverTextChannel, sessionState,
+                            "These roles cannot be found: "
+                                    + roleParseResult.getNotFoundStringList());
+                }
+                alreadyNotAllowed = roleParseResult.getFound().stream()
+                        .filter(role -> !commandRights.isAllowRole(role.getId()))
+                        .map(this::getRoleNameAndId)
+                        .reduce(CommonUtils::reduceConcat);
+                if (alreadyNotAllowed.isPresent()) {
+                    return displayEnterEntityError(serverTextChannel, sessionState,
+                            "These roles are already **not** allowed to execute the command __"
+                                    + enteredCommandName + "__: " + alreadyNotAllowed.get());
+                }
+                toRemoveIds = roleParseResult.getFound().stream()
+                        .map(Role::getId)
+                        .collect(Collectors.toUnmodifiableList());
+                commandRights.getAllowRoles().removeAll(toRemoveIds);
+                settingsController.saveServerSideParameters(server.getId());
+                String rolesList = roleParseResult.getFound().stream()
+                        .map(this::getRoleNameAndId)
+                        .reduce(CommonUtils::reduceConcat)
+                        .orElse("");
+                resultMessage = "The right to execute the command __" + enteredCommandName
+                        + "__ was revoked for the following roles: " + rolesList;
+                break;
+
+            case TYPE_TEXT_CHAT:
+                if (!rightsInfo.hasTextChannels) {
+                    String message = "There are currently no text channels in which the execution of this " +
+                            "command is allowed.";
+                    return displayErrorNoEntityForDelete(server, serverTextChannel, sessionState, message);
+                }
+                ServerSideResolver.ParseResult<ServerTextChannel> textChannelParseResult =
+                        ServerSideResolver.resolveTextChannelsList(server, entityNames);
+                if (textChannelParseResult.hasNotFound()) {
+                    return displayEnterEntityError(serverTextChannel, sessionState,
+                            "These text channels cannot be found: "
+                                    + textChannelParseResult.getNotFoundStringList());
+                }
+                alreadyNotAllowed = textChannelParseResult.getFound().stream()
+                        .filter(textChannel -> !commandRights.isAllowChat(textChannel.getId()))
+                        .map(this::getChannelNameAndId)
+                        .reduce(CommonUtils::reduceConcat);
+                if (alreadyNotAllowed.isPresent()) {
+                    return displayEnterEntityError(serverTextChannel, sessionState,
+                            "These text channels are already **not** allowed to execute the command __"
+                                    + enteredCommandName + "__: " + alreadyNotAllowed.get());
+                }
+                toRemoveIds = textChannelParseResult.getFound().stream()
+                        .map(ServerTextChannel::getId)
+                        .collect(Collectors.toUnmodifiableList());
+                commandRights.getAllowChannels().removeAll(toRemoveIds);
+                settingsController.saveServerSideParameters(server.getId());
+                String channelsList = textChannelParseResult.getFound().stream()
+                        .map(this::getChannelNameAndId)
+                        .reduce(CommonUtils::reduceConcat)
+                        .orElse("");
+                resultMessage = "The right to execute the command __" + enteredCommandName
+                        + "__ was revoked for the following text channels: " + channelsList;
+                break;
+
+            case TYPE_CATEGORY:
+                if (!rightsInfo.hasChannelCategories) {
+                    String message = "There are currently no categories in which text chats are allowed to " +
+                            "execute this command.";
+                    return displayErrorNoEntityForDelete(server, serverTextChannel, sessionState, message);
+                }
+                ServerSideResolver.ParseResult<ChannelCategory> categoryParseResult =
+                        ServerSideResolver.resolveChannelCategoriesList(server, entityNames);
+                if (categoryParseResult.hasNotFound()) {
+                    return displayEnterEntityError(serverTextChannel, sessionState,
+                            "These channel categories cannot be found: "
+                                    + categoryParseResult.getNotFoundStringList());
+                }
+                alreadyNotAllowed = categoryParseResult.getFound().stream()
+                        .filter(channelCategory -> !commandRights.isAllowChat(channelCategory.getId()))
+                        .map(this::getChannelNameAndId)
+                        .reduce(CommonUtils::reduceConcat);
+                if (alreadyNotAllowed.isPresent()) {
+                    return displayEnterEntityError(serverTextChannel, sessionState,
+                            "These channel categories are already **not** allowed to execute the command __"
+                                    + enteredCommandName + "__: " + alreadyNotAllowed.get());
+                }
+                toRemoveIds = categoryParseResult.getFound().stream()
+                        .map(ChannelCategory::getId)
+                        .collect(Collectors.toUnmodifiableList());
+                commandRights.getAllowChannels().removeAll(toRemoveIds);
+                settingsController.saveServerSideParameters(server.getId());
+                String categoriesList = categoryParseResult.getFound().stream()
+                        .map(this::getChannelNameAndId)
+                        .reduce(CommonUtils::reduceConcat)
+                        .orElse("");
+                resultMessage = "The right to execute a command __" + enteredCommandName
+                        + "__ has been revoked for the following " +
+                        "categories (and all text channels that include these categories): " + categoriesList;
+                break;
+        }
+
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+                .setTitle(TITLE)
+                .setDescription(resultMessage);
+        return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
+            SessionState newSessionState = sessionState.toBuilderWithStepId(STATE_ON_COMMAND_EDIT_SCREEN)
+                    .putValue(MODIFY_TYPE_KEY, RightType.TYPE_NONE)
+                    .build();
+            return selectDeletion(server, serverTextChannel, newSessionState);
+        }).orElse(false);
     }
 
-    private boolean displayAdditionError(@NotNull ServerTextChannel serverTextChannel,
-                                         @NotNull SessionState sessionState,
-                                         @NotNull String errorText) {
+    private boolean displayEnterEntityError(@NotNull ServerTextChannel serverTextChannel,
+                                            @NotNull SessionState sessionState,
+                                            @NotNull String errorText) {
 
-        super.dropPreviousStateEmoji(sessionState);
         String descriptionMessage = errorText +
                 ". Please try again.\nYou can also click on " + EMOJI_ARROW_LEFT +
                 " to return to return to the previous menu and " +
@@ -597,6 +786,22 @@ public class RightsScenario
             } else {
                 return false;
             }
+        }).orElse(false);
+    }
+
+    private boolean displayErrorNoEntityForDelete(@NotNull Server server,
+                                                  @NotNull ServerTextChannel serverTextChannel,
+                                                  @NotNull SessionState sessionState,
+                                                  @NotNull String errorMessage) {
+
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+                .setTitle(TITLE)
+                .setDescription(errorMessage);
+        return super.displayMessage(embedBuilder, serverTextChannel).map(message -> {
+            SessionState newSessionState = sessionState.toBuilderWithStepId(STATE_ON_COMMAND_EDIT_SCREEN)
+                    .putValue(MODIFY_TYPE_KEY, RightType.TYPE_NONE)
+                    .build();
+            return selectDeletion(server, serverTextChannel, newSessionState);
         }).orElse(false);
     }
 
@@ -634,6 +839,7 @@ public class RightsScenario
         boolean userPressRepeat = equalsUnicodeReaction(event, EMOJI_REPEAT);
         boolean userPressAdd = equalsUnicodeReaction(event, EMOJI_PLUS);
         boolean userPressRemove = equalsUnicodeReaction(event, EMOJI_MINUS);
+        boolean userPressScroll = equalsUnicodeReaction(event, EMOJI_SCROLL);
 
         RightType rightType = RightType.ofEmoji(event);
 
@@ -644,6 +850,9 @@ public class RightsScenario
         } else if (onTitleStep && userPressHelp) {
             super.dropPreviousStateEmoji(sessionState);
             return showHelpScreen(serverTextChannel, sessionState);
+        } else if (onTitleStep && userPressScroll) {
+            super.dropPreviousStateEmoji(sessionState);
+            return displayAllCommandsWithRights(server, serverTextChannel, user);
         } else if ((onHelpScreen || onCommandEditScreen) && userPressArrowLeft) {
             super.dropPreviousStateEmoji(sessionState);
             return showTitleScreen(serverTextChannel, user);
@@ -683,6 +892,52 @@ public class RightsScenario
             return selectDeletion(server, serverTextChannel, sessionState);
         }
         return false;
+    }
+
+    private boolean displayAllCommandsWithRights(@NotNull Server server,
+                                                 @NotNull ServerTextChannel serverTextChannel,
+                                                 @NotNull User user) {
+        StringBuilder descriptionText = new StringBuilder();
+        descriptionText.append("The following commands have any specified permission on the server `")
+                .append(Message.ESCAPED_CHARACTER.matcher(server.getName()).replaceAll("${char}"))
+                .append("`:\n");
+        SettingsController settingsController = SettingsController.getInstance();
+        ServerPreferences serverPreferences = settingsController.getServerPreferences(server.getId());
+        serverPreferences.getSrvCommandRights().keySet().stream()
+                .filter(item ->
+                        new ShortRightsInfo(server, item).isThereAnything)
+                .forEachOrdered(item ->
+                        appendCommandRightsInfo(descriptionText, settingsController, server, item));
+        appendTitleDescription(descriptionText);
+
+        List<String> listOfMessagesText = CommonUtils.splitEqually(descriptionText.toString(), 1999);
+        Message latest = null;
+        for (String msgText : listOfMessagesText) {
+            EmbedBuilder embedBuilder = new EmbedBuilder()
+                    .setTitle(TITLE)
+                    .setDescription(msgText);
+            Optional<Message> msg = super.displayMessage(embedBuilder, serverTextChannel);
+            if (msg.isPresent()) {
+                latest = msg.get();
+            } else {
+                return false;
+            }
+        }
+        if (latest == null) {
+            return false;
+        }
+
+        if (super.addReactions(latest, null, TITLE_EMOJI_LIST)) {
+            SessionState sessionState = SessionState.forScenario(this, STATE_ON_TITLE_SCREEN)
+                    .setMessage(latest)
+                    .setUser(user)
+                    .setTextChannel(serverTextChannel)
+                    .build();
+            super.commitState(sessionState);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private boolean selectAddition(@NotNull ServerTextChannel serverTextChannel,
@@ -999,10 +1254,14 @@ public class RightsScenario
         StringBuilder descriptionText = new StringBuilder()
                 .append(SELECT_COMMAND_LIST_TEXT);
         descriptionText.append("__Bot commands:__\n");
-        Scenario.all().forEach(scenario ->
+        Scenario.all().stream()
+                .filter(ACLCommand::isNotExpertCommand)
+                .forEach(scenario ->
                 descriptionText.append('`').append(scenario.getPrefix()).append('`')
                         .append(" - ").append(scenario.getCommandDescription()).append('\n'));
-        BotCommand.all().forEach(botCommand ->
+        BotCommand.all().stream()
+                .filter(ACLCommand::isNotExpertCommand)
+                .forEach(botCommand ->
                 descriptionText.append('`').append(botCommand.getPrefix()).append('`')
                         .append(" - ").append(botCommand.getCommandDescription()).append('\n'));
         descriptionText.append("__Bot reactions:__\n");
@@ -1011,6 +1270,17 @@ public class RightsScenario
                 .forEachOrdered(msgCreateReaction ->
                         descriptionText.append('`').append(msgCreateReaction.getCommandPrefix()).append('`')
                                 .append(" - ").append(msgCreateReaction.getCommandDescription()).append('\n'));
+        descriptionText.append("__Bot expert commands:__\n");
+        Scenario.all().stream()
+                .filter(ACLCommand::isExpertCommand)
+                .forEach(scenario ->
+                        descriptionText.append('`').append(scenario.getPrefix()).append('`')
+                                .append(" - ").append(scenario.getCommandDescription()).append('\n'));
+        BotCommand.all().stream()
+                .filter(ACLCommand::isExpertCommand)
+                .forEach(botCommand ->
+                        descriptionText.append('`').append(botCommand.getPrefix()).append('`')
+                                .append(" - ").append(botCommand.getCommandDescription()).append('\n'));
         appendTitleDescription(descriptionText);
         embedBuilder.setDescription(descriptionText.toString());
         embedBuilder.addField("Access system operation mode:",
@@ -1034,6 +1304,9 @@ public class RightsScenario
         stringBuilder.append("\n")
                 .append("You can also click on the ").append(EMOJI_QUESTION)
                 .append(" to show help on the access rights of the bot. ")
+                .append(" Or click on the ")
+                .append(EMOJI_SCROLL)
+                .append(" to display all the commands for which any rights are granted. ")
                 .append("Or click on the ")
                 .append(EMOJI_REPEAT)
                 .append(" to switch access system operation. ")
@@ -1114,12 +1387,13 @@ public class RightsScenario
         return true;
     }
 
-    private class ShortRightsInfo {
+    private static class ShortRightsInfo {
 
         final boolean hasUsers;
         final boolean hasRoles;
         final boolean hasTextChannels;
         final boolean hasChannelCategories;
+        final boolean isThereAnything;
 
         ShortRightsInfo(@NotNull Server server,
                         @NotNull String enteredCommandName) {
@@ -1142,6 +1416,10 @@ public class RightsScenario
                     && commandRights.getAllowChannels().stream()
                     .map(server::getChannelCategoryById)
                     .anyMatch(Optional::isPresent);
+            this.isThereAnything = this.hasUsers
+                    || this.hasRoles
+                    || this.hasTextChannels
+                    || this.hasChannelCategories;
         }
     }
 }

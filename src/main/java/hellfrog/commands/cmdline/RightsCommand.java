@@ -32,7 +32,9 @@ public class RightsCommand
 
     private static final String PREF = "rig";
     private static final String DESCRIPTION = "Show or change command rights";
-    private static final String FOOTER = "Only server owner and users with permission " +
+    private static final String FOOTER = "This is an expert command. To invoke an interactive user-friendly " +
+            "command, use \"rights\" command. " +
+            "Only server owner and users with permission " +
             "to manage server can use any command by default. Certain commands " +
             "(such as: vote) also may require permission to manage channel, " +
             "designated for a poll.";
@@ -104,6 +106,7 @@ public class RightsCommand
 
         super.enableOnlyServerCommandStrict();
         super.setFooter(FOOTER);
+        super.setCommandAsExpert();
     }
 
     /**

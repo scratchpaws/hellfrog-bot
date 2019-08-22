@@ -15,6 +15,8 @@ public class PrefixCommand
 
     private static final String PREF = "pref";
     private static final String DESCRIPTION = "Show or change bot call prefix";
+    private static final String FOOTER = "This is an expert command. To invoke an interactive user-friendly " +
+            "command, use \"prefix\" command.";
 
     public PrefixCommand() {
         super(PREF, DESCRIPTION);
@@ -35,6 +37,7 @@ public class PrefixCommand
                 .build();
 
         addCmdlineOption(set, get, globalSwitcher);
+        super.setCommandAsExpert();
     }
 
     /**

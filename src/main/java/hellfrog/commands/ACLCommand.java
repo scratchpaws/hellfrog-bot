@@ -33,6 +33,7 @@ public abstract class ACLCommand {
     private boolean strictByChannels = false;
     private boolean onlyServerCommand = false;
     private boolean updateLastUsage = true;
+    private boolean expertCommand = false;
     protected final Logger log = LogManager.getLogger(this.getClass().getSimpleName());
 
     protected ACLCommand(@NotNull String prefix, @NotNull String description) {
@@ -57,6 +58,10 @@ public abstract class ACLCommand {
         this.updateLastUsage = false;
     }
 
+    protected final void setCommandAsExpert() {
+        this.expertCommand = true;
+    }
+
     /**
      * Получить префикс команды для её вызова
      *
@@ -76,6 +81,14 @@ public abstract class ACLCommand {
 
     public boolean isUpdateLastUsage() {
         return updateLastUsage;
+    }
+
+    public boolean isExpertCommand() {
+        return expertCommand;
+    }
+
+    public boolean isNotExpertCommand() {
+        return !expertCommand;
     }
 
     public boolean canExecuteServerCommand(MessageCreateEvent event, Server server,
