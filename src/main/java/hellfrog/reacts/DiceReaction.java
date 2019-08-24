@@ -21,8 +21,6 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,21 +35,35 @@ public class DiceReaction
         extends MsgCreateReaction {
 
     private static final String SHORT_ROLL_PREFIX = "([lLдД]{2})";
-    private static final Pattern DICE_PATTERN = Pattern.compile("^([rр])?(d?\\d{1,3}[dд]\\d+|[lд]{2})([=<>]{1,2}\\d+)?",
+    private static final Pattern DICE_PATTERN = Pattern.compile(
+            "([rр]\\s?)?" +
+                    "([dд]?\\s?\\d+\\s?[dд]\\s?\\d+|[lд]{2})" +
+                    "(\\s?([=<>]{1,2}|[+\\-])\\s?\\d+)*",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-    private static final Pattern SEARCH_PATTERN = Pattern.compile("^\\s*([rр])?(d?\\d{1,3}[dд]\\d+|[lд]{2})([=<>]{1,2}\\d+)?",
+    private static final Pattern SEARCH_PATTERN = Pattern.compile(
+            "^\\s*" +
+                    "([rр]\\s?)?" +
+                    "([dд]?\\s?\\d+\\s?[dд]\\s?\\d+|[lд]{2})" +
+                    "(\\s?([=<>]{1,2}|[+\\-])\\s?\\d+)*",
             Pattern.MULTILINE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final String DEFAULT_ROLL = "1d20";
 
-    @Deprecated
-    private static final Path ROFL_ROOT = Paths.get("./rofls");
-    @Deprecated
-    private static final Path ROFL_LOW = ROFL_ROOT.resolve("./min");
-    @Deprecated
-    private static final Path ROFL_HIGH = ROFL_ROOT.resolve("./max");
+    private static final Pattern ROFL_PATTERN = Pattern.compile("^[rр]",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern VALUE_PATTERN = Pattern.compile(
+            "\\d{1,5}\\s?[dд]\\s?\\d{1,5}",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern MODIFIER_PATTERN = Pattern.compile(
+            "[+\\-]\\s?\\d{1,5}",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern FILTER_PATTERN = Pattern.compile(
+            "[=<>]{1,2}\\s?\\d{1,5}",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     private static final List<String> LOW_ROFL_LIST = new CopyOnWriteArrayList<>();
     private static final List<String> HIGH_ROFL_LIST = new CopyOnWriteArrayList<>();
+    private static final long MAX_DICES = 100L;
+    private static final long MAX_FACES = 1000L;
 
     private static final String PREFIX = "dice";
     private static final String DESCRIPTION = "roll dices (use NdN or ll for roll, " +
@@ -66,18 +78,6 @@ public class DiceReaction
         super.enableStrictByChannel();
     }
 
-    @Deprecated
-    @Contract(pure = true)
-    public static Path getRoflLowPath() {
-        return ROFL_LOW;
-    }
-
-    @Deprecated
-    @Contract(pure = true)
-    public static Path getRoflHighPath() {
-        return ROFL_HIGH;
-    }
-
     @Override
     public boolean canReact(MessageCreateEvent event) {
         String messageString = event.getMessageContent();
@@ -90,103 +90,120 @@ public class DiceReaction
                               @Nullable User user, TextChannel textChannel,
                               Instant messageCreateDate, Message sourceMessage) {
 
-        SettingsController.getInstance().updateLastCommandUsage();
-        List<String> lines = Arrays.asList(strMessage.split("\n"));
-        for (int i = 0; i < lines.size(); i++) {
-            String currentLine = lines.get(i).trim();
-            Matcher patternMatcher = DICE_PATTERN.matcher(currentLine);
-            if (patternMatcher.find()) {
-                String diceValue = patternMatcher.group(0)
-                        .replaceAll(SHORT_ROLL_PREFIX, DEFAULT_ROLL)
-                        .replaceAll("^d", "");
-                String anotherString = EmojiParser.parseToUnicode(":game_die: ")
-                        + CommonUtils.cutLeftString(currentLine, patternMatcher.group(0)).trim();
-                if ((i + 1) < lines.size()) {
-                    Optional<String> anotherLast = lines.subList(i + 1, lines.size())
-                            .stream()
-                            .reduce((l1, l2) -> l1 + '\n' + l2);
-                    if (anotherLast.isPresent()) {
-                        anotherString += '\n' + anotherLast.get();
+        try {
+            SettingsController.getInstance().updateLastCommandUsage();
+            List<String> lines = Arrays.asList(strMessage.split("\n"));
+            for (int i = 0; i < lines.size(); i++) {
+                String currentLine = lines.get(i).trim();
+                Matcher patternMatcher = DICE_PATTERN.matcher(currentLine);
+                if (patternMatcher.find()) {
+                    String diceValue = patternMatcher.group()
+                            .replaceAll(SHORT_ROLL_PREFIX, DEFAULT_ROLL);
+                    String anotherString = EmojiParser.parseToUnicode(":game_die: ")
+                            + CommonUtils.cutLeftString(currentLine, patternMatcher.group(0)).trim();
+                    if ((i + 1) < lines.size()) {
+                        Optional<String> anotherLast = lines.subList(i + 1, lines.size())
+                                .stream()
+                                .reduce((l1, l2) -> l1 + '\n' + l2);
+                        if (anotherLast.isPresent()) {
+                            anotherString += '\n' + anotherLast.get();
+                        }
                     }
-                }
 
-                if (server != null) {
-                    anotherString = ServerSideResolver.resolveMentions(server, anotherString);
-                }
+                    if (server != null) {
+                        anotherString = ServerSideResolver.resolveMentions(server, anotherString);
+                    }
 
-                boolean doRofl = diceValue.toLowerCase().startsWith("r")
-                        || diceValue.toLowerCase().startsWith("р");
-                boolean doEquals = diceValue.contains("=");
-                boolean doGreat = diceValue.contains(">");
-                boolean doLess = diceValue.contains("<");
-                boolean doFilter = doEquals || doGreat || doLess;
+                    boolean doRofl = ROFL_PATTERN.matcher(diceValue).find();
+                    Matcher valueMatcher = VALUE_PATTERN.matcher(diceValue);
+                    if (!valueMatcher.find()) return;
+                    String rawDiceValues = valueMatcher.group();
+                    String[] rawDiceArrayValues = rawDiceValues.split("[dDдД]");
+                    long numOfDice = rawDiceArrayValues.length == 2
+                            ? CommonUtils.onlyNumbersToLong(rawDiceArrayValues[0])
+                            : 1L;
+                    long numOfFaces = rawDiceArrayValues.length == 2
+                            ? CommonUtils.onlyNumbersToLong(rawDiceArrayValues[1])
+                            : 20L;
 
-                String[] diceParams = diceValue.trim().split("([dDдД]|[<>=]{1,2})");
-                if (diceParams.length >= 2 && diceParams.length <= 3) {
-                    long diceNum = CommonUtils.onlyNumbersToLong(diceParams[0]);
-                    long varNum = CommonUtils.onlyNumbersToLong(diceParams[1]);
-                    long filter = doFilter ? CommonUtils.onlyNumbersToLong(diceParams[2]) : 0;
-                    if (diceNum > 0 && varNum > 0 && diceNum <= 100 && varNum <= 1000 && filter >= 0 && filter <= 1000) {
+                    if (numOfDice > 0 && numOfDice <= MAX_DICES
+                            && numOfFaces > 0 && numOfFaces <= MAX_FACES) {
+
+                        List<SumModifier> resultModifiers = new ArrayList<>();
+                        Matcher foundModifiers = MODIFIER_PATTERN.matcher(diceValue);
+                        while (foundModifiers.find()) {
+                            String rawModifier = foundModifiers.group();
+                            boolean addition = rawModifier.startsWith("+");
+                            long modifierValue = CommonUtils.onlyNumbersToLong(rawModifier);
+                            if (modifierValue > 0) {
+                                resultModifiers.add(new SumModifier(modifierValue, addition));
+                            }
+                        }
+
+                        List<ResultFilter> resultFilters = new ArrayList<>();
+                        Matcher filterModifiers = FILTER_PATTERN.matcher(diceValue);
+                        while (filterModifiers.find()) {
+                            String rawFilter = filterModifiers.group();
+                            FilterType filterType = FilterType.NOP;
+                            if (rawFilter.startsWith(">=")) {
+                                filterType = FilterType.GE;
+                            } else if (rawFilter.startsWith("<=")) {
+                                filterType = FilterType.LE;
+                            } else if (rawFilter.startsWith("<>")) {
+                                filterType = FilterType.NE;
+                            } else if (rawFilter.startsWith("=")) {
+                                filterType = FilterType.EQ;
+                            } else if (rawFilter.startsWith("<")) {
+                                filterType = FilterType.LT;
+                            } else if (rawFilter.startsWith(">")) {
+                                filterType = FilterType.GT;
+                            }
+                            long filterValue = CommonUtils.onlyNumbersToLong(rawFilter);
+                            if (filterValue > 0 && !filterType.equals(FilterType.NOP)) {
+                                resultFilters.add(new ResultFilter(filterType, filterValue));
+                            }
+                        }
+
                         MessageBuilder dicesOutput = new MessageBuilder();
                         long sumResult = 0;
                         ThreadLocalRandom currRnd = ThreadLocalRandom.current();
                         int success = 0;
-                        for (long d = 1; d <= diceNum; d++) {
-                            boolean strike = doFilter;
-                            long tr = currRnd.nextLong(1L, varNum + 1);
-                            if (doEquals && doGreat) {
-                                if (tr >= filter) {
-                                    sumResult += tr;
-                                    success++;
-                                    strike = false;
+                        for (long d = 1; d <= numOfDice; d++) {
+                            long tr = currRnd.nextLong(1L, numOfFaces + 1);
+                            boolean strike = false;
+                            if (!resultFilters.isEmpty()) {
+                                for (ResultFilter resultFilter : resultFilters) {
+                                    if (resultFilter.notOk(tr)) {
+                                        strike = true;
+                                        break;
+                                    }
                                 }
-                            } else if (doEquals && doLess) {
-                                if (tr <= filter) {
-                                    sumResult += tr;
-                                    success++;
-                                    strike = false;
-                                }
-                            } else if (doGreat && doLess) {
-                                if (tr != filter) {
-                                    sumResult += tr;
-                                    success++;
-                                    strike = false;
-                                }
-                            } else if (doEquals) {
-                                if (tr == filter) {
-                                    sumResult += tr;
-                                    success++;
-                                    strike = false;
-                                }
-                            } else if (doGreat) {
-                                if (tr > filter) {
-                                    sumResult += tr;
-                                    success++;
-                                    strike = false;
-                                }
-                            } else if (doLess) {
-                                if (tr < filter) {
-                                    sumResult += tr;
-                                    success++;
-                                    strike = false;
-                                }
-                            } else {
-                                sumResult += tr;
                             }
-                            if (strike) {
+                            if (!strike) {
+                                success++;
+                                sumResult += tr;
+                                dicesOutput.append("[").append(tr).append("]");
+                            } else {
                                 dicesOutput.append("[", MessageDecoration.STRIKEOUT)
                                         .append(String.valueOf(tr), MessageDecoration.STRIKEOUT)
                                         .append("]", MessageDecoration.STRIKEOUT);
-                            } else {
-                                dicesOutput.append("[").append(tr).append("]");
                             }
                         }
-                        if (doFilter) {
+                        long modifiedSum = sumResult;
+                        long commonModifier = 0L;
+                        for (SumModifier resultModifier : resultModifiers) {
+                            modifiedSum = resultModifier.modify(modifiedSum);
+                            commonModifier = resultModifier.modify(commonModifier);
+                        }
+                        if (modifiedSum < 0L) {
+                            modifiedSum = 0L;
+                        }
+                        if (!resultFilters.isEmpty()) {
                             dicesOutput.append(" (")
                                     .append(String.valueOf(success))
                                     .append(" success)");
                         }
-                        long max = diceNum * varNum + 1;
+                        long max = numOfDice * numOfFaces + 1;
                         String defName = "You";
                         if (user != null) {
                             defName = MessageUtils.escapeSpecialSymbols(server != null ?
@@ -196,13 +213,20 @@ public class DiceReaction
                         MessageBuilder msg = new MessageBuilder()
                                 .append(defName, MessageDecoration.BOLD)
                                 .append(" rolled ")
-                                .append(String.valueOf(diceNum))
+                                .append(String.valueOf(numOfDice))
                                 .append("-")
                                 .append(String.valueOf(max - 1))
                                 .append(" and got ")
                                 .append(dicesOutput.getStringBuilder().toString())
                                 .append("...")
-                                .append(String.valueOf(sumResult), MessageDecoration.BOLD);
+                                .append(String.valueOf(modifiedSum), MessageDecoration.BOLD);
+                        if (!resultModifiers.isEmpty()) {
+                            msg.append(" (")
+                                    .append(sumResult)
+                                    .append(commonModifier >= 0L ? "+" : "")
+                                    .append(commonModifier)
+                                    .append(")");
+                        }
                         new MessageBuilder()
                                 .setEmbed(new EmbedBuilder()
                                         .setTitle(anotherString)
@@ -210,13 +234,16 @@ public class DiceReaction
                                         .setDescription(msg.getStringBuilder().toString()))
                                 .send(textChannel);
                         if (doRofl) {
-                            rofling(textChannel, sumResult, max - 1);
+                            rofling(textChannel, modifiedSum, modifiedSum < max ?
+                                    max - 1 : modifiedSum);
                         }
                     }
-                }
 
-                break;
+                    break;
+                }
             }
+        } catch (Exception err) {
+            log.error(err.getMessage(), err);
         }
     }
 
@@ -243,10 +270,9 @@ public class DiceReaction
             discordApi.getServerTextChannelById(HIGH_ROLL_IMAGES_CHANNEL).ifPresentOrElse(textChannel -> {
                 if (textChannel.canYouReadMessageHistory()
                         && textChannel.canYouSee()) {
-                    textChannel.getMessagesAsStream().forEach(message -> {
-                        message.getAttachments().forEach(messageAttachment ->
-                                highRoflUrls.add(messageAttachment.getUrl().toString()));
-                    });
+                    textChannel.getMessagesAsStream().forEach(message ->
+                            message.getAttachments().forEach(messageAttachment ->
+                                    highRoflUrls.add(messageAttachment.getUrl().toString())));
                     HIGH_ROFL_LIST.clear();
                     HIGH_ROFL_LIST.addAll(highRoflUrls);
                     BroadCast.sendServiceMessage("Found " + HIGH_ROFL_LIST.size()
@@ -262,10 +288,9 @@ public class DiceReaction
             discordApi.getServerTextChannelById(LOG_ROLL_IMAGES_CHANNEL).ifPresentOrElse(textChannel -> {
                 if (textChannel.canYouReadMessageHistory()
                         && textChannel.canYouSee()) {
-                    textChannel.getMessagesAsStream().forEach(message -> {
-                        message.getAttachments().forEach(messageAttachment ->
-                                lowRoflUrls.add(messageAttachment.getUrl().toString()));
-                    });
+                    textChannel.getMessagesAsStream().forEach(message ->
+                            message.getAttachments().forEach(messageAttachment ->
+                                    lowRoflUrls.add(messageAttachment.getUrl().toString())));
                     LOW_ROFL_LIST.clear();
                     LOW_ROFL_LIST.addAll(lowRoflUrls);
                     BroadCast.sendServiceMessage("Found " + LOW_ROFL_LIST.size()
@@ -278,5 +303,66 @@ public class DiceReaction
                     + LOG_ROLL_IMAGES_CHANNEL + " with low rofl images"));
 
         }, () -> log.fatal("Unable to rebuild dice reaction rofl indexes - api is null!"));
+    }
+
+    private static class SumModifier {
+
+        private final long value;
+        private final boolean isAddition;
+
+        @Contract(pure = true)
+        SumModifier(long value, boolean isAddition) {
+            this.value = value;
+            this.isAddition = isAddition;
+        }
+
+        long modify(final long currentSum) {
+            if (value > 0) {
+                return isAddition ? currentSum + value : currentSum - value;
+            }
+            return currentSum;
+        }
+    }
+
+    private static class ResultFilter {
+
+        private final FilterType filterType;
+        private final long filterValue;
+
+        @Contract(pure = true)
+        ResultFilter(FilterType filterType, long filterValue) {
+            this.filterType = filterType != null ? filterType : FilterType.NOP;
+            this.filterValue = filterValue;
+        }
+
+        boolean isOk(final long value) {
+            if (filterValue > 0) {
+                switch (filterType) {
+                    case EQ:
+                        return value == filterValue;
+                    case LT:
+                        return value < filterValue;
+                    case GT:
+                        return value > filterValue;
+                    case LE:
+                        return value <= filterValue;
+                    case GE:
+                        return value >= filterValue;
+                    case NE:
+                        return value != filterValue;
+                    case NOP:
+                        return true;
+                }
+            }
+            return true;
+        }
+
+        boolean notOk(final long value) {
+            return !isOk(value);
+        }
+    }
+
+    private enum FilterType {
+        EQ, LT, GT, LE, GE, NE, NOP
     }
 }

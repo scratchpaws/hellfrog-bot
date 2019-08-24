@@ -10,6 +10,8 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.listener.message.MessageCreateListener;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
@@ -27,6 +29,7 @@ public abstract class MsgCreateReaction
     private String commandPrefix = "";
     private String commandDescription = "";
 
+    @Contract(pure = true)
     public static List<MsgCreateReaction> all() {
         return ALL_MESSAGE_REACTS;
     }
@@ -50,7 +53,7 @@ public abstract class MsgCreateReaction
     public abstract boolean canReact(MessageCreateEvent event);
 
     @Override
-    public void onMessageCreate(MessageCreateEvent event) {
+    public void onMessageCreate(@NotNull MessageCreateEvent event) {
         Optional<Server> server = event.getServer();
         if (accessControl && server.isPresent()) {
             boolean granted = AccessControlCheck.canExecuteOnServer(commandPrefix, event, server.get(),
@@ -61,7 +64,7 @@ public abstract class MsgCreateReaction
         executeReaction(event);
     }
 
-    private void executeReaction(MessageCreateEvent event) {
+    private void executeReaction(@NotNull MessageCreateEvent event) {
         Optional<Server> mayBeServer = event.getServer();
         Optional<User> mayBeUser = event.getMessageAuthor().asUser();
 
