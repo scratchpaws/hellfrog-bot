@@ -6,7 +6,7 @@
 
     <groupId>pub.funforge.scratchypaws</groupId>
     <artifactId>hellfrog-bot</artifactId>
-    <version>0.1.23b</version>
+    <version>0.1.24b</version>
     <packaging>jar</packaging>
     <name>hellfrog</name>
 
@@ -101,20 +101,6 @@
             <groupId>org.nibor.autolink</groupId>
             <artifactId>autolink</artifactId>
             <version>0.10.0</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.hibernate/hibernate-core -->
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-core</artifactId>
-            <version>5.4.4.Final</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <version>1.4.199</version>
         </dependency>
     </dependencies>
 
