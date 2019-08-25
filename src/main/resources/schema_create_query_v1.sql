@@ -52,27 +52,48 @@ CREATE TABLE "user_rights" (
 	"create_date"	INTEGER NOT NULL DEFAULT 0,
 	"update_date"	INTEGER NOT NULL DEFAULT 0
 );
+CREATE UNIQUE INDEX "uniq_user_right" ON "user_rights" (
+	"server_id",
+	"command_prefix",
+	"user_id"
+);
 CREATE TABLE "role_rights" (
 	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
 	"server_id"	INTEGER NOT NULL,
 	"command_prefix"	TEXT NOT NULL,
-	"user_id"	INTEGER NOT NULL,
+	"role_id"	INTEGER NOT NULL,
 	"create_date"	INTEGER NOT NULL DEFAULT 0,
 	"update_date"	INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX "uniq_role_right" ON "role_rights" (
+	"server_id",
+	"command_prefix",
+	"role_id"
 );
 CREATE TABLE "text_channel_rights" (
 	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
 	"server_id"	INTEGER NOT NULL,
 	"command_prefix"	TEXT NOT NULL,
-	"user_id"	INTEGER NOT NULL,
+	"channel_id"	INTEGER NOT NULL,
 	"create_date"	INTEGER NOT NULL DEFAULT 0,
 	"update_date"	INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX "uniq_channel_right" ON "text_channel_rights" (
+	"server_id",
+	"command_prefix",
+	"channel_id"
 );
 CREATE TABLE "category_rights" (
 	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
 	"server_id"	INTEGER NOT NULL,
 	"command_prefix"	TEXT NOT NULL,
-	"user_id"	INTEGER NOT NULL,
+	"category_id"	INTEGER NOT NULL,
 	"create_date"	INTEGER NOT NULL DEFAULT 0,
 	"update_date"	INTEGER NOT NULL DEFAULT 0
 );
+CREATE UNIQUE INDEX "uniq_category_right" ON "category_rights" (
+	"server_id",
+	"command_prefix",
+	"category_id"
+);
+PRAGMA user_version = 1
