@@ -282,6 +282,7 @@ public class ServiceCommand
             settingsController.getDiscordApi().disconnect();
         }
 
+        settingsController.stopMainDatabase();
         System.exit(0);
     }
 

@@ -25,7 +25,7 @@
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
-        <RollingFile name="hibernateLogger"
+        <RollingFile name="sqlLogger"
                      fileName="logs/hellfrog_sql.log"
                      filePattern="logs/hellfrog_sql_%d{yyyy-MM-dd}_%i.log.gz"
                      append="true">
@@ -42,16 +42,11 @@
         <Logger name="Commands debug" level="info" additivity="false">
             <AppenderRef ref="cmdLogger"/>
         </Logger>
-        <!--<logger name="org.hibernate.SQL" level="trace"/>
-        <logger name="org.hibernate.tool.hbm2ddl" level="trace"/>-->
-        <Logger name="bruva.settings.DAO.CommonSettingsDAO" level="info" additivity="false">
-            <AppenderRef ref="hibernateLogger"/>
+        <Logger name="SQL logger" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
         </Logger>
-        <Logger name="bruva.settings.AutoSession" level="info" additivity="false">
-            <AppenderRef ref="hibernateLogger"/>
-        </Logger>
-        <Logger name="org.hibernate" level="info" additivity="false">
-            <AppenderRef ref="hibernateLogger"/>
+        <Logger name="JSON legacy loader" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
         </Logger>
         <Root level="info">
             <AppenderRef ref="plainLogger"/>

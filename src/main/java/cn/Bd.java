@@ -9,6 +9,7 @@ import hellfrog.core.SessionsCheckTask;
 import hellfrog.settings.ServerStatistic;
 import hellfrog.settings.SettingsController;
 import org.javacord.api.DiscordApi;
+import org.javacord.api.entity.DiscordEntity;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.Message;
@@ -24,6 +25,7 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipEntry;
@@ -364,5 +366,12 @@ public class Bd {
     public static String rstat() {
         SessionState.all().forEach(SessionsCheckTask::terminateSessionState);
         return "OK";
+    }
+
+    @MethodInfo("Show creation date and time of any Discord entity by ID")
+    @NotNull
+    public static String date(long entityId) {
+        Instant instant = DiscordEntity.getCreationTimestamp(entityId);
+        return instant.toString();
     }
 }

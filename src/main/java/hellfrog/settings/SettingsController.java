@@ -6,7 +6,10 @@ import hellfrog.common.CommonUtils;
 import hellfrog.core.ServerStatisticTask;
 import hellfrog.core.SessionsCheckTask;
 import hellfrog.core.VoteController;
+import hellfrog.settings.db.MainDBController;
 import org.javacord.api.DiscordApi;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -25,11 +28,12 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class SettingsController {
 
-    private static final Path SETTINGS_PATH = Paths.get("./settings/");
-    private static final Path COMMON_SETTINGS = SETTINGS_PATH.resolve("common.json");
-    private static final String SERVER_SETTINGS_FILES_SUFFIX = "_server.json";
-    private static final String SERVER_STATISTICS_FILES_SUFFIX = "_stat.json";
-    private static final SettingsController instance = new SettingsController();
+    private final Path SETTINGS_PATH = Paths.get("./settings/");
+
+    private final Path COMMON_SETTINGS = SETTINGS_PATH.resolve("common.json");
+    private final String SERVER_SETTINGS_FILES_SUFFIX = "_server.json";
+    private final String SERVER_STATISTICS_FILES_SUFFIX = "_stat.json";
+
     private final ConcurrentHashMap<Long, ServerPreferences> prefByServer = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, ServerStatistic> statByServer = new ConcurrentHashMap<>();
     private final ReentrantLock serverPrefCreateLock = new ReentrantLock();
@@ -43,6 +47,9 @@ public class SettingsController {
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
     private volatile Instant lastCommandUsage = null;
+    private MainDBController mainDBController = new MainDBController();
+
+    private static final SettingsController instance = new SettingsController();
 
     private SettingsController() {
         loadCommonSettings();
@@ -50,8 +57,12 @@ public class SettingsController {
         voteController = new VoteController();
         serverStatisticTask = new ServerStatisticTask();
         sessionsCheckTask = new SessionsCheckTask();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() ->
+                SettingsController.getInstance().mainDBController.close()));
     }
 
+    @Contract(pure = true)
     public static SettingsController getInstance() {
         return instance;
     }
@@ -177,6 +188,7 @@ public class SettingsController {
         }
     }
 
+    @NotNull
     private ObjectMapper buildMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -378,5 +390,9 @@ public class SettingsController {
 
     public SessionsCheckTask getSessionsCheckTask() {
         return sessionsCheckTask;
+    }
+
+    public synchronized void stopMainDatabase() {
+        this.mainDBController.close();
     }
 }
