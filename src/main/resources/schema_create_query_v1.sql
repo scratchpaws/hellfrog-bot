@@ -1,6 +1,6 @@
 CREATE TABLE "common_preferences" (
 	"key"	TEXT NOT NULL UNIQUE,
-	"value"	TEXT,
+	"value"	TEXT NOT NULL,
 	"create_date"	INTEGER NOT NULL DEFAULT 0,
 	"update_date"	INTEGER NOT NULL DEFAULT 0,
 	PRIMARY KEY("key")
@@ -8,8 +8,8 @@ CREATE TABLE "common_preferences" (
 CREATE TABLE "server_preferences" (
 	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
 	"server_id"	INTEGER NOT NULL,
-	"key"	INTEGER NOT NULL,
-	"value"	INTEGER,
+	"key"	TEXT NOT NULL,
+	"value"	TEXT,
 	"create_date"	INTEGER NOT NULL DEFAULT 0,
 	"update_date"	INTEGER NOT NULL DEFAULT 0,
 	CONSTRAINT "uniq_serv_key" UNIQUE ("server_id","key")
@@ -95,5 +95,79 @@ CREATE UNIQUE INDEX "uniq_category_right" ON "category_rights" (
 	"server_id",
 	"command_prefix",
 	"category_id"
+);
+CREATE TABLE "wtf_assigns" (
+	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+	"server_id"	INTEGER NOT NULL,
+	"author_id"	INTEGER NOT NULL,
+	"target_id"	INTEGER NOT NULL,
+	"description"	TEXT,
+	"image_url"	TEXT,
+	"create_date"	INTEGER NOT NULL DEFAULT 0,
+	"update_date"	INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX "uniq_wft_assign" ON "wtf_assigns" (
+	"server_id",
+	"author_id",
+	"target_id"
+);
+CREATE TABLE "emoji_total_statistics" (
+	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+	"server_id"	INTEGER NOT NULL,
+	"emoji_id"	INTEGER NOT NULL,
+	"last_usage"	INTEGER NOT NULL,
+	"create_date"	INTEGER NOT NULL DEFAULT 0,
+	"update_date"	INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX "uniq_total_emoji_stat" ON "emoji_total_statistics" (
+	"server_id",
+	"emoji_id"
+);
+CREATE TABLE "user_total_statistics" (
+	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+	"server_id"	INTEGER NOT NULL,
+	"user_id"	INTEGER NOT NULL,
+	"messages_count"	INTEGER NOT NULL DEFAULT 0,
+	"last_message_date"	INTEGER NOT NULL DEFAULT 0,
+	"symbols_count"	INTEGER NOT NULL DEFAULT 0,
+	"bytes_count"	INTEGER NOT NULL DEFAULT 0,
+	"create_date"	INTEGER NOT NULL DEFAULT 0,
+	"update_date"	INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX "uniq_user_total_stat" ON "user_total_statistics" (
+	"server_id",
+	"user_id"
+);
+CREATE TABLE "text_channel_total_stats" (
+	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+	"server_id"	INTEGER NOT NULL,
+	"text_channel_id"	INTEGER NOT NULL,
+	"messages_count"	INTEGER NOT NULL DEFAULT 0,
+	"last_message_date"	INTEGER NOT NULL DEFAULT 0,
+	"symbols_count"	INTEGER NOT NULL DEFAULT 0,
+	"bytes_count"	INTEGER NOT NULL DEFAULT 0,
+	"create_date"	INTEGER NOT NULL DEFAULT 0,
+	"update_date"	INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX "uniq_txtchan_total_stat" ON "text_channel_total_stats" (
+	"server_id",
+	"text_channel_id"
+);
+CREATE TABLE "text_chan_user_total_stats" (
+	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+	"server_id"	INTEGER NOT NULL,
+	"text_channel_id"	INTEGER NOT NULL,
+	"user_id"	INTEGER NOT NULL,
+	"messages_count"	INTEGER NOT NULL DEFAULT 0,
+	"last_message_date"	INTEGER NOT NULL DEFAULT 0,
+	"symbols_count"	INTEGER NOT NULL DEFAULT 0,
+	"bytes_count"	INTEGER NOT NULL DEFAULT 0,
+	"create_date"	INTEGER NOT NULL DEFAULT 0,
+	"update_date"	INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX "uniq_txtchan_user_total_stat" ON "text_chan_user_total_stats" (
+	"server_id",
+	"text_channel_id",
+	"user_id"
 );
 PRAGMA user_version = 1

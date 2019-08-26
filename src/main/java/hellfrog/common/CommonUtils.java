@@ -21,7 +21,8 @@ public class CommonUtils {
         return str != null && !str.toString().trim().isEmpty();
     }
 
-    public static String cutLeftString(String source, String cut) {
+    @NotNull
+    public static String cutLeftString(@NotNull String source, @NotNull String cut) {
         if (source.length() >= cut.length() && source.startsWith(cut) && source.length() >= 1 && cut.length() >= 1) {
             return source.substring(cut.length());
         } else {
@@ -29,7 +30,8 @@ public class CommonUtils {
         }
     }
 
-    public static String cutRightString(String source, String cut) {
+    @NotNull
+    public static String cutRightString(@NotNull String source, @NotNull String cut) {
         if (source.length() >= cut.length() && source.endsWith(cut) && source.length() >= 1 && cut.length() >= 1) {
             return source.substring(0, source.length() - cut.length());
         } else {
@@ -75,6 +77,7 @@ public class CommonUtils {
         return String.format("%tF\n%<tT (UTC)", current);
     }
 
+    @Contract(pure = true)
     public static long getLowValue(long maxValue) {
         if (maxValue >= 2) {
             long lowValue = maxValue / 2;
@@ -86,6 +89,7 @@ public class CommonUtils {
         }
     }
 
+    @Contract(pure = true)
     public static long getHighValue(long maxValue) {
         if (maxValue >= 2) {
             if (maxValue == 2) return 2;
@@ -95,7 +99,8 @@ public class CommonUtils {
         }
     }
 
-    public static List<String> splitEqually(String text, int size) {
+    @NotNull
+    public static List<String> splitEqually(@NotNull String text, int size) {
         List<String> ret = new ArrayList<>((text.length() + size - 1) / size);
 
         for (int start = 0; start < text.length(); start += size) {
@@ -174,6 +179,15 @@ public class CommonUtils {
                 + (s2 != null ? s2 : "(?)");
     }
 
+    @NotNull
+    @Contract(pure = true)
+    public static String reduceNewLine(final @Nullable String s1, final @Nullable String s2) {
+        return (s1 != null ? s1 : "(?)")
+                + "\n"
+                + (s1 != null ? s2 : "(?)");
+    }
+
+    @Contract(value = "null, _ -> false; !null, null -> false", pure = true)
     @SafeVarargs
     public static<T> boolean in(T that, T... there) {
         if (that == null || there == null) return false;

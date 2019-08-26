@@ -14,7 +14,7 @@ public class CommonPreferences
      * Префикс по-умолчанию. Используется при прямом обращении к боту, либо если
      * в настройках для сервера не указано иное
      */
-    private volatile String commonBotPrefix = "r!b";
+    private volatile String commonBotPrefix = ">>";
     /**
      * Имя бота, отображается в вообщениях
      */

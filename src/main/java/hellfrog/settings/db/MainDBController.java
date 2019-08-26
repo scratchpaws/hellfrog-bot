@@ -1,11 +1,13 @@
 package hellfrog.settings.db;
 
-import hellfrog.settings.oldjson.JSONLegacySettings;
+import hellfrog.common.CommonUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.io.Closeable;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,26 +17,37 @@ public class MainDBController
     implements Closeable, AutoCloseable {
 
     private final Path SETTINGS_PATH = Paths.get("./settings/");
-    private final Path MAIN_DB_PATH = SETTINGS_PATH.resolve("hellfrog_main.sqlite3");
-    private final String MAIN_CONNECTION_URL = "jdbc:sqlite:" + MAIN_DB_PATH.toString();
 
-    private final Path TEST_DB_PATH = SETTINGS_PATH.resolve("test.sqlite3");
-    private final String TEST_CONNECTION_URL = "jdbc:sqlite:" + TEST_DB_PATH.toString();
-
-    private final int CURRENT_SCHEMA_VERSION = 1;
-    private final String SCHEMA_VERSION_SET_QUERY = "PRAGMA user_version = " + CURRENT_SCHEMA_VERSION;
-    private final String SCHEMA_VERSION_GET_QUERY = "PRAGMA user_version";
-    private final String SCHEMA_CREATE_QUERY_1 = "schema_create_query_v1.sql";
-
-    private final Logger sqlLog = LogManager.getLogger("SQL logger");
+    private final Logger sqlLog = LogManager.getLogger("DB controller");
     private final Logger mainLog = LogManager.getLogger("Main");
     private Connection connection;
+    private DBCommonPreferences commonPreferences = null;
 
     public MainDBController() {
+        String MAIN_DB_FILE_NAME = "hellfrog_main.sqlite3";
+        init(MAIN_DB_FILE_NAME);
+    }
+
+    public MainDBController(@NotNull String anotherName) {
+        init(anotherName);
+    }
+
+    private void init(@NotNull String dbFileName) {
+        Path pathToDb = SETTINGS_PATH.resolve(dbFileName);
+        String JDBC_PREFIX = "jdbc:sqlite:";
+        String connectionURL = JDBC_PREFIX + pathToDb.toString();
         checkSettingsPath();
-        testJdbc();
-        createConnection();
-        checkSchemaVersion();
+        createConnection(connectionURL);
+        try {
+            new SchemaVersionChecker(this).checkSchemaVersion();
+        } catch (SQLException err) {
+            mainLog.fatal("Terminated. See sql log.");
+            System.exit(2);
+        }
+    }
+
+    Connection getConnection() {
+        return this.connection;
     }
 
     private void checkSettingsPath() {
@@ -48,97 +61,64 @@ public class MainDBController
         }
     }
 
-    private void testJdbc() {
+    private void createConnection(@NotNull String connectionURL) {
         try {
-            Files.deleteIfExists(TEST_DB_PATH);
-            try (Connection connection = DriverManager.getConnection(TEST_CONNECTION_URL)) {
-                try (Statement statement = connection.createStatement()) {
-                    statement.executeUpdate(SCHEMA_VERSION_SET_QUERY);
-                }
-                try (Statement statement = connection.createStatement()) {
-                    try (ResultSet resultSet = statement.executeQuery(SCHEMA_VERSION_GET_QUERY)) {
-                        if (resultSet.next()) {
-                            int version = resultSet.getInt(1);
-                            if (version != CURRENT_SCHEMA_VERSION)
-                                throw new SQLException("Incorrect version set");
-                        } else {
-                            throw new SQLException("Incorrect version set");
-                        }
-                    }
-                }
-            }
-        } catch (Exception err) {
-            sqlLog.fatal("SQLite test error: " + err.getMessage(), err);
-            System.exit(2);
-        }
-    }
-
-    private void createConnection() {
-        try {
-            connection = DriverManager.getConnection(MAIN_CONNECTION_URL);
+            connection = DriverManager.getConnection(connectionURL);
+            commonPreferences = new DBCommonPreferences(connection);
             sqlLog.info("Main database opened");
         } catch (Exception err) {
             sqlLog.fatal("Unable to open main database: " + err.getMessage(), err);
+            mainLog.fatal("Terminated. See sql log.");
             System.exit(2);
         }
     }
 
-    private void checkSchemaVersion() {
-        int currentSchemaVersion = 0;
+    public String executeRawQuery(@Nullable String rawQuery) {
+        if (CommonUtils.isTrStringEmpty(rawQuery)) {
+            return "(Query is empty or null)";
+        }
+        try {
+            if (connection == null || connection.isClosed()) {
+                return "(Connection is closed)";
+            }
+        } catch (SQLException err) {
+            return err.getMessage();
+        }
+        StringBuilder result = new StringBuilder();
         try (Statement statement = connection.createStatement()) {
-            try (ResultSet resultSet = statement.executeQuery(SCHEMA_VERSION_GET_QUERY)) {
-                if (resultSet.next()) {
-                    currentSchemaVersion = resultSet.getInt(1);
+            boolean hasResult = statement.execute(rawQuery);
+            if (!hasResult) {
+                int updateCount = statement.getUpdateCount();
+                return "Successful. Updated " + updateCount + " rows";
+            } else {
+                try (ResultSet resultSet = statement.getResultSet()) {
+                    ResultSetMetaData metaData = resultSet.getMetaData();
+                    for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                        String label = metaData.getColumnLabel(i);
+                        result.append(label);
+                        if (i < metaData.getColumnCount()) {
+                            result.append("|");
+                        }
+                    }
+                    result.append('\n');
+                    result.append("-".repeat(Math.max(0, result.length())));
+                    result.append('\n');
+                    while (resultSet.next()) {
+                        for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                            String value = resultSet.getString(i);
+                            result.append(value);
+                            if (i < metaData.getColumnCount()) {
+                                result.append("|");
+                            }
+                        }
+                        result.append('\n');
+                    }
                 }
             }
         } catch (SQLException err) {
-            sqlLog.fatal("Unable to check schema version: " + err.getMessage(), err);
-            System.exit(2);
+            return err.getMessage();
         }
-        if (currentSchemaVersion == 0) {
-            initSchema();
-        }
-    }
-
-    private void initSchema() {
-        sqlLog.info("Initial scheme");
-        sqlLog.info("Searching legacy settings into JSON files");
-        JSONLegacySettings jsonLegacySettings = new JSONLegacySettings();
-        ClassLoader classLoader = this.getClass().getClassLoader();
-        InputStream queryStream = classLoader.getResourceAsStream(SCHEMA_CREATE_QUERY_1);
-        if (queryStream == null) {
-            queryStream = classLoader.getResourceAsStream("/" + SCHEMA_CREATE_QUERY_1);
-        }
-        if (queryStream != null) {
-            StringBuilder stringBuilder = new StringBuilder();
-            try (BufferedReader queryReader = new BufferedReader(new InputStreamReader(queryStream, StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = queryReader.readLine()) != null)
-                    stringBuilder.append(line).append('\n');
-            } catch (IOException err) {
-                sqlLog.fatal("Unable to read resource file " + SCHEMA_CREATE_QUERY_1 + " with initial schema query: "
-                + err.getMessage(), err);
-                System.exit(2);
-            }
-            String[] buildQueries = stringBuilder.toString().split(";");
-            try (Statement statement = connection.createStatement()) {
-                for (String query : buildQueries) {
-                    try {
-                        statement.executeUpdate(query);
-                    } catch (Exception updateErr) {
-                        sqlLog.fatal("Unable to execute init SQL query \"" + query + "\": " + updateErr.getMessage(),
-                                updateErr);
-                        System.exit(2);
-                    }
-                }
-            } catch (SQLException err) {
-                sqlLog.fatal("Unable to create statement: " + err.getMessage(), err);
-                System.exit(2);
-            }
-        } else {
-            sqlLog.fatal("Unable to found resource file " + SCHEMA_CREATE_QUERY_1);
-            System.exit(2);
-        }
+        return result.toString();
     }
 
     @Override
@@ -153,5 +133,9 @@ public class MainDBController
                 connection = null;
             }
         }
+    }
+
+    public DBCommonPreferences getCommonPreferences() {
+        return commonPreferences;
     }
 }

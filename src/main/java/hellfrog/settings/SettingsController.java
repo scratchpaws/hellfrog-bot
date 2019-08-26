@@ -395,4 +395,8 @@ public class SettingsController {
     public synchronized void stopMainDatabase() {
         this.mainDBController.close();
     }
+
+    public MainDBController getMainDBController() {
+        return this.mainDBController;
+    }
 }

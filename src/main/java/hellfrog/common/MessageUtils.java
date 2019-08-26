@@ -77,13 +77,22 @@ public class MessageUtils
         }
     }
 
-    public static void sendLongMessage(MessageBuilder messageBuilder, Messageable messageable) {
+    public static void sendLongMessage(@Nullable MessageBuilder messageBuilder, @Nullable Messageable messageable) {
+        if (messageBuilder == null)
+            return;
+        sendLongMessage(messageBuilder.getStringBuilder().toString(), messageable);
+    }
 
-        if (messageBuilder.getStringBuilder().length() <= 2000) {
-            messageBuilder.send(messageable);
+    public static void sendLongMessage(@Nullable String longMessage, @Nullable Messageable messageable) {
+        if (CommonUtils.isTrStringEmpty(longMessage) || messageable == null)
+            return;
+
+        if (longMessage.length() <= 2000) {
+            new MessageBuilder()
+                .append(longMessage)
+                .send(messageable);
         } else {
-            String[] lines = messageBuilder.getStringBuilder().toString()
-                    .split("\n");
+            String[] lines = longMessage.split("\n");
             List<String> rebuilds = new ArrayList<>(lines.length);
             for (String line : lines) {
                 if (line.length() > 1999) {
@@ -108,6 +117,8 @@ public class MessageUtils
             }
         }
     }
+
+
 
     public static Optional<Message> findByIds(long serverId, long textChatId, long messageId) {
         DiscordApi api = SettingsController.getInstance().getDiscordApi();

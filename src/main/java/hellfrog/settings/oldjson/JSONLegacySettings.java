@@ -29,6 +29,9 @@ public class JSONLegacySettings {
     private final Map<Long, JSONServerStatistic> statByServer = new HashMap<>();
     private final Logger log = LogManager.getLogger("JSON legacy loader");
     private JSONCommonPreferences jsonCommonPreferences = new JSONCommonPreferences();
+    private boolean hasCommonPreferences = false;
+    private boolean hasServerPreferences = false;
+    private boolean hasServerStatistics = false;
 
     public JSONLegacySettings() {
         loadCommonSettings();
@@ -51,6 +54,7 @@ public class JSONLegacySettings {
 
             try (BufferedReader reader = Files.newBufferedReader(COMMON_SETTINGS, StandardCharsets.UTF_8)) {
                 jsonCommonPreferences = objectMapper.readValue(reader, JSONCommonPreferences.class);
+                hasCommonPreferences = true;
             } catch (IOException err) {
                 log.error("Unable to read legacy common settings from file \"" + COMMON_SETTINGS + "\": "
                         + err.getMessage(), err);
@@ -107,6 +111,10 @@ public class JSONLegacySettings {
 
                     prefByServer.put(serverId, serverPreferences);
 
+                    if (!hasServerPreferences) {
+                        hasServerPreferences = true;
+                    }
+
                 } catch (IOException err) {
                     log.error("Unable to read legacy server config settings file \"" + file + "\": "
                             + err.getMessage(), err);
@@ -140,6 +148,10 @@ public class JSONLegacySettings {
                         stat.setTextChatStats(new HashMap<>());
                     }
                     statByServer.put(serverId, stat);
+
+                    if (!hasServerStatistics) {
+                        hasServerStatistics = true;
+                    }
                 } catch (NullPointerException | IOException statReadErr) {
                     log.error("Unable to read legacy server statistics file " + entry + ": " + statReadErr);
                 }
@@ -159,5 +171,17 @@ public class JSONLegacySettings {
 
     public Map<Long, JSONServerStatistic> getStatByServer() {
         return Collections.unmodifiableMap(statByServer);
+    }
+
+    public boolean isHasCommonPreferences() {
+        return hasCommonPreferences;
+    }
+
+    public boolean isHasServerPreferences() {
+        return hasServerPreferences;
+    }
+
+    public boolean isHasServerStatistics() {
+        return hasServerStatistics;
     }
 }

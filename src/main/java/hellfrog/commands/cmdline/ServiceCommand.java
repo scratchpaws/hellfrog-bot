@@ -90,10 +90,16 @@ public class ServiceCommand
             .argName("text chat")
             .build();
 
+    private final Option executeQuery = Option.builder("q")
+            .longOpt("query")
+            .desc("Execute raw SQL query in the main DB")
+            .build();
+
     public ServiceCommand() {
         super(PREF, DESCRIPTIONS);
 
-        super.addCmdlineOption(stopBot, memInfo, botDate, runGc, runtimeShell, lastUsage, secureTransfer);
+        super.addCmdlineOption(stopBot, memInfo, botDate, runGc, runtimeShell, lastUsage, secureTransfer,
+                executeQuery);
 
         super.disableUpdateLastCommandUsage();
     }
@@ -147,9 +153,10 @@ public class ServiceCommand
         boolean runtimeShell = cmdline.hasOption(this.runtimeShell.getOpt());
         boolean lastUsageAction = cmdline.hasOption(this.lastUsage.getOpt());
         boolean secureTransfer = cmdline.hasOption(this.secureTransfer.getOpt());
+        boolean executeQuery = cmdline.hasOption(this.executeQuery.getOpt());
         String transferChat = cmdline.getOptionValue(this.secureTransfer.getOpt(), "");
 
-        if (stopAction ^ memInfo ^ getDate ^ runGc ^ runtimeShell ^ lastUsageAction ^ secureTransfer) {
+        if (stopAction ^ memInfo ^ getDate ^ runGc ^ runtimeShell ^ lastUsageAction ^ secureTransfer ^ executeQuery) {
 
             if (stopAction) {
                 doStopAction(event);
@@ -257,6 +264,10 @@ public class ServiceCommand
                     });
                 });
             }
+
+            if (executeQuery) {
+                doExecuteQuery(anotherLines, event);
+            }
         } else {
             showErrorMessage("Only one service command may be execute", event);
         }
@@ -286,6 +297,58 @@ public class ServiceCommand
         System.exit(0);
     }
 
+    private void doExecuteQuery(@NotNull ArrayList<String> anotherLines,
+                                @NotNull MessageCreateEvent event) {
+        BroadCast.sendBroadcastUnsafeUsageCE("run SQL query", event);
+
+        Optional<String> mayBeQuery = anotherLines.stream()
+                .reduce(CommonUtils::reduceNewLine);
+
+        mayBeQuery.ifPresentOrElse(query -> {
+            final String command = query.replaceAll("`{3}", "");
+            executeQueryAction(command, event.getChannel().getId());
+        }, () -> {
+            List<MessageAttachment> attachmentList = event.getMessage()
+                    .getAttachments();
+            if (attachmentList.size() > 0) {
+                attachmentList.forEach((attachment) -> {
+                    try {
+                        byte[] attach = attachment.downloadAsByteArray()
+                                .join();
+                        String buff;
+                        StringBuilder execScript = new StringBuilder();
+                        try (BufferedReader textReader = new BufferedReader(
+                                new InputStreamReader(new ByteArrayInputStream(attach), StandardCharsets.UTF_8))) {
+                            while ((buff = textReader.readLine()) != null) {
+                                execScript.append(buff)
+                                        .append('\n');
+                            }
+                        }
+                        executeQueryAction(execScript.toString(), event.getChannel().getId());
+                    } catch (Exception err) {
+                        new MessageBuilder()
+                                .append("Exception reached while attachment downloading:", MessageDecoration.BOLD)
+                                .appendNewLine()
+                                .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
+                                .send(event.getChannel());
+                    }
+                });
+            } else {
+                showErrorMessage("Query text required", event);
+            }
+        });
+    }
+
+    private void executeQueryAction(@NotNull final String queryTest, final long channelId) {
+        CompletableFuture.runAsync(() ->
+                Optional.ofNullable(SettingsController.getInstance()
+                        .getDiscordApi()).flatMap(api ->
+                        api.getTextChannelById(channelId)).ifPresent(channel -> {
+                    String result = SettingsController.getInstance().getMainDBController().executeRawQuery(queryTest);
+                    MessageUtils.sendLongMessage(result, channel);
+                }));
+    }
+
     private void doRunShellAction(ArrayList<String> anotherLines, MessageCreateEvent event) {
         BroadCast.sendBroadcastUnsafeUsageCE("call remote debug shell module", event);
 
@@ -294,12 +357,12 @@ public class ServiceCommand
 
         if (settingsController.isEnableRemoteDebug()) {
             Optional<String> shellCmd = anotherLines.stream()
-                    .reduce((s1, s2) -> s1 + " " + s2);
+                    .reduce(CommonUtils::reduceNewLine);
 
-            OptionalUtils.ifPresentOrElse(shellCmd, cmd -> {
+            shellCmd.ifPresentOrElse(cmd -> {
                 final String command = cmd.replaceAll("`{3}", "");
                 CompletableFuture.runAsync(() -> executeDebugCommand(command, channelId));
-            }, new Thread(() -> {
+            }, () -> {
                 List<MessageAttachment> attachmentList = event.getMessage()
                         .getAttachments();
                 if (attachmentList.size() > 0) {
@@ -328,7 +391,7 @@ public class ServiceCommand
                 } else {
                     showErrorMessage("Debug script required", event);
                 }
-            }));
+            });
 
         } else {
             showErrorMessage("Remote debug not allowed", event);
