@@ -2,59 +2,59 @@
 <Configuration status="info">
     <Appenders>
         <RollingFile name="plainLogger"
-                     fileName="logs/hellfrog_common.log"
-                     filePattern="logs/hellfrog_common_%d{yyyy-MM-dd}_%i.log.gz"
+                     fileName="logs/hellfrog_common_test.log"
+                     filePattern="logs/hellfrog_common_test_%d{yyyy-MM-dd}_%i.log.gz"
                      append="true">
             <PatternLayout>
                 <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%t] [%logger{36}] %msg%n</Pattern>
             </PatternLayout>
             <Policies>
-                <CronTriggeringPolicy schedule="0 0 0 * * ?" evaluateOnStartup="true"/>
+                <OnStartupTriggeringPolicy/>
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
         <RollingFile name="cmdLogger"
-                     fileName="logs/hellfrog_cmds.log"
-                     filePattern="logs/hellfrog_cmds_%d{yyyy-MM-dd}_%i.log.gz"
+                     fileName="logs/hellfrog_cmds_test.log"
+                     filePattern="logs/hellfrog_cmds_test_%d{yyyy-MM-dd}_%i.log.gz"
                      append="true">
             <PatternLayout>
                 <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] %msg%n</Pattern>
             </PatternLayout>
             <Policies>
-                <CronTriggeringPolicy schedule="0 0 0 * * ?" evaluateOnStartup="true"/>
+                <OnStartupTriggeringPolicy/>
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
         <RollingFile name="sqlLogger"
-                     fileName="logs/hellfrog_sql.log"
-                     filePattern="logs/hellfrog_sql_%d{yyyy-MM-dd}_%i.log.gz"
+                     fileName="logs/hellfrog_sql_test.log"
+                     filePattern="logs/hellfrog_sql_test_%d{yyyy-MM-dd}_%i.log.gz"
                      append="true">
             <PatternLayout>
                 <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%t] [%logger{36}] %msg%n</Pattern>
             </PatternLayout>
             <Policies>
-                <CronTriggeringPolicy schedule="0 0 0 * * ?" evaluateOnStartup="true"/>
+                <OnStartupTriggeringPolicy/>
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
     </Appenders>
     <Loggers>
-        <Logger name="Commands debug" level="info" additivity="false">
+        <Logger name="Commands debug" level="debug" additivity="false">
             <AppenderRef ref="cmdLogger"/>
         </Logger>
-        <Logger name="DB controller" level="info" additivity="false">
+        <Logger name="DB controller" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
-        <Logger name="Schema version checker" level="info" additivity="false">
+        <Logger name="Schema version checker" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
-        <Logger name="JSON legacy loader" level="info" additivity="false">
+        <Logger name="JSON legacy loader" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
-        <Logger name="Common preferences" level="info" additivity="false">
+        <Logger name="Common preferences" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
-        <Root level="info">
+        <Root level="debug">
             <AppenderRef ref="plainLogger"/>
         </Root>
     </Loggers>

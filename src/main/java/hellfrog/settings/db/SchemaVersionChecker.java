@@ -1,17 +1,14 @@
 package hellfrog.settings.db;
 
 import hellfrog.common.CommonUtils;
+import hellfrog.common.FromTextFile;
+import hellfrog.common.ResourcesLoader;
 import hellfrog.settings.oldjson.JSONCommonPreferences;
 import hellfrog.settings.oldjson.JSONLegacySettings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -21,15 +18,21 @@ class SchemaVersionChecker {
 
     private static final int CURRENT_SCHEMA_VERSION = 1;
     private static final String SCHEMA_VERSION_GET_QUERY = "PRAGMA user_version";
-    private static final String SCHEMA_CREATE_QUERY_1 = "schema_create_query_v1.sql";
 
+    private final boolean migrateOldSettings;
     private final Logger sqlLog = LogManager.getLogger("Schema version checker");
     private final Connection connection;
     private final MainDBController mainDBController;
 
-    SchemaVersionChecker(@NotNull MainDBController mainDBController) {
+    @FromTextFile(fileName = "sql/scheme_create_queries/schema_create_query_v1.sql")
+    private String schemaCreateQuery1 = null;
+
+    SchemaVersionChecker(@NotNull MainDBController mainDBController,
+                         boolean migrateOldSettings) {
+        this.migrateOldSettings = migrateOldSettings;
         this.mainDBController = mainDBController;
         this.connection = mainDBController.getConnection();
+        ResourcesLoader.initFileResources(this, SchemaVersionChecker.class);
     }
 
     void checkSchemaVersion() throws SQLException {
@@ -52,46 +55,28 @@ class SchemaVersionChecker {
     private void initSchemaVersion() throws SQLException {
         sqlLog.info("Initial scheme " + CURRENT_SCHEMA_VERSION);
         sqlLog.info("Searching legacy settings into JSON files");
-        writeSchema(SCHEMA_CREATE_QUERY_1);
-        convertLegacy();
+        writeSchema(schemaCreateQuery1, CURRENT_SCHEMA_VERSION);
+        if (migrateOldSettings) {
+            convertLegacy();
+        }
     }
 
-    private void writeSchema(@NotNull String name) throws SQLException {
-        sqlLog.info("Write schema from " + name);
-        ClassLoader classLoader = this.getClass().getClassLoader();
-        InputStream queryStream = classLoader.getResourceAsStream(name);
-        if (queryStream == null) {
-            queryStream = classLoader.getResourceAsStream("/" + name);
-        }
-        if (queryStream != null) {
-            StringBuilder stringBuilder = new StringBuilder();
-            try (BufferedReader queryReader = new BufferedReader(new InputStreamReader(queryStream, StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = queryReader.readLine()) != null)
-                    stringBuilder.append(line).append('\n');
-            } catch (IOException err) {
-                sqlLog.fatal("Unable to read resource file " + name + " with initial schema query: "
-                        + err.getMessage(), err);
-                throw new SQLException("Init error", err);
-            }
-            String[] buildQueries = stringBuilder.toString().split(";");
-            try (Statement statement = connection.createStatement()) {
-                for (String query : buildQueries) {
-                    try {
-                        statement.executeUpdate(query);
-                    } catch (Exception updateErr) {
-                        sqlLog.fatal("Unable to execute init SQL query \"" + query + "\": " + updateErr.getMessage(),
-                                updateErr);
-                        throw new SQLException("Init error", updateErr);
-                    }
+    private void writeSchema(@NotNull String schemaQuery, int schemaVersion) throws SQLException {
+        sqlLog.info("Write schema from " + schemaVersion);
+        String[] buildQueries = schemaQuery.split(";");
+        try (Statement statement = connection.createStatement()) {
+            for (String query : buildQueries) {
+                try {
+                    statement.executeUpdate(query);
+                } catch (Exception updateErr) {
+                    sqlLog.fatal("Unable to execute init SQL query \"" + query + "\": " + updateErr.getMessage(),
+                            updateErr);
+                    throw new SQLException("Init error", updateErr);
                 }
-            } catch (SQLException err) {
-                sqlLog.fatal("Unable to create statement: " + err.getMessage(), err);
-                throw new SQLException("Init error", err);
             }
-        } else {
-            sqlLog.fatal("Unable to found resource file " + name);
-            throw new SQLException("Init error");
+        } catch (SQLException err) {
+            sqlLog.fatal("Unable to create statement: " + err.getMessage(), err);
+            throw new SQLException("Init error", err);
         }
     }
 
@@ -102,18 +87,21 @@ class SchemaVersionChecker {
             sqlLog.info("Attempt to legacy JSON settings conversion");
             if (jsonLegacySettings.isHasCommonPreferences()) {
                 JSONCommonPreferences oldCommonPreferences = jsonLegacySettings.getJsonCommonPreferences();
-                DBCommonPreferences newCommonPreferences = mainDBController.getCommonPreferences();
+                CommonPreferencesDAO newCommonPreferences = mainDBController.getCommonPreferences();
                 if (CommonUtils.isTrStringNotEmpty(oldCommonPreferences.getApiKey())) {
                     sqlLog.info("Common preferences: found API key");
                     newCommonPreferences.setApiKey(oldCommonPreferences.getApiKey());
+                    newCommonPreferences.getApiKey();
                 }
                 if (CommonUtils.isTrStringNotEmpty(oldCommonPreferences.getCommonBotPrefix())) {
                     sqlLog.info("Common preferences: found global bot prefix");
                     newCommonPreferences.setBotPrefix(oldCommonPreferences.getCommonBotPrefix());
+                    newCommonPreferences.getBotPrefix();
                 }
                 if (CommonUtils.isTrStringNotEmpty(oldCommonPreferences.getBotName())) {
                     sqlLog.info("Common preferences: found bot name");
                     newCommonPreferences.setBotName(oldCommonPreferences.getBotName());
+                    newCommonPreferences.getBotName();
                 }
             }
         }

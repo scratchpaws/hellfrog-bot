@@ -7,6 +7,8 @@ import hellfrog.core.ServerStatisticTask;
 import hellfrog.core.SessionsCheckTask;
 import hellfrog.core.VoteController;
 import hellfrog.settings.db.MainDBController;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -28,6 +30,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class SettingsController {
 
+    private static final Logger log = LogManager.getLogger("Settings controller");
     private final Path SETTINGS_PATH = Paths.get("./settings/");
 
     private final Path COMMON_SETTINGS = SETTINGS_PATH.resolve("common.json");
@@ -47,11 +50,17 @@ public class SettingsController {
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
     private volatile Instant lastCommandUsage = null;
-    private MainDBController mainDBController = new MainDBController();
+    private MainDBController mainDBController;
 
     private static final SettingsController instance = new SettingsController();
 
     private SettingsController() {
+        try {
+            mainDBController = new MainDBController();
+        } catch (Exception err) {
+            log.fatal("Terminated", err);
+            System.exit(2);
+        }
         loadCommonSettings();
         loadServersSettings();
         voteController = new VoteController();

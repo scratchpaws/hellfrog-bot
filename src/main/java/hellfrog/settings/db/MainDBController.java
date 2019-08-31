@@ -21,55 +21,52 @@ public class MainDBController
     private final Logger sqlLog = LogManager.getLogger("DB controller");
     private final Logger mainLog = LogManager.getLogger("Main");
     private Connection connection;
-    private DBCommonPreferences commonPreferences = null;
+    private CommonPreferencesDAO commonPreferences = null;
 
-    public MainDBController() {
+    public MainDBController() throws IOException, SQLException {
         String MAIN_DB_FILE_NAME = "hellfrog_main.sqlite3";
-        init(MAIN_DB_FILE_NAME);
+        init(MAIN_DB_FILE_NAME, true);
     }
 
-    public MainDBController(@NotNull String anotherName) {
-        init(anotherName);
+    public MainDBController(@NotNull String anotherName,
+                            boolean migrateOldSettings) throws IOException, SQLException {
+        init(anotherName, migrateOldSettings);
     }
 
-    private void init(@NotNull String dbFileName) {
+    private void init(@NotNull String dbFileName,
+                      boolean migrateOldSettings) throws IOException, SQLException {
+
         Path pathToDb = SETTINGS_PATH.resolve(dbFileName);
         String JDBC_PREFIX = "jdbc:sqlite:";
         String connectionURL = JDBC_PREFIX + pathToDb.toString();
         checkSettingsPath();
         createConnection(connectionURL);
-        try {
-            new SchemaVersionChecker(this).checkSchemaVersion();
-        } catch (SQLException err) {
-            mainLog.fatal("Terminated. See sql log.");
-            System.exit(2);
-        }
+        new SchemaVersionChecker(this, migrateOldSettings).checkSchemaVersion();
     }
 
     Connection getConnection() {
         return this.connection;
     }
 
-    private void checkSettingsPath() {
+    private void checkSettingsPath() throws IOException {
         try {
             if (!Files.exists(SETTINGS_PATH) || !Files.isDirectory(SETTINGS_PATH)) {
                 Files.createDirectory(SETTINGS_PATH);
             }
         } catch (IOException err) {
             mainLog.fatal("Unable to create settings directory: " + err);
-            System.exit(2);
+            throw err;
         }
     }
 
-    private void createConnection(@NotNull String connectionURL) {
+    private void createConnection(@NotNull String connectionURL) throws SQLException {
         try {
             connection = DriverManager.getConnection(connectionURL);
-            commonPreferences = new DBCommonPreferences(connection);
+            commonPreferences = new CommonPreferencesDAO(connection);
             sqlLog.info("Main database opened");
-        } catch (Exception err) {
+        } catch (SQLException err) {
             sqlLog.fatal("Unable to open main database: " + err.getMessage(), err);
-            mainLog.fatal("Terminated. See sql log.");
-            System.exit(2);
+            throw err;
         }
     }
 
@@ -135,7 +132,7 @@ public class MainDBController
         }
     }
 
-    public DBCommonPreferences getCommonPreferences() {
+    public CommonPreferencesDAO getCommonPreferences() {
         return commonPreferences;
     }
 }
