@@ -54,6 +54,9 @@
         <Logger name="Common preferences" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
+        <Logger name="Bot owners" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
         <Root level="debug">
             <AppenderRef ref="plainLogger"/>
         </Root>

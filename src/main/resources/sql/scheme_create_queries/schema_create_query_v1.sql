@@ -41,7 +41,6 @@ CREATE TABLE "vote_points" (
 CREATE TABLE "bot_owners" (
 	"user_id"	INTEGER NOT NULL UNIQUE,
 	"create_date"	INTEGER NOT NULL DEFAULT 0,
-    "update_date"	INTEGER NOT NULL DEFAULT 0,
 	PRIMARY KEY("user_id")
 );
 CREATE TABLE "user_rights" (

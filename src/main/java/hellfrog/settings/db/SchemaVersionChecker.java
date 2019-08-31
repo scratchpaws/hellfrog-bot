@@ -87,7 +87,8 @@ class SchemaVersionChecker {
             sqlLog.info("Attempt to legacy JSON settings conversion");
             if (jsonLegacySettings.isHasCommonPreferences()) {
                 JSONCommonPreferences oldCommonPreferences = jsonLegacySettings.getJsonCommonPreferences();
-                CommonPreferencesDAO newCommonPreferences = mainDBController.getCommonPreferences();
+                CommonPreferencesDAO newCommonPreferences = mainDBController.getCommonPreferencesDAO();
+                BotOwnersDAO botOwnersDAO = mainDBController.getBotOwnersDAO();
                 if (CommonUtils.isTrStringNotEmpty(oldCommonPreferences.getApiKey())) {
                     sqlLog.info("Common preferences: found API key");
                     newCommonPreferences.setApiKey(oldCommonPreferences.getApiKey());
@@ -102,6 +103,11 @@ class SchemaVersionChecker {
                     sqlLog.info("Common preferences: found bot name");
                     newCommonPreferences.setBotName(oldCommonPreferences.getBotName());
                     newCommonPreferences.getBotName();
+                }
+                if (oldCommonPreferences.getGlobalBotOwners() != null
+                    && !oldCommonPreferences.getGlobalBotOwners().isEmpty()) {
+                    sqlLog.info("Common preferences: found global bot owners");
+                    oldCommonPreferences.getGlobalBotOwners().forEach(botOwnersDAO::addToOwners);
                 }
             }
         }

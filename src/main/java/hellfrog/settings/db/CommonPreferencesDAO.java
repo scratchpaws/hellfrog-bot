@@ -1,5 +1,6 @@
 package hellfrog.settings.db;
 
+import hellfrog.common.CommonUtils;
 import hellfrog.common.FromTextFile;
 import hellfrog.common.ResourcesLoader;
 import org.apache.logging.log4j.LogManager;
@@ -10,10 +11,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Calendar;
-import java.util.GregorianCalendar;
 import java.util.Optional;
-import java.util.TimeZone;
 
 /**
  * Менеджер основных параметров
@@ -46,7 +44,7 @@ public class CommonPreferencesDAO {
     @FromTextFile(fileName = "sql/common_preferences/update_value_query.sql")
     private String updateQuery = null;
 
-    public CommonPreferencesDAO(@NotNull Connection connection) {
+    CommonPreferencesDAO(@NotNull Connection connection) {
         this.connection = connection;
         ResourcesLoader.initFileResources(this, CommonPreferencesDAO.class);
     }
@@ -80,8 +78,7 @@ public class CommonPreferencesDAO {
             try (PreparedStatement statement = connection.prepareStatement(insertQuery)) {
                 statement.setString(1, key);
                 statement.setString(2, value);
-                Calendar calendar = GregorianCalendar.getInstance(TimeZone.getTimeZone("UTC"));
-                long createDate = calendar.getTimeInMillis();
+                long createDate = CommonUtils.getCurrentGmtTimeAsMillis();
                 statement.setLong(3, createDate);
                 statement.setLong(4, createDate);
                 if (log.isDebugEnabled()) {
@@ -102,8 +99,7 @@ public class CommonPreferencesDAO {
         if (override) {
             try (PreparedStatement statement = connection.prepareStatement(updateQuery)) {
                 statement.setString(1, value);
-                Calendar calendar = GregorianCalendar.getInstance(TimeZone.getTimeZone("UTC"));
-                long updateDate = calendar.getTimeInMillis();
+                long updateDate = CommonUtils.getCurrentGmtTimeAsMillis();
                 statement.setLong(2, updateDate);
                 statement.setString(3, key);
                 if (log.isDebugEnabled()) {

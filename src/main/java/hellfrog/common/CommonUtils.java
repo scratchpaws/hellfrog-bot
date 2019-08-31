@@ -65,16 +65,27 @@ public class CommonUtils {
         }
     }
 
+    public static TimeZone getUtcTimeZone() {
+        return TimeZone.getTimeZone("UTC");
+    }
+
+    public static ZoneId getUtcZoneId() {
+        return ZoneId.of("UTC");
+    }
+
     public static String getCurrentGmtTimeAsString() {
-        TimeZone tz = TimeZone.getTimeZone("GMT");
-        Calendar current = Calendar.getInstance(tz);
+        Calendar current = Calendar.getInstance(getUtcTimeZone());
         return String.format("%tF %<tT (UTC)", current);
     }
 
     public static String getCurrentGmtTimeAsNewlineString() {
-        TimeZone tz = TimeZone.getTimeZone("GMT");
-        Calendar current = Calendar.getInstance(tz);
+        Calendar current = Calendar.getInstance(getUtcTimeZone());
         return String.format("%tF\n%<tT (UTC)", current);
+    }
+
+    public static long getCurrentGmtTimeAsMillis() {
+        Calendar current = Calendar.getInstance(getUtcTimeZone());
+        return current.getTimeInMillis();
     }
 
     @Contract(pure = true)
@@ -138,7 +149,7 @@ public class CommonUtils {
     public static long getLatestDate(Instant entityDateTime, long lastDateOfCalendar) {
         Calendar cl = instantToCalendar(entityDateTime);
         if (lastDateOfCalendar >= 0) {
-            Calendar current = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+            Calendar current = Calendar.getInstance(getUtcTimeZone());
             current.setTimeInMillis(lastDateOfCalendar);
             if (cl.after(current)) {
                 return cl.getTimeInMillis();
@@ -151,7 +162,7 @@ public class CommonUtils {
     }
 
     public static Calendar instantToCalendar(Instant instant) {
-        ZonedDateTime zdt = ZonedDateTime.ofInstant(instant, ZoneId.of("UTC"));
+        ZonedDateTime zdt = ZonedDateTime.ofInstant(instant, getUtcZoneId());
         return GregorianCalendar.from(zdt);
     }
 

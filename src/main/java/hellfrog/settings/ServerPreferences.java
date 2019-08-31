@@ -19,7 +19,7 @@ public class ServerPreferences
     /**
      * Префикс для вызова команд бота
      */
-    private volatile String botPrefix = "h!f";
+    private volatile String botPrefix = ">>";
     private ConcurrentHashMap<String, CommandRights> srvCommandRights = new ConcurrentHashMap<>();
     private CopyOnWriteArrayList<ActiveVote> activeVotes = new CopyOnWriteArrayList<>();
     private volatile Boolean joinLeaveDisplay = false;
