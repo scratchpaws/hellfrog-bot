@@ -57,6 +57,9 @@
         <Logger name="Bot owners" level="info" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
+        <Logger name="Server preferences" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
         <Root level="info">
             <AppenderRef ref="plainLogger"/>
         </Root>

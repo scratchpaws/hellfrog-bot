@@ -5,6 +5,7 @@ import hellfrog.common.FromTextFile;
 import hellfrog.common.ResourcesLoader;
 import hellfrog.settings.oldjson.JSONCommonPreferences;
 import hellfrog.settings.oldjson.JSONLegacySettings;
+import hellfrog.settings.oldjson.JSONServerPreferences;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -13,6 +14,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
+import java.util.Map;
 
 class SchemaVersionChecker {
 
@@ -90,24 +93,54 @@ class SchemaVersionChecker {
                 CommonPreferencesDAO newCommonPreferences = mainDBController.getCommonPreferencesDAO();
                 BotOwnersDAO botOwnersDAO = mainDBController.getBotOwnersDAO();
                 if (CommonUtils.isTrStringNotEmpty(oldCommonPreferences.getApiKey())) {
-                    sqlLog.info("Common preferences: found API key");
+                    sqlLog.info("Common preferences: found API key: {}", oldCommonPreferences.getApiKey());
                     newCommonPreferences.setApiKey(oldCommonPreferences.getApiKey());
-                    newCommonPreferences.getApiKey();
                 }
                 if (CommonUtils.isTrStringNotEmpty(oldCommonPreferences.getCommonBotPrefix())) {
-                    sqlLog.info("Common preferences: found global bot prefix");
+                    sqlLog.info("Common preferences: found global bot prefix: {}",
+                            oldCommonPreferences.getCommonBotPrefix());
                     newCommonPreferences.setBotPrefix(oldCommonPreferences.getCommonBotPrefix());
-                    newCommonPreferences.getBotPrefix();
                 }
                 if (CommonUtils.isTrStringNotEmpty(oldCommonPreferences.getBotName())) {
-                    sqlLog.info("Common preferences: found bot name");
+                    sqlLog.info("Common preferences: found bot name: {}", oldCommonPreferences.getBotName());
                     newCommonPreferences.setBotName(oldCommonPreferences.getBotName());
-                    newCommonPreferences.getBotName();
                 }
                 if (oldCommonPreferences.getGlobalBotOwners() != null
                     && !oldCommonPreferences.getGlobalBotOwners().isEmpty()) {
-                    sqlLog.info("Common preferences: found global bot owners");
+                    sqlLog.info("Common preferences: found global bot owners: {}",
+                            oldCommonPreferences.getGlobalBotOwners().stream()
+                                    .map(String::valueOf)
+                                    .reduce(CommonUtils::reduceConcat)
+                                    .orElse(""));
                     oldCommonPreferences.getGlobalBotOwners().forEach(botOwnersDAO::addToOwners);
+                }
+            }
+            if (jsonLegacySettings.isHasServerPreferences()) {
+                ServerPreferencesDAO serverPreferencesDAO = mainDBController.getServerPreferencesDAO();
+                for (Map.Entry<Long, JSONServerPreferences> serverPref : jsonLegacySettings.getPrefByServer().entrySet()) {
+                    long serverId = serverPref.getKey();
+                    JSONServerPreferences jsonServerPreferences = serverPref.getValue();
+                    sqlLog.info("Found preferences for server {}", serverId);
+
+                    String botPrefix = jsonServerPreferences.getBotPrefix();
+                    if (CommonUtils.isTrStringNotEmpty(botPrefix)) {
+                        sqlLog.info("Server {}: found bot prefix: {}", serverId, botPrefix);
+                        serverPreferencesDAO.setPrefix(serverId, botPrefix);
+                    }
+
+                    boolean isJoinLeaveDisplay = jsonServerPreferences.isJoinLeaveDisplay();
+                    sqlLog.info("Server {}: found join/leave display state: {}", serverId, isJoinLeaveDisplay);
+                    serverPreferencesDAO.setJoinLeaveDisplay(serverId, isJoinLeaveDisplay);
+
+                    long joinLeaveChannel = jsonServerPreferences.getJoinLeaveChannel();
+                    if (joinLeaveChannel > 0L) {
+                        sqlLog.info("Server {}: found join/leave channel: {}", serverId, joinLeaveChannel);
+                        serverPreferencesDAO.setJoinLeaveChannel(serverId, joinLeaveChannel);
+                    }
+
+                    boolean isNewAclMode = jsonServerPreferences.getNewAclMode();
+                    sqlLog.info("Server {}: found new ACL state: {}", serverId, isNewAclMode);
+                    serverPreferencesDAO.setNewAclMode(serverId, isNewAclMode);
                 }
             }
         }

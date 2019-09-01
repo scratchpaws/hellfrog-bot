@@ -169,4 +169,26 @@ CREATE UNIQUE INDEX "uniq_txtchan_user_total_stat" ON "text_chan_user_total_stat
 	"text_channel_id",
 	"user_id"
 );
+CREATE TABLE "persistence_roles" (
+	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+	"server_id"	INTEGER NOT NULL,
+	"user_id"	INTEGER NOT NULL,
+	"role_id"	INTEGER NOT NULL,
+	"create_date"	INTEGER NOT NULL DEFAULT 0,
+    "update_date"	INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX "uniq_persist_role" ON "persistence_roles" (
+	"server_id",
+	"user_id",
+	"role_id"
+);
+CREATE TABLE "auto_promotes" (
+	"server_id"	INTEGER NOT NULL UNIQUE,
+	"role_id"	INTEGER NOT NULL,
+	"timeout"	INTEGER NOT NULL DEFAULT 0,
+	"enabled"	INTEGER NOT NULL DEFAULT 0,
+	"create_date"	INTEGER NOT NULL DEFAULT 0,
+	"update_date"	INTEGER NOT NULL DEFAULT 0,
+	PRIMARY KEY("server_id")
+);
 PRAGMA user_version = 1

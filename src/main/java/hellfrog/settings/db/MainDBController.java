@@ -23,6 +23,7 @@ public class MainDBController
     private Connection connection;
     private CommonPreferencesDAO commonPreferencesDAO = null;
     private BotOwnersDAO botOwnersDAO = null;
+    private ServerPreferencesDAO serverPreferencesDAO = null;
 
     public MainDBController() throws IOException, SQLException {
         String MAIN_DB_FILE_NAME = "hellfrog_main.sqlite3";
@@ -65,6 +66,7 @@ public class MainDBController
             connection = DriverManager.getConnection(connectionURL);
             commonPreferencesDAO = new CommonPreferencesDAO(connection);
             botOwnersDAO = new BotOwnersDAO(connection);
+            serverPreferencesDAO = new ServerPreferencesDAO(connection);
             sqlLog.info("Main database opened");
         } catch (SQLException err) {
             sqlLog.fatal("Unable to open main database: " + err.getMessage(), err);
@@ -140,5 +142,9 @@ public class MainDBController
 
     public BotOwnersDAO getBotOwnersDAO() {
         return botOwnersDAO;
+    }
+
+    public ServerPreferencesDAO getServerPreferencesDAO() {
+        return serverPreferencesDAO;
     }
 }

@@ -39,20 +39,6 @@ public class ServerPreferencesDAO {
     static final long JOIN_LEAVE_CHANNEL_ID_DEFAULT = 0L;
     private static final String NEW_ACL_MODE_KEY = "new.acl.mode";
     static final boolean NEW_ACL_MODE_DEFAULT = true;
-    private static final String AUTO_PROMOTE_ENABLED_KEY = "auto.promote.enabled";
-    static final boolean AUTO_PROMOTE_ENABLED_DEFAULT = false;
-    private static final String AUTO_PROMOTE_ROLE_ID_KEY = "auto.promote.role";
-    static final long AUTO_PROMOTE_ROLE_ID_DEFAULT = 0L;
-    private static final String AUTO_PROMOTE_TIMEOUT_KEY = "auto.promote.timeout";
-    static final long AUTO_PROMOTE_TIMEOUT_DEFAULT = 0L;
-    private static final String COMMUNITY_CONTROL_THRESHOLD_KEY = "com.control.threshold";
-    static final long COMMUNITY_CONTROL_THRESHOLD_DEFAULT = 0L;
-    private static final String COMMUNITY_CONTROL_ROLE_ID_KEY = "com.control.role";
-    static final long COMMUNITY_CONTROL_ROLE_ID_DEFAULT = 0L;
-    private static final String COMMUNITY_CONTROL_CUSTOM_EMOJI_ID_KEY = "com.control.emoji.id";
-    static final long COMMUNITY_CONTROL_CUSTOM_EMOJI_ID_DEFAULT = 0L;
-    private static final String COMMUNITY_CONTROL_UNICODE_EMOJI_KEY = "com.control.unicode.emoji";
-    static final String COMMUNITY_CONTROL_UNICODE_EMOJI_DEFAULT = "";
 
     private final Logger log = LogManager.getLogger("Server preferences");
     private final Connection connection;
@@ -217,5 +203,4 @@ public class ServerPreferencesDAO {
     public boolean setNewAclMode(long serverId, boolean isNewMode) {
         return setBooleanValue(serverId, NEW_ACL_MODE_KEY, isNewMode, NEW_ACL_MODE_DEFAULT);
     }
-
 }

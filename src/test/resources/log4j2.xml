@@ -11,7 +11,7 @@
             <Policies>
                 <OnStartupTriggeringPolicy/>
             </Policies>
-            <DefaultRolloverStrategy max="10"/>
+            <DefaultRolloverStrategy max="2"/>
         </RollingFile>
         <RollingFile name="cmdLogger"
                      fileName="logs/hellfrog_cmds_test.log"
@@ -23,7 +23,7 @@
             <Policies>
                 <OnStartupTriggeringPolicy/>
             </Policies>
-            <DefaultRolloverStrategy max="10"/>
+            <DefaultRolloverStrategy max="2"/>
         </RollingFile>
         <RollingFile name="sqlLogger"
                      fileName="logs/hellfrog_sql_test.log"
@@ -35,7 +35,7 @@
             <Policies>
                 <OnStartupTriggeringPolicy/>
             </Policies>
-            <DefaultRolloverStrategy max="10"/>
+            <DefaultRolloverStrategy max="2"/>
         </RollingFile>
     </Appenders>
     <Loggers>
@@ -55,6 +55,9 @@
             <AppenderRef ref="sqlLogger"/>
         </Logger>
         <Logger name="Bot owners" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Server preferences" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
         <Root level="debug">
