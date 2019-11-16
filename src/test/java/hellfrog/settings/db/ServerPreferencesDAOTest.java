@@ -1,7 +1,6 @@
 package hellfrog.settings.db;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -15,12 +14,7 @@ public class ServerPreferencesDAOTest {
 
     private static final Path SETTINGS_PATH = Paths.get("./settings/");
     private static final String TEST_DB_NAME = "test.sqlite3";
-
-    @BeforeEach
-    public void dropPreviousDb() throws Exception {
-        Path tstBase = SETTINGS_PATH.resolve(TEST_DB_NAME);
-        Files.deleteIfExists(tstBase);
-    }
+    private static final Path tstBase = SETTINGS_PATH.resolve(TEST_DB_NAME);
 
     @Test
     public void testValues() throws Exception {
@@ -37,7 +31,7 @@ public class ServerPreferencesDAOTest {
             }
         }
 
-
+        Files.deleteIfExists(tstBase);
         try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
             ServerPreferencesDAO preferencesDAO = mainDBController.getServerPreferencesDAO();
 

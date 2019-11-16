@@ -41,16 +41,6 @@ public class MainDBController
         Path pathToDb = SETTINGS_PATH.resolve(dbFileName);
         String JDBC_PREFIX = "jdbc:sqlite:";
         String connectionURL = JDBC_PREFIX + pathToDb.toString();
-        checkSettingsPath();
-        createConnection(connectionURL);
-        new SchemaVersionChecker(this, migrateOldSettings).checkSchemaVersion();
-    }
-
-    Connection getConnection() {
-        return this.connection;
-    }
-
-    private void checkSettingsPath() throws IOException {
         try {
             if (!Files.exists(SETTINGS_PATH) || !Files.isDirectory(SETTINGS_PATH)) {
                 Files.createDirectory(SETTINGS_PATH);
@@ -59,9 +49,6 @@ public class MainDBController
             mainLog.fatal("Unable to create settings directory: " + err);
             throw err;
         }
-    }
-
-    private void createConnection(@NotNull String connectionURL) throws SQLException {
         try {
             connection = DriverManager.getConnection(connectionURL);
             commonPreferencesDAO = new CommonPreferencesDAO(connection);
@@ -72,6 +59,11 @@ public class MainDBController
             sqlLog.fatal("Unable to open main database: " + err.getMessage(), err);
             throw err;
         }
+        new SchemaVersionChecker(this, migrateOldSettings).checkSchemaVersion();
+    }
+
+    Connection getConnection() {
+        return this.connection;
     }
 
     public String executeRawQuery(@Nullable String rawQuery) {
