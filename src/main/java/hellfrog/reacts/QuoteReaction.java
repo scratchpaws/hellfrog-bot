@@ -122,7 +122,7 @@ public class QuoteReaction
         try {
             new MessageBuilder()
                     .setEmbed(embedBuilder)
-                    .send(textChannel).get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
+                    .send(textChannel).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
 
             List<Embed> quotedEmbeds = sourceMessage.getEmbeds().stream()
                     .filter(embed -> embed.getProvider().isEmpty())
@@ -132,7 +132,7 @@ public class QuoteReaction
                 for (Embed embed : quotedEmbeds) {
                     new MessageBuilder()
                             .setEmbed(embed.toBuilder())
-                            .send(textChannel).get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
+                            .send(textChannel).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                 }
             }
             if (!extractedUrls.isEmpty())

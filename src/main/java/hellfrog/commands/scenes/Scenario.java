@@ -457,7 +457,7 @@ public abstract class Scenario
             return Optional.ofNullable(new MessageBuilder()
                     .setEmbed(embedBuilder)
                     .send(target)
-                    .get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS));
+                    .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT));
         } catch (Exception err) {
             log.error("Unable to send message: " + err.getMessage(), err);
             return Optional.empty();
@@ -484,15 +484,15 @@ public abstract class Scenario
                 TextChannel textChannel = mayBeTextChannel.get();
                 try {
                     Message message = textChannel.getMessageById(sessionState.getMessageId())
-                            .get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS);
+                            .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                     try {
-                        message.removeAllReactions().get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS);
+                        message.removeAllReactions().get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                     } catch (Exception delErr) {
                         log.error("Unable to send message: " + delErr.getMessage(), delErr);
                         return Optional.empty();
                     }
                     try {
-                        message.edit(embedBuilder).get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS);
+                        message.edit(embedBuilder).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                         return Optional.of(message);
                     } catch (Exception sendErr) {
                         log.error("Unable to send message: " + sendErr.getMessage(), sendErr);
@@ -528,7 +528,7 @@ public abstract class Scenario
         if (existsResolvedEmoji) {
             for (KnownCustomEmoji knownCustomEmoji : resolvedEmojies) {
                 try {
-                    message.addReaction(knownCustomEmoji).get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS);
+                    message.addReaction(knownCustomEmoji).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                 } catch (Exception err) {
                     log.error("Unable to add reaction: " + err.getMessage(), err);
                     success = false;
@@ -538,7 +538,7 @@ public abstract class Scenario
         if (existsUnicodeEmoji) {
             for (String unicodeEmoji : unicodeEmojies) {
                 try {
-                    message.addReaction(unicodeEmoji).get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS);
+                    message.addReaction(unicodeEmoji).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                 } catch (Exception err) {
                     log.error("Unable to add reaction: " + err.getMessage(), err);
                     success = false;
@@ -563,9 +563,9 @@ public abstract class Scenario
             TextChannel textChannel = mayBeChannel.get();
             try {
                 Message msg = textChannel.getMessageById(sessionState.getMessageId())
-                        .get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS);
+                        .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                 try {
-                    msg.removeAllReactions().get(OP_WAITING_TIMEOUT, TimeUnit.MILLISECONDS);
+                    msg.removeAllReactions().get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                 } catch (Exception delErr) {
                     log.error("Unable to delete all reactions by message: channel id: "
                             + sessionState.getTextChannelId() + ", message id: "

@@ -37,7 +37,7 @@ public class UserCachedData
             String[] nameEl = avatarName.split("\\.");
             if (nameEl.length > 0) {
                 avatarExt = nameEl[nameEl.length - 1];
-                avatarBytes = avatar.asByteArray().get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
+                avatarBytes = avatar.asByteArray().get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                 if (avatarBytes.length > 0) {
                     hasAvatarData = true;
                 }

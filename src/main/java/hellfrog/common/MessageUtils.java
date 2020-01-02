@@ -171,7 +171,7 @@ public class MessageUtils
             if (attachment.getSize() > MAX_FILE_SIZE) continue;
             try {
                 String name = attachment.getFileName();
-                byte[] attachBytes = attachment.downloadAsByteArray().get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
+                byte[] attachBytes = attachment.downloadAsByteArray().get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                 result.add(new InMemoryAttach(name, attachBytes));
             } catch (Exception ignore) {
             }
@@ -231,7 +231,7 @@ public class MessageUtils
                 try {
                     new MessageBuilder()
                             .addAttachment(attach.getBytes(), attach.getFileName())
-                            .send(ch).get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
+                            .send(ch).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                 } catch (Exception ignore) {}
             }
         }

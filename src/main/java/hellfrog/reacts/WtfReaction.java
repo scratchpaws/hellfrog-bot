@@ -124,7 +124,7 @@ public class WtfReaction
         try {
             User reporterUser = server.getApi()
                     .getUserById(reporter)
-                    .get(OP_WAITING_TIMEOUT, TimeUnit.SECONDS);
+                    .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
             String reporterName = server.getMemberById(reporter).map(server::getDisplayName)
                     .orElse(reporterUser.getName());
             String value = wtfMap.getNameValues().get(reporter);
