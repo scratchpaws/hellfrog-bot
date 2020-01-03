@@ -57,7 +57,7 @@ public class EventsListener
         ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener, CommonConstants {
 
-    private static final String VERSION_STRING = "2020-01-02";
+    private static final String VERSION_STRING = "2020-01-03";
 
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
@@ -335,14 +335,21 @@ public class EventsListener
 
     void onReady() {
         DiceReaction.rebuildRoflIndexes();
-        Optional<DiscordApi> mayBeApi = Optional.ofNullable(SettingsController.getInstance().getDiscordApi());
+        final SettingsController settingsController = SettingsController.getInstance();
+        final long highRollImagesChannelId = settingsController.getMainDBController()
+                .getCommonPreferencesDAO()
+                .getHighRollChannelId();
+        final long lowRollImagesChannelId = settingsController.getMainDBController()
+                .getCommonPreferencesDAO()
+                .getLowRollChannelId();
+        Optional<DiscordApi> mayBeApi = Optional.ofNullable(settingsController.getDiscordApi());
         mayBeApi.ifPresentOrElse(discordApi -> {
-            discordApi.getServerTextChannelById(HIGH_ROLL_IMAGES_CHANNEL).ifPresent(textChannel -> {
+            discordApi.getServerTextChannelById(highRollImagesChannelId).ifPresent(textChannel -> {
                 textChannel.addMessageCreateListener(event -> DiceReaction.rebuildRoflIndexes());
                 textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes());
                 textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes());
             });
-            discordApi.getServerTextChannelById(LOG_ROLL_IMAGES_CHANNEL).ifPresent(textChannel -> {
+            discordApi.getServerTextChannelById(lowRollImagesChannelId).ifPresent(textChannel -> {
                 textChannel.addMessageCreateListener(event -> DiceReaction.rebuildRoflIndexes());
                 textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes());
                 textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes());

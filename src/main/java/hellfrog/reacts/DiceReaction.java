@@ -264,10 +264,17 @@ public class DiceReaction
     }
 
     public static void rebuildRoflIndexes() {
-        Optional<DiscordApi> mayBeApi = Optional.ofNullable(SettingsController.getInstance().getDiscordApi());
+        final SettingsController settingsController = SettingsController.getInstance();
+        final long highRollImagesChannelId = settingsController.getMainDBController()
+                .getCommonPreferencesDAO()
+                .getHighRollChannelId();
+        final long lowRollImagesChannelId = settingsController.getMainDBController()
+                .getCommonPreferencesDAO()
+                .getLowRollChannelId();
+        Optional<DiscordApi> mayBeApi = Optional.ofNullable(settingsController.getDiscordApi());
         mayBeApi.ifPresentOrElse(discordApi -> {
             List<String> highRoflUrls = new ArrayList<>();
-            discordApi.getServerTextChannelById(HIGH_ROLL_IMAGES_CHANNEL).ifPresentOrElse(textChannel -> {
+            discordApi.getServerTextChannelById(highRollImagesChannelId).ifPresentOrElse(textChannel -> {
                 if (textChannel.canYouReadMessageHistory()
                         && textChannel.canYouSee()) {
                     textChannel.getMessagesAsStream().forEach(message ->
@@ -283,9 +290,9 @@ public class DiceReaction
                 }
             }, () ->
                     BroadCast.sendServiceMessage("Unable to find server text channel "
-                            + HIGH_ROLL_IMAGES_CHANNEL + " with high rofl images"));
+                            + highRollImagesChannelId + " with high rofl images"));
             List<String> lowRoflUrls = new ArrayList<>();
-            discordApi.getServerTextChannelById(LOG_ROLL_IMAGES_CHANNEL).ifPresentOrElse(textChannel -> {
+            discordApi.getServerTextChannelById(lowRollImagesChannelId).ifPresentOrElse(textChannel -> {
                 if (textChannel.canYouReadMessageHistory()
                         && textChannel.canYouSee()) {
                     textChannel.getMessagesAsStream().forEach(message ->
@@ -300,7 +307,7 @@ public class DiceReaction
                             "channel " + textChannel.getName() + " (channel with low rofl images)");
                 }
             }, () -> BroadCast.sendServiceMessage("Unable to find server text channel "
-                    + LOG_ROLL_IMAGES_CHANNEL + " with low rofl images"));
+                    + lowRollImagesChannelId + " with low rofl images"));
 
         }, () -> log.fatal("Unable to rebuild dice reaction rofl indexes - api is null!"));
     }

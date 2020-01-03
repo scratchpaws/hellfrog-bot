@@ -2,6 +2,7 @@ package hellfrog.commands.scenes;
 
 import hellfrog.common.BroadCast;
 import hellfrog.core.SessionState;
+import hellfrog.settings.SettingsController;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.PrivateChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
@@ -45,15 +46,19 @@ public class InviteScenario
 
     private void sendInvite(@NotNull MessageCreateEvent event, @NotNull User user) {
         DiscordApi discordApi = event.getApi();
-        discordApi.getServerById(OFFICIAL_SERVER).ifPresentOrElse(server -> {
-                    server.getSystemChannel().ifPresentOrElse(textChannel ->
-                            generateAndSendInvite(event,
-                                    server,
-                                    textChannel,
-                                    user), () ->
-                            super.showErrorMessage("Server " + server.getName()
-                                    + "does not has default channel", event));
-                }, () ->
+        final long officialBotServerId = SettingsController.getInstance()
+                .getMainDBController()
+                .getCommonPreferencesDAO()
+                .getOfficialBotServerId();
+        discordApi.getServerById(officialBotServerId).ifPresentOrElse(server ->
+                        server.getSystemChannel().ifPresentOrElse(textChannel ->
+                                generateAndSendInvite(event,
+                                        server,
+                                        textChannel,
+                                        user), () ->
+                                super.showErrorMessage("Server " + server.getName()
+                                        + "does not has default channel", event))
+                , () ->
                         super.showErrorMessage("Bot hasn't official server", event)
         );
     }

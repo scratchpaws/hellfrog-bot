@@ -33,6 +33,18 @@ public class CommonPreferencesDAO {
     static final String API_KEY_DEFAULT = "";
     private static final String BOT_NAME_KEY = "bot.name";
     static final String BOT_NAME_DEFAULT = "HellFrog";
+    private static final String OFFICIAL_SERVER_KEY = "bot.server";
+    static final long OFFICIAL_SERVER_DEFAULT = 612645599132778517L;
+    static final String OFFICIAL_SERVER_DEFAULT_STR = String.valueOf(OFFICIAL_SERVER_DEFAULT);
+    private static final String SERVICE_CHANNEL_KEY = "bot.service.channel";
+    static final long SERVICE_CHANNEL_DEFAULT = 612659329392443422L;
+    static final String SERVICE_CHANNEL_DEFAULT_STR = String.valueOf(SERVICE_CHANNEL_DEFAULT);
+    private static final String HIGH_ROLL_CHANNEL_KEY = "bot.high.channel";
+    static final long HIGH_ROLL_CHANNEL_KEY_DEFAULT = 612654844679028736L;
+    static final String HIGH_ROLL_CHANNEL_KEY_DEFAULT_STR = String.valueOf(HIGH_ROLL_CHANNEL_KEY_DEFAULT);
+    private static final String LOW_ROLL_CHANNEL_KEY = "bot.low.channel";
+    static final long LOW_ROLL_CHANNEL_DEFAULT = 612654929219158021L;
+    static final String LOW_ROLL_CHANNEL_DEFAULT_STR = String.valueOf(LOW_ROLL_CHANNEL_DEFAULT);
 
     private final Connection connection;
     private final Logger log = LogManager.getLogger("Common preferences");
@@ -140,5 +152,85 @@ public class CommonPreferencesDAO {
 
     public String setBotName(@NotNull String newBotName) {
         return upsert(BOT_NAME_KEY, newBotName, true).orElse(BOT_NAME_DEFAULT);
+    }
+
+    public long getOfficialBotServerId() {
+        try {
+            return Long.parseLong(upsert(OFFICIAL_SERVER_KEY, OFFICIAL_SERVER_DEFAULT_STR, false)
+                    .orElse(OFFICIAL_SERVER_DEFAULT_STR));
+        } catch (NumberFormatException | NullPointerException err) {
+            log.error("Unable to parse official bot server id value: {}", err.getMessage());
+            return OFFICIAL_SERVER_DEFAULT;
+        }
+    }
+
+    public long setOfficialBotServerId(long newServerId) {
+        try {
+            return Long.parseLong(upsert(OFFICIAL_SERVER_KEY, String.valueOf(newServerId), true)
+                    .orElse(OFFICIAL_SERVER_DEFAULT_STR));
+        } catch (NumberFormatException | NullPointerException err) {
+            log.error("Unable to parse official bot server id value: {}", err.getMessage());
+            return OFFICIAL_SERVER_DEFAULT;
+        }
+    }
+
+    public long getBotServiceChannelId() {
+        try {
+            return Long.parseLong(upsert(SERVICE_CHANNEL_KEY, SERVICE_CHANNEL_DEFAULT_STR, false)
+                    .orElse(SERVICE_CHANNEL_DEFAULT_STR));
+        } catch (NumberFormatException | NullPointerException err) {
+            log.error("Unable to parse service channel id value: {}", err.getMessage());
+            return SERVICE_CHANNEL_DEFAULT;
+        }
+    }
+
+    public long setBotServiceChannelId(long newBotServiceChannelId) {
+        try {
+            return Long.parseLong(upsert(SERVICE_CHANNEL_KEY, String.valueOf(newBotServiceChannelId), true)
+                    .orElse(SERVICE_CHANNEL_DEFAULT_STR));
+        } catch (NumberFormatException | NullPointerException err) {
+            log.error("Unable to parse service channel id value: {}", err.getMessage());
+            return SERVICE_CHANNEL_DEFAULT;
+        }
+    }
+
+    public long getHighRollChannelId() {
+        try {
+            return Long.parseLong(upsert(HIGH_ROLL_CHANNEL_KEY, HIGH_ROLL_CHANNEL_KEY_DEFAULT_STR, false)
+                    .orElse(HIGH_ROLL_CHANNEL_KEY_DEFAULT_STR));
+        } catch (NullPointerException | NumberFormatException err) {
+            log.error("Unable to parse channel id with images for high rolls: {}", err.getMessage());
+            return HIGH_ROLL_CHANNEL_KEY_DEFAULT;
+        }
+    }
+
+    public long setHighRollChannelId(long newHighRollChannelId) {
+        try {
+            return Long.parseLong(upsert(HIGH_ROLL_CHANNEL_KEY, String.valueOf(newHighRollChannelId), true)
+                    .orElse(HIGH_ROLL_CHANNEL_KEY_DEFAULT_STR));
+        } catch (NullPointerException | NumberFormatException err) {
+            log.error("Unable to parse channel id with images for high rolls: {}", err.getMessage());
+            return HIGH_ROLL_CHANNEL_KEY_DEFAULT;
+        }
+    }
+
+    public long getLowRollChannelId() {
+        try {
+            return Long.parseLong(upsert(LOW_ROLL_CHANNEL_KEY, LOW_ROLL_CHANNEL_DEFAULT_STR, false)
+            .orElse(LOW_ROLL_CHANNEL_DEFAULT_STR));
+        } catch (NumberFormatException | NullPointerException err) {
+            log.error("Unable to parse channel id with images for low rolls: {}", err.getMessage());
+            return LOW_ROLL_CHANNEL_DEFAULT;
+        }
+    }
+
+    public long setLowRollChannelId(long newLowRollChannelId) {
+        try {
+            return Long.parseLong(upsert(LOW_ROLL_CHANNEL_KEY, String.valueOf(newLowRollChannelId), true)
+                    .orElse(LOW_ROLL_CHANNEL_DEFAULT_STR));
+        } catch (NumberFormatException | NullPointerException err) {
+            log.error("Unable to parse channel id with images for low rolls: {}", err.getMessage());
+            return LOW_ROLL_CHANNEL_DEFAULT;
+        }
     }
 }

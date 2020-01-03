@@ -22,8 +22,12 @@ public class BroadCast
 
     public static void sendServiceMessage(String broadcastMessage) {
         Optional<DiscordApi> mayBeApi = Optional.ofNullable(SettingsController.getInstance().getDiscordApi());
+        final long serviceChannelId = SettingsController.getInstance()
+                .getMainDBController()
+                .getCommonPreferencesDAO()
+                .getBotServiceChannelId();
         mayBeApi.ifPresentOrElse(discordApi ->
-                        discordApi.getTextChannelById(SERVICE_MESSAGES_CHANNEL).ifPresentOrElse(textChannel -> {
+                        discordApi.getTextChannelById(serviceChannelId).ifPresentOrElse(textChannel -> {
                             if (textChannel.canYouSee() && textChannel.canYouWrite()
                                     && textChannel.canYouReadMessageHistory()
                                     && textChannel.canYouEmbedLinks()) {
@@ -37,19 +41,19 @@ public class BroadCast
                                             .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                                 } catch (Exception throwable) {
                                     String errMessage = "Unable to send message to channel "
-                                            + SERVICE_MESSAGES_CHANNEL + ": " + throwable.getMessage();
+                                            + serviceChannelId + ": " + throwable.getMessage();
                                     log.error(errMessage, throwable);
                                     sendMessageToAllOwners(broadcastMessage);
                                     sendMessageToAllOwners(errMessage);
                                 }
                             } else {
                                 String errMessage = "There are no rights to send messages to the channel "
-                                        + SERVICE_MESSAGES_CHANNEL;
+                                        + serviceChannelId;
                                 sendMessageToAllOwners(broadcastMessage);
                                 sendMessageToAllOwners(errMessage);
                             }
                         }, () -> {
-                            String errMessage = "Unable to resolve text channel " + SERVICE_MESSAGES_CHANNEL;
+                            String errMessage = "Unable to resolve text channel " + serviceChannelId;
                             sendMessageToAllOwners(broadcastMessage);
                             sendMessageToAllOwners(errMessage);
                         })
