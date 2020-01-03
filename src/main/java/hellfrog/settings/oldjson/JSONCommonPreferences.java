@@ -3,15 +3,16 @@ package hellfrog.settings.oldjson;
 import java.util.Collections;
 import java.util.List;
 
+// DB migration is ok
 public class JSONCommonPreferences {
 
-    private String commonBotPrefix = ">>";
-    private String botName = "HellFrog";
-    private String apiKey = "";
-    private long serverTransfer = 0L;
-    private long serverTextChatTransfer = 0L;
-    private boolean enableRemoteDebug = false;
-    private List<Long> globalBotOwners = Collections.emptyList();
+    private String commonBotPrefix = ">>"; // hellfrog.settings.db.CommonPreferencesDAO.getBotPrefix
+    private String botName = "HellFrog"; // hellfrog.settings.db.CommonPreferencesDAO.getBotName
+    private String apiKey = ""; // hellfrog.settings.db.CommonPreferencesDAO.getApiKey
+    private long serverTransfer = 0L; // will be removed
+    private long serverTextChatTransfer = 0L; // will be removed
+    private boolean enableRemoteDebug = false; // will be removed
+    private List<Long> globalBotOwners = Collections.emptyList(); // hellfrog.settings.db.BotOwnersDAO
 
     public String getCommonBotPrefix() {
         return commonBotPrefix;

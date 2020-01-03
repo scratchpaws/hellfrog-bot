@@ -1,5 +1,6 @@
 package hellfrog.settings.db;
 
+import hellfrog.TestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +23,7 @@ public class ServerPreferencesDAOTest {
         Map<Long, ServerSettings> servers = new HashMap<>();
         for (int i = 0; i < 100; i++) {
             while (true) {
-                long serverId = genEntityId();
+                long serverId = TestUtils.randomDiscordEntityId();
                 if (!servers.containsKey(serverId)) {
                     ServerSettings sset = new ServerSettings();
                     servers.put(serverId, sset);
@@ -125,11 +126,6 @@ public class ServerPreferencesDAOTest {
         }
     }
 
-    private static long genEntityId() {
-        return ThreadLocalRandom.current()
-                .nextLong(199999999999999999L, 999999999999999999L);
-    }
-
     private static class ServerSettings {
 
         final String prefix;
@@ -139,14 +135,9 @@ public class ServerPreferencesDAOTest {
 
         ServerSettings() {
             ThreadLocalRandom lr = ThreadLocalRandom.current();
-            StringBuilder prefBuilder = new StringBuilder();
-            for (int i = 0; i < 3; i++) {
-                int plus = lr.nextInt(0, 25);
-                prefBuilder.append((char)('a' + plus));
-            }
-            prefix = prefBuilder.toString();
+            prefix = TestUtils.randomStringName(3);
             joinLeaveDisplay = lr.nextBoolean();
-            joinLeaveChannel = genEntityId();
+            joinLeaveChannel = TestUtils.randomDiscordEntityId();
             newAclMode = lr.nextBoolean();
         }
     }
