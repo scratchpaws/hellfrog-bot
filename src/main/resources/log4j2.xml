@@ -60,6 +60,18 @@
         <Logger name="Server preferences" level="info" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
+        <Logger name="Entity rights (user_rights)" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Entity rights (role_rights)" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Entity rights (text_channel_rights)" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Entity rights (category_rights)" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
         <Root level="info">
             <AppenderRef ref="plainLogger"/>
         </Root>

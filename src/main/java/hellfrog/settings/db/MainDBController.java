@@ -24,6 +24,10 @@ public class MainDBController
     private CommonPreferencesDAO commonPreferencesDAO = null;
     private BotOwnersDAO botOwnersDAO = null;
     private ServerPreferencesDAO serverPreferencesDAO = null;
+    private UserRightsDAO userRightsDAO = null;
+    private RoleRightsDAO roleRightsDAO = null;
+    private TextChannelRightsDAO textChannelRightsDAO = null;
+    private ChannelCategoryRightsDAO channelCategoryRightsDAO = null;
 
     public MainDBController() throws IOException, SQLException {
         String MAIN_DB_FILE_NAME = "hellfrog_main.sqlite3";
@@ -54,6 +58,10 @@ public class MainDBController
             commonPreferencesDAO = new CommonPreferencesDAO(connection);
             botOwnersDAO = new BotOwnersDAO(connection);
             serverPreferencesDAO = new ServerPreferencesDAO(connection);
+            userRightsDAO = new UserRightsDAO(connection);
+            roleRightsDAO = new RoleRightsDAO(connection);
+            textChannelRightsDAO = new TextChannelRightsDAO(connection);
+            channelCategoryRightsDAO = new ChannelCategoryRightsDAO(connection);
             sqlLog.info("Main database opened");
         } catch (SQLException err) {
             sqlLog.fatal("Unable to open main database: " + err.getMessage(), err);
@@ -138,5 +146,21 @@ public class MainDBController
 
     public ServerPreferencesDAO getServerPreferencesDAO() {
         return serverPreferencesDAO;
+    }
+
+    public UserRightsDAO getUserRightsDAO() {
+        return userRightsDAO;
+    }
+
+    public RoleRightsDAO getRoleRightsDAO() {
+        return roleRightsDAO;
+    }
+
+    public TextChannelRightsDAO getTextChannelRightsDAO() {
+        return textChannelRightsDAO;
+    }
+
+    public ChannelCategoryRightsDAO getChannelCategoryRightsDAO() {
+        return channelCategoryRightsDAO;
     }
 }

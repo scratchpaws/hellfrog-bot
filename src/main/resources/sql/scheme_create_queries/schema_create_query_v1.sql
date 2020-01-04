@@ -48,8 +48,7 @@ CREATE TABLE "user_rights" (
 	"server_id"	INTEGER NOT NULL,
 	"command_prefix"	TEXT NOT NULL,
 	"user_id"	INTEGER NOT NULL,
-	"create_date"	INTEGER NOT NULL DEFAULT 0,
-	"update_date"	INTEGER NOT NULL DEFAULT 0
+	"create_date"	INTEGER NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX "uniq_user_right" ON "user_rights" (
 	"server_id",
@@ -61,8 +60,7 @@ CREATE TABLE "role_rights" (
 	"server_id"	INTEGER NOT NULL,
 	"command_prefix"	TEXT NOT NULL,
 	"role_id"	INTEGER NOT NULL,
-	"create_date"	INTEGER NOT NULL DEFAULT 0,
-	"update_date"	INTEGER NOT NULL DEFAULT 0
+	"create_date"	INTEGER NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX "uniq_role_right" ON "role_rights" (
 	"server_id",
@@ -74,8 +72,7 @@ CREATE TABLE "text_channel_rights" (
 	"server_id"	INTEGER NOT NULL,
 	"command_prefix"	TEXT NOT NULL,
 	"channel_id"	INTEGER NOT NULL,
-	"create_date"	INTEGER NOT NULL DEFAULT 0,
-	"update_date"	INTEGER NOT NULL DEFAULT 0
+	"create_date"	INTEGER NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX "uniq_channel_right" ON "text_channel_rights" (
 	"server_id",
@@ -87,8 +84,7 @@ CREATE TABLE "category_rights" (
 	"server_id"	INTEGER NOT NULL,
 	"command_prefix"	TEXT NOT NULL,
 	"category_id"	INTEGER NOT NULL,
-	"create_date"	INTEGER NOT NULL DEFAULT 0,
-	"update_date"	INTEGER NOT NULL DEFAULT 0
+	"create_date"	INTEGER NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX "uniq_category_right" ON "category_rights" (
 	"server_id",

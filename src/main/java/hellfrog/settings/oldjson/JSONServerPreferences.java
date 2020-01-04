@@ -11,6 +11,9 @@ public class JSONServerPreferences {
     // hellfrog.settings.db.ServerPreferencesDAO.getPrefix
     // migrate available
     private String botPrefix = ">>";
+    // hellfrog.settings.db.EntityRightsDAO
+    // migrate available
+    // details into hellfrog.settings.oldjson.JSONCommandRights
     private Map<String, JSONCommandRights> srvCommandRights = Collections.emptyMap();
     private List<JSONActiveVote> activeVotes = Collections.emptyList();
     // hellfrog.settings.db.ServerPreferencesDAO.isJoinLeaveDisplay

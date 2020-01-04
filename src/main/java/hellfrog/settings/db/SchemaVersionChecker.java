@@ -3,6 +3,7 @@ package hellfrog.settings.db;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.FromTextFile;
 import hellfrog.common.ResourcesLoader;
+import hellfrog.settings.oldjson.JSONCommandRights;
 import hellfrog.settings.oldjson.JSONCommonPreferences;
 import hellfrog.settings.oldjson.JSONLegacySettings;
 import hellfrog.settings.oldjson.JSONServerPreferences;
@@ -14,7 +15,6 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Arrays;
 import java.util.Map;
 
 class SchemaVersionChecker {
@@ -106,7 +106,7 @@ class SchemaVersionChecker {
                     newCommonPreferences.setBotName(oldCommonPreferences.getBotName());
                 }
                 if (oldCommonPreferences.getGlobalBotOwners() != null
-                    && !oldCommonPreferences.getGlobalBotOwners().isEmpty()) {
+                        && !oldCommonPreferences.getGlobalBotOwners().isEmpty()) {
                     sqlLog.info("Common preferences: found global bot owners: {}",
                             oldCommonPreferences.getGlobalBotOwners().stream()
                                     .map(String::valueOf)
@@ -141,6 +141,69 @@ class SchemaVersionChecker {
                     boolean isNewAclMode = jsonServerPreferences.getNewAclMode();
                     sqlLog.info("Server {}: found new ACL state: {}", serverId, isNewAclMode);
                     serverPreferencesDAO.setNewAclMode(serverId, isNewAclMode);
+
+                    Map<String, JSONCommandRights> legacyRights = jsonServerPreferences.getSrvCommandRights();
+                    if (!legacyRights.isEmpty()) {
+                        sqlLog.info("Server {}: found command rights settings", serverId);
+                        UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
+                        RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
+                        TextChannelRightsDAO textChannelRightsDAO = mainDBController.getTextChannelRightsDAO();
+                        ChannelCategoryRightsDAO channelCategoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
+                        for (Map.Entry<String, JSONCommandRights> rightsEntry : legacyRights.entrySet()) {
+                            String commandPrefix = rightsEntry.getKey();
+                            JSONCommandRights commandRights = rightsEntry.getValue();
+                            if (!commandPrefix.equals(commandRights.getCommandPrefix())) {
+                                sqlLog.warn("Server {}: command prefix of legacy map key {} " +
+                                                "not equals with command prefix name in object: {}",
+                                        serverId, commandPrefix, commandRights.getCommandPrefix());
+                            }
+                            if (commandRights.getAllowUsers().isEmpty()
+                                    && commandRights.getAllowRoles().isEmpty()
+                                    && commandRights.getAllowChannels().isEmpty()) {
+                                sqlLog.info("Server {}: empty privileges for command {}, skipping",
+                                        serverId, commandPrefix);
+                            } else {
+                                for (long userId : commandRights.getAllowUsers()) {
+                                    sqlLog.info("Server {}: grant access to userId {} for command {}",
+                                            serverId, userId, commandPrefix);
+                                    boolean isAllowed = userRightsDAO.allow(serverId, userId, commandPrefix);
+                                    if (isAllowed) {
+                                        sqlLog.info("Grant is OK");
+                                    } else {
+                                        sqlLog.warn("Grant is not OK");
+                                    }
+                                }
+                                for (long roleId : commandRights.getAllowRoles()) {
+                                    sqlLog.info("Server {}: grant access to roleId {} for command {}",
+                                            serverId, roleId, commandPrefix);
+                                    boolean isAllowed = roleRightsDAO.allow(serverId, roleId, commandPrefix);
+                                    if (isAllowed) {
+                                        sqlLog.info("Grant is OK");
+                                    } else {
+                                        sqlLog.warn("Grant is not OK");
+                                    }
+                                }
+                                for (long textChatId : commandRights.getAllowChannels()) {
+                                    sqlLog.info("Server {}: grant access to textChatId/categoryId {} " +
+                                            "for command {}", serverId, textChatId, commandPrefix);
+                                    boolean isAllowedChat = textChannelRightsDAO.allow(serverId, textChatId,
+                                            commandPrefix);
+                                    boolean isAllowedCategory = channelCategoryRightsDAO.allow(serverId,
+                                            textChatId, commandPrefix);
+                                    if (isAllowedChat) {
+                                        sqlLog.info("Grant text chat is OK");
+                                    } else {
+                                        sqlLog.warn("Grant text chat is not OK");
+                                    }
+                                    if (isAllowedCategory) {
+                                        sqlLog.info("Grant category is OK");
+                                    } else {
+                                        sqlLog.warn("Grant category is not OK");
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
