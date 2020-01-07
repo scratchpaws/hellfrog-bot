@@ -30,6 +30,7 @@ import java.util.List;
  * "is_exceptional"    INTEGER NOT NULL DEFAULT 0,<br>
  * "has_default"       INTEGER NOT NULL DEFAULT 0,<br>
  * "win_threshold"     INTEGER NOT NULL DEFAULT 0,<br>
+ * "roles_filter"      TEXT NOT NULL,<br>
  * "create_date"       INTEGER NOT NULL DEFAULT 0,<br>
  * "update_date"       INTEGER NOT NULL DEFAULT 0<br>
  * );
@@ -103,11 +104,11 @@ public class VotesDAO {
     }
 
     public List<Vote> getAllExpired(long serverId) {
-        long currentDateTime = Instant.now().toEpochMilli();
-        return getAllExpired(serverId, currentDateTime);
+        return getAllExpired(serverId, Instant.now());
     }
 
-    List<Vote> getAllExpired(long serverId, long currentDateTime) {
+    List<Vote> getAllExpired(long serverId, @NotNull Instant dateTime) {
+        long currentDateTime = dateTime.getEpochSecond();
         if (log.isDebugEnabled()) {
             log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}", getAllExpiredVotesQuery, serverId,
                     currentDateTime);
@@ -161,19 +162,24 @@ public class VotesDAO {
         long serverId = vote.getServerId();
         long textChatId = vote.getTextChatId();
         long messageId = 0L;
-        long finishTime = vote.getFinishTime().map(Instant::toEpochMilli).orElse(0L);
+        long finishTime = vote.getFinishTime().map(Instant::getEpochSecond).orElse(0L);
         String voteText = vote.getVoteText().orElse(" ");
         long hasTimer = vote.isHasTimer() ? 1L : 0L;
         long exceptionalVote = vote.isExceptional() ? 1L : 0L;
         long hasDefault = vote.isHasDefault() ? 1L : 0L;
         long winThreshold = vote.getWinThreshold();
-        long currentDateTime = Instant.now().toEpochMilli();
+        String rolesFilter = vote.getRolesFilter() == null ? " " : vote.getRolesFilter()
+                .stream()
+                .map(String::valueOf)
+                .reduce(CommonUtils::reduceConcat)
+                .orElse(" ");
+        long currentDateTime = Instant.now().getEpochSecond();
         if (log.isDebugEnabled()) {
             log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}\n" +
                             "Param 5: {}\nParam 6: {}\nParam 7: {}\nParam 8: {}\nParam 9: {}\n" +
-                            "Param 10: {}\nParam 11: {}", insertVoteQuery, serverId, textChatId, messageId,
-                    finishTime, voteText, hasTimer, exceptionalVote, hasDefault, winThreshold, currentDateTime,
-                    currentDateTime);
+                            "Param 10: {}\nParam 11: {}\nParam 12: {}", insertVoteQuery, serverId,
+                    textChatId, messageId, finishTime, voteText, hasTimer, exceptionalVote, hasDefault,
+                    winThreshold, rolesFilter, currentDateTime, currentDateTime);
         }
         try (PreparedStatement statement = connection.prepareStatement(insertVoteQuery)) {
             statement.setLong(Vote.Columns.SERVER_ID.insertColumn, serverId);
@@ -185,6 +191,7 @@ public class VotesDAO {
             statement.setLong(Vote.Columns.IS_EXCEPTIONAL.insertColumn, exceptionalVote);
             statement.setLong(Vote.Columns.HAS_DEFAULT.insertColumn, hasDefault);
             statement.setLong(Vote.Columns.WIN_THRESHOLD.insertColumn, winThreshold);
+            statement.setString(Vote.Columns.ROLES_FILTER.insertColumn, rolesFilter);
             statement.setLong(Vote.Columns.CREATE_DATE.insertColumn, currentDateTime);
             statement.setLong(Vote.Columns.UPDATE_DATE.insertColumn, currentDateTime);
             int insertCount = statement.executeUpdate();
@@ -224,7 +231,7 @@ public class VotesDAO {
             String pointText = votePoint.getPointText().orElse(" ");
             String emojiText = votePoint.getUnicodeEmoji().orElse(" ");
             long customEmojiId = votePoint.getCustomEmojiId();
-            currentDateTime = Instant.now().toEpochMilli();
+            currentDateTime = Instant.now().getEpochSecond();
             if (log.isDebugEnabled()) {
                 log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}" +
                                 "\nParam 5: {}\nParam 6: {}", insertVotePointQuery, voteId, pointText,
@@ -284,7 +291,7 @@ public class VotesDAO {
                     vote.toString());
             throw new VoteCreateException("this vote was not stored in the database");
         }
-        long currentDateTime = Instant.now().toEpochMilli();
+        long currentDateTime = Instant.now().getEpochSecond();
         if (log.isDebugEnabled()) {
             log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}", activateVoteQuery,
                     vote.getMessageId(), currentDateTime, vote.getId());
@@ -352,12 +359,21 @@ public class VotesDAO {
             long voteId = resultSet.getLong(Vote.Columns.ID.selectColumn);
             if (currentVote == null || voteId != currentVote.getId()) {
                 currentVote = new Vote();
+                String rawRolesFilter = resultSet.getString(Vote.Columns.ROLES_FILTER.selectColumn);
+                if (CommonUtils.isTrStringNotEmpty(rawRolesFilter)) {
+                    List<Long> rolesFilter = currentVote.getRolesFilter();
+                    for (String item : rawRolesFilter.split(",")) {
+                        long roleId = CommonUtils.onlyNumbersToLong(item);
+                        if (roleId > 0L)
+                            rolesFilter.add(roleId);
+                    }
+                }
                 currentVote.setId(voteId)
                         .setServerId(resultSet.getLong(Vote.Columns.SERVER_ID.selectColumn))
                         .setTextChatId(resultSet.getLong(Vote.Columns.TEXT_CHAT_ID.selectColumn))
                         .setMessageId(resultSet.getLong(Vote.Columns.MESSAGE_ID.selectColumn))
                         .setFinishTime(resultSet.getLong(Vote.Columns.FINISH_DATE.selectColumn) > 0
-                                ? Instant.ofEpochMilli(resultSet.getLong(Vote.Columns.FINISH_DATE.selectColumn))
+                                ? Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.FINISH_DATE.selectColumn))
                                 : null)
                         .setVoteText(CommonUtils.isTrStringNotEmpty(resultSet.getString(Vote.Columns.VOTE_TEXT.selectColumn))
                                 ? resultSet.getString(Vote.Columns.VOTE_TEXT.selectColumn)
@@ -367,10 +383,10 @@ public class VotesDAO {
                         .setHasDefault(resultSet.getLong(Vote.Columns.HAS_DEFAULT.selectColumn) > 0)
                         .setWinThreshold(resultSet.getLong(Vote.Columns.WIN_THRESHOLD.selectColumn))
                         .setCreateDate(resultSet.getLong(Vote.Columns.CREATE_DATE.selectColumn) > 0
-                                ? Instant.ofEpochMilli(resultSet.getLong(Vote.Columns.CREATE_DATE.selectColumn))
+                                ? Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.CREATE_DATE.selectColumn))
                                 : null)
                         .setUpdateDate(resultSet.getLong(Vote.Columns.UPDATE_DATE.selectColumn) > 0
-                                ? Instant.ofEpochMilli(resultSet.getLong(Vote.Columns.UPDATE_DATE.selectColumn))
+                                ? Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.UPDATE_DATE.selectColumn))
                                 : null);
                 result.add(currentVote);
             }
@@ -385,10 +401,10 @@ public class VotesDAO {
                             : null)
                     .setCustomEmojiId(resultSet.getLong(VotePoint.Columns.CUSTOM_EMOJI_ID.selectColumn))
                     .setCreateDate(resultSet.getLong(VotePoint.Columns.CREATE_DATE.selectColumn) > 0
-                            ? Instant.ofEpochMilli(resultSet.getLong(VotePoint.Columns.CREATE_DATE.selectColumn))
+                            ? Instant.ofEpochSecond(resultSet.getLong(VotePoint.Columns.CREATE_DATE.selectColumn))
                             : null)
                     .setUpdateDate(resultSet.getLong(VotePoint.Columns.UPDATE_DATE.selectColumn) > 0
-                            ? Instant.ofEpochMilli(resultSet.getLong(VotePoint.Columns.UPDATE_DATE.selectColumn))
+                            ? Instant.ofEpochSecond(resultSet.getLong(VotePoint.Columns.UPDATE_DATE.selectColumn))
                             : null);
             currentVote.getVotePoints().add(votePoint);
         }

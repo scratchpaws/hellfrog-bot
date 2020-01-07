@@ -1,23 +1,33 @@
 package hellfrog.settings.oldjson;
 
-import hellfrog.settings.VotePoint;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+// hellfrog.settings.entity.Vote
 public class JSONActiveVote {
 
-    private short id; // vote_id
+    // hellfrog.settings.entity.Vote.id
+    private short id;
+    // hellfrog.settings.entity.Vote.hasTimer
     private boolean hasTimer;
+    // hellfrog.settings.entity.Vote.finishTime
     private long endDate;
+    // hellfrog.settings.entity.Vote.rolesFilter
     private List<Long> rolesFilter;
+    // hellfrog.settings.entity.Vote.textChatId
     private Long textChatId;
+    // hellfrog.settings.entity.Vote.messageId
     private Long messageId;
-    private List<VotePoint> votePoints;
+    // hellfrog.settings.entity.Vote.votePoints
+    private List<JSONVotePoint> votePoints;
+    // hellfrog.settings.entity.Vote.voteText
     private String readableVoteText;
+    // hellfrog.settings.entity.Vote.isExceptional
     private boolean exceptionalVote;
+    // hellfrog.settings.entity.Vote.hasDefault
     private boolean withDefaultPoint;
+    // hellfrog.settings.entity.Vote.winThreshold
     private long winThreshold;
 
     public short getId() {
@@ -68,11 +78,11 @@ public class JSONActiveVote {
         this.messageId = messageId;
     }
 
-    public List<VotePoint> getVotePoints() {
+    public List<JSONVotePoint> getVotePoints() {
         return votePoints;
     }
 
-    public void setVotePoints(List<VotePoint> votePoints) {
+    public void setVotePoints(List<JSONVotePoint> votePoints) {
         this.votePoints = votePoints != null ? Collections.unmodifiableList(votePoints) : null;
     }
 
@@ -130,5 +140,22 @@ public class JSONActiveVote {
     public int hashCode() {
         return Objects.hash(id, hasTimer, endDate, rolesFilter, textChatId, messageId,
                 votePoints, readableVoteText, exceptionalVote, withDefaultPoint, winThreshold);
+    }
+
+    @Override
+    public String toString() {
+        return "ActiveVote{" +
+                "id=" + id +
+                ", hasTimer=" + hasTimer +
+                ", endDate=" + endDate +
+                ", rolesFilter=" + rolesFilter +
+                ", textChatId=" + textChatId +
+                ", messageId=" + messageId +
+                ", votePoints=" + votePoints +
+                ", readableVoteText='" + readableVoteText + '\'' +
+                ", exceptionalVote=" + exceptionalVote +
+                ", withDefaultPoint=" + withDefaultPoint +
+                ", winThreshold=" + winThreshold +
+                '}';
     }
 }

@@ -3,20 +3,19 @@ package hellfrog.settings.entity;
 import hellfrog.common.CommonUtils;
 
 import java.time.Instant;
-import java.util.Objects;
 import java.util.Optional;
 
 public class VotePoint {
 
     public enum Columns {
 
-        ID(13, -1),
-        VOTE_ID(14, 1),
-        POINT_TEXT(15, 2),
-        UNICODE_EMOJI(16, 3),
-        CUSTOM_EMOJI_ID(17, 4),
-        CREATE_DATE(18, 5),
-        UPDATE_DATE(19, 6);
+        ID(14, -1),
+        VOTE_ID(15, 1),
+        POINT_TEXT(16, 2),
+        UNICODE_EMOJI(17, 3),
+        CUSTOM_EMOJI_ID(18, 4),
+        CREATE_DATE(19, 5),
+        UPDATE_DATE(20, 6);
 
         public final int selectColumn;
         public final int insertColumn;

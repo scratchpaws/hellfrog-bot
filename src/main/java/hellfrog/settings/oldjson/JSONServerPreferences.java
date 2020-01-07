@@ -15,6 +15,8 @@ public class JSONServerPreferences {
     // migrate available
     // details into hellfrog.settings.oldjson.JSONCommandRights
     private Map<String, JSONCommandRights> srvCommandRights = Collections.emptyMap();
+    // hellfrog.settings.db.VotesDAO
+    // migrate available
     private List<JSONActiveVote> activeVotes = Collections.emptyList();
     // hellfrog.settings.db.ServerPreferencesDAO.isJoinLeaveDisplay
     // migrate available

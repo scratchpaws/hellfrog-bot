@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
@@ -44,7 +45,7 @@ public class VotesDAOTest {
             }
 
             List<VotePoint> votePoints = testVote.getVotePoints();
-            int pointsCount = tlr.nextInt(1, 10);
+            int pointsCount = tlr.nextInt(1, 11);
             for (int j = 0; j < pointsCount; j++) {
                 VotePoint votePoint = new VotePoint()
                         .setPointText(TestUtils.randomStringName(20));
@@ -57,6 +58,11 @@ public class VotesDAOTest {
             }
 
             testVotesList.add(testVote);
+
+            List<Long> rolesFilter = testVote.getRolesFilter();
+            int filtersCount = tlr.nextInt(0, 4);
+            if (filtersCount > 0)
+                rolesFilter.addAll(TestUtils.randomDiscordEntitiesIds(0, filtersCount));
         }
 
         try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
@@ -97,7 +103,7 @@ public class VotesDAOTest {
                 Assertions.assertNotNull(vote);
                 if (vote.isHasTimer() && vote.getFinishTime().isPresent()) {
                     Instant past = vote.getFinishTime().get().minus(1L, ChronoUnit.SECONDS);
-                    List<Vote> expired = votesDAO.getAllExpired(testVote.getServerId(), past.toEpochMilli());
+                    List<Vote> expired = votesDAO.getAllExpired(testVote.getServerId(), past);
                     Assertions.assertFalse(expired.isEmpty());
                 }
             }
@@ -133,6 +139,11 @@ public class VotesDAOTest {
         Assertions.assertEquals(finishEpochSeconds, otherFinishEpochSeconds);
         Assertions.assertEquals(first.getVotePoints().size(), second.getVotePoints().size());
         Assertions.assertEquals(first.getVoteText(), second.getVoteText());
+        List<Long> copyOfRolesFilterFirst = new ArrayList<>(first.getRolesFilter());
+        List<Long> copyOfRilesFilterSecond = new ArrayList<>(second.getRolesFilter());
+        Collections.sort(copyOfRolesFilterFirst);
+        Collections.sort(copyOfRilesFilterSecond);
+        Assertions.assertEquals(copyOfRolesFilterFirst, copyOfRilesFilterSecond);
         for (VotePoint votePoint : first.getVotePoints()) {
             boolean found = false;
             for (VotePoint another : second.getVotePoints()) {

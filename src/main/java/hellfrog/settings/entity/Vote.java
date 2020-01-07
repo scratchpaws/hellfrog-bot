@@ -5,7 +5,6 @@ import hellfrog.common.CommonUtils;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 public class Vote {
@@ -22,8 +21,9 @@ public class Vote {
         IS_EXCEPTIONAL(8, 7),
         HAS_DEFAULT(9, 8),
         WIN_THRESHOLD(10, 9),
-        CREATE_DATE(11, 10),
-        UPDATE_DATE(12, 11);
+        ROLES_FILTER(11, 10),
+        CREATE_DATE(12, 11),
+        UPDATE_DATE(13, 12);
 
         public final int selectColumn;
         public final int insertColumn;
@@ -47,6 +47,7 @@ public class Vote {
     private Instant createDate = null;
     private Instant updateDate = null;
     private List<VotePoint> votePoints = new ArrayList<>();
+    private List<Long> rolesFilter = new ArrayList<>();
 
     public Vote() {}
 
@@ -159,11 +160,26 @@ public class Vote {
     }
 
     public List<VotePoint> getVotePoints() {
-        return votePoints != null ? votePoints : new ArrayList<>();
+        if (votePoints == null) {
+            votePoints = new ArrayList<>();
+        }
+        return votePoints;
     }
 
     public Vote setVotePoints(List<VotePoint> votePoints) {
         this.votePoints = votePoints != null ? votePoints : new ArrayList<>();
+        return this;
+    }
+
+    public List<Long> getRolesFilter() {
+        if (rolesFilter == null) {
+            rolesFilter = new ArrayList<>();
+        }
+        return rolesFilter;
+    }
+
+    public Vote setRolesFilter(List<Long> rolesFilter) {
+        this.rolesFilter = rolesFilter != null ? rolesFilter : new ArrayList<>();
         return this;
     }
 
@@ -183,6 +199,7 @@ public class Vote {
                 ", createDate=" + createDate +
                 ", updateDate=" + updateDate +
                 ", votePoints=" + votePoints +
+                ", rolesFilter=" + rolesFilter +
                 '}';
     }
 }

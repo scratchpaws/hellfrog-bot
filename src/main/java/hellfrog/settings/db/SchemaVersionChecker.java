@@ -3,10 +3,9 @@ package hellfrog.settings.db;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.FromTextFile;
 import hellfrog.common.ResourcesLoader;
-import hellfrog.settings.oldjson.JSONCommandRights;
-import hellfrog.settings.oldjson.JSONCommonPreferences;
-import hellfrog.settings.oldjson.JSONLegacySettings;
-import hellfrog.settings.oldjson.JSONServerPreferences;
+import hellfrog.settings.entity.Vote;
+import hellfrog.settings.entity.VotePoint;
+import hellfrog.settings.oldjson.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -15,6 +14,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 class SchemaVersionChecker {
@@ -201,6 +202,49 @@ class SchemaVersionChecker {
                                         sqlLog.warn("Grant category is not OK");
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    List<JSONActiveVote> legacyVotes = jsonServerPreferences.getActiveVotes();
+                    if (!legacyVotes.isEmpty()) {
+                        sqlLog.info("Server: {}, found votes", serverId);
+                        VotesDAO votesDAO = mainDBController.getVotesDAO();
+
+                        for (JSONActiveVote legacyVote : legacyVotes) {
+                            sqlLog.info("Vote {}: {}", legacyVote.getId(), legacyVote.getReadableVoteText());
+
+                            Vote vote = new Vote()
+                                    .setServerId(serverId)
+                                    .setTextChatId(legacyVote.getTextChatId())
+                                    .setFinishTime(legacyVote.getEndDate() > 0L
+                                             ? Instant.ofEpochSecond(legacyVote.getEndDate())
+                                            : null)
+                                    .setVoteText(legacyVote.getReadableVoteText())
+                                    .setHasTimer(legacyVote.isHasTimer())
+                                    .setExceptional(legacyVote.isExceptionalVote())
+                                    .setHasDefault(legacyVote.isWithDefaultPoint())
+                                    .setWinThreshold(legacyVote.getWinThreshold())
+                                    .setRolesFilter(legacyVote.getRolesFilter());
+
+                            List<VotePoint> votePoints = vote.getVotePoints();
+                            for (JSONVotePoint legacyVotePoint : legacyVote.getVotePoints()) {
+                                VotePoint votePoint = new VotePoint()
+                                        .setPointText(legacyVotePoint.getPointText())
+                                        .setUnicodeEmoji(legacyVotePoint.getEmoji())
+                                        .setCustomEmojiId(legacyVotePoint.getCustomEmoji() != null
+                                                ? legacyVotePoint.getCustomEmoji() : 0L);
+                                votePoints.add(votePoint);
+                            }
+
+                            sqlLog.info("Original vote record: {}", legacyVote.toString());
+                            try {
+                                Vote added = votesDAO.addVote(vote);
+                                added.setMessageId(legacyVote.getMessageId());
+                                Vote activated = votesDAO.activateVote(added);
+                                sqlLog.info("Converted vote record: {}", activated.toString());
+                            } catch (VoteCreateException err) {
+                                sqlLog.error("Unable to add converted vote to database");
                             }
                         }
                     }

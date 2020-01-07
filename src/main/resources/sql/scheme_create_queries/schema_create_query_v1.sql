@@ -25,6 +25,7 @@ CREATE TABLE "active_votes" (
     "is_exceptional"    INTEGER NOT NULL DEFAULT 0,
     "has_default"       INTEGER NOT NULL DEFAULT 0,
     "win_threshold"     INTEGER NOT NULL DEFAULT 0,
+    "roles_filter"      TEXT NOT NULL,
     "create_date"       INTEGER NOT NULL DEFAULT 0,
     "update_date"       INTEGER NOT NULL DEFAULT 0
 );
