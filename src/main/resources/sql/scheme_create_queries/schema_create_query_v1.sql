@@ -19,7 +19,6 @@ CREATE TABLE "active_votes" (
     "server_id"         INTEGER NOT NULL,
     "text_chat_id"      INTEGER NOT NULL,
     "message_id"        INTEGER NOT NULL,
-    "is_active"         INTEGER NOT NULL,
     "finish_date"       INTEGER NOT NULL,
     "vote_text"         TEXT NOT NULL,
     "has_timer"         INTEGER NOT NULL DEFAULT 0,

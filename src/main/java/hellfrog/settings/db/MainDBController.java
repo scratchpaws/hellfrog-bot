@@ -28,6 +28,7 @@ public class MainDBController
     private RoleRightsDAO roleRightsDAO = null;
     private TextChannelRightsDAO textChannelRightsDAO = null;
     private ChannelCategoryRightsDAO channelCategoryRightsDAO = null;
+    private VotesDAO votesDAO = null;
 
     public MainDBController() throws IOException, SQLException {
         String MAIN_DB_FILE_NAME = "hellfrog_main.sqlite3";
@@ -62,6 +63,7 @@ public class MainDBController
             roleRightsDAO = new RoleRightsDAO(connection);
             textChannelRightsDAO = new TextChannelRightsDAO(connection);
             channelCategoryRightsDAO = new ChannelCategoryRightsDAO(connection);
+            votesDAO = new VotesDAO(connection);
             sqlLog.info("Main database opened");
         } catch (SQLException err) {
             sqlLog.fatal("Unable to open main database: " + err.getMessage(), err);
@@ -162,5 +164,9 @@ public class MainDBController
 
     public ChannelCategoryRightsDAO getChannelCategoryRightsDAO() {
         return channelCategoryRightsDAO;
+    }
+
+    public VotesDAO getVotesDAO() {
+        return votesDAO;
     }
 }

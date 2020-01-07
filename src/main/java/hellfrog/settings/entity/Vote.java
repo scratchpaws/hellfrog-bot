@@ -1,17 +1,43 @@
 package hellfrog.settings.entity;
 
+import hellfrog.common.CommonUtils;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public class Vote {
+
+    public enum Columns {
+
+        ID(1, -1),
+        SERVER_ID(2, 1),
+        TEXT_CHAT_ID(3, 2),
+        MESSAGE_ID(4, 3),
+        FINISH_DATE(5, 4),
+        VOTE_TEXT(6, 5),
+        HAS_TIMER(7, 6),
+        IS_EXCEPTIONAL(8, 7),
+        HAS_DEFAULT(9, 8),
+        WIN_THRESHOLD(10, 9),
+        CREATE_DATE(11, 10),
+        UPDATE_DATE(12, 11);
+
+        public final int selectColumn;
+        public final int insertColumn;
+
+        Columns(int selectColumn, int insertColumn) {
+            this.selectColumn = selectColumn;
+            this.insertColumn = insertColumn;
+        }
+    }
 
     private long id = -1L;
     private long serverId = 0L;
     private long textChatId = 0L;
     private long messageId = 0L;
-    private boolean isActive = false;
     private Instant finishTime = null;
     private String voteText = null;
     private boolean hasTimer = false;
@@ -38,10 +64,6 @@ public class Vote {
 
     public long getMessageId() {
         return messageId;
-    }
-
-    public boolean isActive() {
-        return isActive;
     }
 
     public Optional<Instant> getFinishTime() {
@@ -96,18 +118,13 @@ public class Vote {
         return this;
     }
 
-    public Vote setActive(boolean active) {
-        isActive = active;
-        return this;
-    }
-
     public Vote setFinishTime(Instant finishTime) {
         this.finishTime = finishTime;
         return this;
     }
 
     public Vote setVoteText(String voteText) {
-        this.voteText = voteText;
+        this.voteText = CommonUtils.isTrStringNotEmpty(voteText) ? voteText : null;
         return this;
     }
 
@@ -157,7 +174,6 @@ public class Vote {
                 ", serverId=" + serverId +
                 ", textChatId=" + textChatId +
                 ", messageId=" + messageId +
-                ", isActive=" + isActive +
                 ", finishTime=" + finishTime +
                 ", voteText='" + voteText + '\'' +
                 ", hasTimer=" + hasTimer +

@@ -1,8 +1,31 @@
 package hellfrog.settings.entity;
 
+import hellfrog.common.CommonUtils;
+
 import java.time.Instant;
+import java.util.Objects;
+import java.util.Optional;
 
 public class VotePoint {
+
+    public enum Columns {
+
+        ID(13, -1),
+        VOTE_ID(14, 1),
+        POINT_TEXT(15, 2),
+        UNICODE_EMOJI(16, 3),
+        CUSTOM_EMOJI_ID(17, 4),
+        CREATE_DATE(18, 5),
+        UPDATE_DATE(19, 6);
+
+        public final int selectColumn;
+        public final int insertColumn;
+
+        Columns(int selectColumn, int insertColumn) {
+            this.selectColumn = selectColumn;
+            this.insertColumn = insertColumn;
+        }
+    }
 
     private long id = -1L;
     private String pointText = null;
@@ -22,21 +45,21 @@ public class VotePoint {
         return this;
     }
 
-    public String getPointText() {
-        return pointText;
+    public Optional<String> getPointText() {
+        return Optional.ofNullable(pointText);
     }
 
     public VotePoint setPointText(String pointText) {
-        this.pointText = pointText;
+        this.pointText = CommonUtils.isTrStringNotEmpty(pointText) ? pointText : null;
         return this;
     }
 
-    public String getUnicodeEmoji() {
-        return unicodeEmoji;
+    public Optional<String> getUnicodeEmoji() {
+        return Optional.ofNullable(unicodeEmoji);
     }
 
     public VotePoint setUnicodeEmoji(String unicodeEmoji) {
-        this.unicodeEmoji = unicodeEmoji;
+        this.unicodeEmoji = CommonUtils.isTrStringNotEmpty(pointText) ? unicodeEmoji : null;
         return this;
     }
 
@@ -49,8 +72,8 @@ public class VotePoint {
         return this;
     }
 
-    public Instant getCreateDate() {
-        return createDate;
+    public Optional<Instant> getCreateDate() {
+        return Optional.ofNullable(createDate);
     }
 
     public VotePoint setCreateDate(Instant createDate) {
@@ -58,8 +81,8 @@ public class VotePoint {
         return this;
     }
 
-    public Instant getUpdateDate() {
-        return updateDate;
+    public Optional<Instant> getUpdateDate() {
+        return Optional.ofNullable(updateDate);
     }
 
     public VotePoint setUpdateDate(Instant updateDate) {
