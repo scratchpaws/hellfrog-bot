@@ -27,7 +27,6 @@ import org.jetbrains.annotations.Nullable;
 import java.awt.*;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Абстрактный интерактивный сценарий, который отображается для пользователя
@@ -146,7 +145,7 @@ public abstract class Scenario
      */
     public boolean canExecute(String rawCommand) {
         return !CommonUtils.isTrStringEmpty(rawCommand)
-                && rawCommand.strip().equalsIgnoreCase(super.getPrefix());
+                && rawCommand.strip().toLowerCase().startsWith(super.getPrefix());
     }
 
     /**
@@ -167,6 +166,10 @@ public abstract class Scenario
     public final void firstRun(final @NotNull MessageCreateEvent event) {
 
         super.updateLastUsage();
+
+        if (hasRateLimits(event)) {
+            return;
+        }
 
         boolean isBotOwner = canExecuteGlobalCommand(event);
 
@@ -240,6 +243,11 @@ public abstract class Scenario
     public final void executeMessageStep(@NotNull MessageCreateEvent event,
                                          @NotNull SessionState sessionState) {
         super.updateLastUsage();
+
+        if (hasRateLimits(event)) {
+            rollbackState(sessionState);
+            return;
+        }
 
         boolean doRollback = true;
         boolean isBotOwner = canExecuteGlobalCommand(event);

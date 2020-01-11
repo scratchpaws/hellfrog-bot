@@ -21,7 +21,7 @@ public class RightsDAOTest {
     public void testRightsEntities() throws Exception {
 
         List<TestServer> testServers = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 3; i++) {
             while (true) {
                 TestServer testServer = new TestServer();
                 boolean exists = false;
@@ -189,9 +189,9 @@ public class RightsDAOTest {
     }
 
     private static class TestCommandRights {
-        final List<Long> allowedUsers = TestUtils.randomSublist(USERS_LIST, 10, USERS_LIST.size() / 2);
-        final List<Long> allowedRoles = TestUtils.randomDiscordEntitiesIds(10);
-        final List<Long> allowedTextChats = TestUtils.randomDiscordEntitiesIds(50);
-        final List<Long> allowedCategories = TestUtils.randomDiscordEntitiesIds(10);
+        final List<Long> allowedUsers = TestUtils.randomSublist(USERS_LIST, 5, USERS_LIST.size() / 2);
+        final List<Long> allowedRoles = TestUtils.randomDiscordEntitiesIds(5);
+        final List<Long> allowedTextChats = TestUtils.randomDiscordEntitiesIds(5);
+        final List<Long> allowedCategories = TestUtils.randomDiscordEntitiesIds(2);
     }
 }

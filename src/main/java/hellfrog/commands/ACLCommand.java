@@ -1,7 +1,9 @@
 package hellfrog.commands;
 
+import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.core.AccessControlCheck;
+import hellfrog.core.RateLimiter;
 import hellfrog.settings.SettingsController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -147,13 +149,17 @@ public abstract class ACLCommand {
         resolveMessageEmbedByRights(textMessage, event, INFO_MESSAGE);
     }
 
-    private void resolveMessageEmbedByRights(@NotNull String textMessage, @NotNull MessageCreateEvent event, int type) {
+    private void resolveMessageEmbedByRights(@NotNull String textMessage,
+                                             @NotNull MessageCreateEvent event,
+                                             int type) {
         event.getMessageAuthor().asUser().ifPresentOrElse(user ->
                         resolveMessageEmbedByRights(textMessage, event, user, type),
                 () -> log.warn("Receive message from {}", event.getMessageAuthor()));
     }
 
-    private void resolveMessageEmbedByRights(@NotNull String textMessage, @NotNull SingleReactionEvent event, int type) {
+    private void resolveMessageEmbedByRights(@NotNull String textMessage,
+                                             @NotNull SingleReactionEvent event,
+                                             int type) {
         User user = event.getUser();
         resolveMessageEmbedByRights(textMessage, event, user, type);
     }
@@ -197,6 +203,13 @@ public abstract class ACLCommand {
     }
 
     private void showEmbedMessage(String textMessage, Messageable target, @Nullable User alternatePrivateTarget, int type) {
+        boolean isTargetLimited = false;
+        if (target instanceof User) {
+            isTargetLimited = RateLimiter.notifyIsLimited(((User) target).getId());
+        }
+        if (isTargetLimited) {
+            return;
+        }
         Color messageColor = Color.BLACK;
         switch (type) {
             case ERROR_MESSAGE:
@@ -233,6 +246,27 @@ public abstract class ACLCommand {
     protected void updateLastUsage() {
         if (updateLastUsage) {
             SettingsController.getInstance().updateLastCommandUsage();
+        }
+    }
+
+    protected boolean hasRateLimits(@NotNull MessageCreateEvent event) {
+        boolean userIsLimited = RateLimiter.userIsLimited(event);
+        boolean serverIsLimited = RateLimiter.serverIsLimited(event);
+        if (userIsLimited) {
+            showErrorMessage("You have exceeded the number of requests", event);
+            String errorMessage = String.format("User %s reached requests limit",
+                    event.getMessageAuthor().asUser().map(u -> u.getDiscriminatedName()
+                    + " (" + u.getId() + ")").orElse(""));
+            BroadCast.sendServiceMessage(errorMessage);
+            return true;
+        } else if (serverIsLimited) {
+            showErrorMessage("The number of requests exceeded from this server", event);
+            String errorMessage = String.format("Server %s reached requests limit",
+                    event.getServer().map(s -> s.getName() + " (" + s.getId() + ")").orElse(""));
+            BroadCast.sendServiceMessage(errorMessage);
+            return true;
+        } else {
+            return false;
         }
     }
 }

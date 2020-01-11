@@ -58,8 +58,9 @@ public class SettingsController {
         try {
             mainDBController = new MainDBController();
         } catch (Exception err) {
-            log.fatal("Terminated", err);
-            System.exit(2);
+            // todo: will be enable after migration from json configs to db config
+            //log.fatal("Terminated", err);
+            //System.exit(2);
         }
         loadCommonSettings();
         loadServersSettings();

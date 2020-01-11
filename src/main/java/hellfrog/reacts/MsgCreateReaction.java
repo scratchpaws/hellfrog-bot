@@ -1,9 +1,11 @@
 package hellfrog.reacts;
 
+import hellfrog.common.BroadCast;
 import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.core.AccessControlCheck;
+import hellfrog.core.RateLimiter;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
@@ -26,6 +28,7 @@ public abstract class MsgCreateReaction
             CodeSourceUtils.childClassInstancesCollector(MsgCreateReaction.class);
     private boolean accessControl = false;
     private boolean strictByChannel = false;
+    private boolean rateLimitEnabled = true;
     private String commandPrefix = "";
     private String commandDescription = "";
 
@@ -50,6 +53,10 @@ public abstract class MsgCreateReaction
         this.strictByChannel = true;
     }
 
+    void disableRateLimit() {
+        this.rateLimitEnabled = false;
+    }
+
     public abstract boolean canReact(MessageCreateEvent event);
 
     @Override
@@ -65,6 +72,22 @@ public abstract class MsgCreateReaction
     }
 
     private void executeReaction(@NotNull MessageCreateEvent event) {
+        if (rateLimitEnabled) {
+            boolean userIsLimited = RateLimiter.userIsLimited(event);
+            boolean serverIsLimited = RateLimiter.serverIsLimited(event);
+            if (userIsLimited) {
+                String errorMessage = String.format("User %s reached requests limit",
+                        event.getMessageAuthor().asUser().map(u -> u.getDiscriminatedName()
+                                + " (" + u.getId() + ")").orElse(""));
+                BroadCast.sendServiceMessage(errorMessage);
+                return;
+            } else if (serverIsLimited) {
+                String errorMessage = String.format("Server %s reached requests limit",
+                        event.getServer().map(s -> s.getName() + " (" + s.getId() + ")").orElse(""));
+                BroadCast.sendServiceMessage(errorMessage);
+                return;
+            }
+        }
         Optional<Server> mayBeServer = event.getServer();
         Optional<User> mayBeUser = event.getMessageAuthor().asUser();
 

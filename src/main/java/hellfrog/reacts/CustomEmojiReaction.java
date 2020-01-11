@@ -21,6 +21,10 @@ public class CustomEmojiReaction
 
     private static final Pattern CUSTOM_EMOJI_SEARCH = Pattern.compile("<a?:.+?:\\d+>", Pattern.MULTILINE);
 
+    public CustomEmojiReaction() {
+        super.disableRateLimit();
+    }
+
     public static boolean messageContainCustomEmoji(@NotNull Message message) {
         String messageString = message.getContent();
         return messageContainCustomEmoji(messageString);

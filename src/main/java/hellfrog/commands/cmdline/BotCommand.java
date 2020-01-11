@@ -5,8 +5,6 @@ import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.CommonUtils;
 import hellfrog.settings.SettingsController;
 import org.apache.commons.cli.*;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.MessageBuilder;
@@ -84,11 +82,15 @@ public abstract class BotCommand
      * @param anotherLines остальные строки сообщения команды, не являющиеся
      *                     самой командой (расположены на новых строках)
      */
-    public void executeCreateMessageEvent(MessageCreateEvent event,
-                                          String[] rawCmdline,
+    public void executeCreateMessageEvent(@NotNull MessageCreateEvent event,
+                                          @NotNull String[] rawCmdline,
                                           ArrayList<String> anotherLines) {
 
         super.updateLastUsage();
+
+        if (hasRateLimits(event)) {
+            return;
+        }
 
         TextChannel channel = event.getChannel();
         if (rawCmdline.length < 2) {

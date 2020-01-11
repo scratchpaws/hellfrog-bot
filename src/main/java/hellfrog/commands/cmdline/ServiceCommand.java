@@ -293,7 +293,11 @@ public class ServiceCommand
             settingsController.getDiscordApi().disconnect();
         }
 
-        settingsController.stopMainDatabase();
+        try {
+            settingsController.stopMainDatabase();
+        } catch (Exception err) {
+            log.fatal(err);
+        }
         System.exit(0);
     }
 
