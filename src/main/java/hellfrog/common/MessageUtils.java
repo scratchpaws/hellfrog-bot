@@ -9,6 +9,7 @@ import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.Messageable;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -25,6 +26,43 @@ public class MessageUtils
     implements CommonConstants {
 
     public static final Pattern MESSAGE_LINK_SEARCH = Pattern.compile("https.*discord.*channels/\\d+/\\d+/\\d+", Pattern.MULTILINE);
+
+    @NotNull
+    public static String getCmdlineWithoutPrefix(String prefixNoSep, @NotNull String cmdLine) {
+        String prefixWithSep = prefixNoSep + " ";
+        if (cmdLine.startsWith(prefixWithSep)) {
+            return CommonUtils.cutLeftString(cmdLine, prefixWithSep);
+        } else if (cmdLine.startsWith(prefixNoSep)) {
+            return CommonUtils.cutLeftString(cmdLine, prefixNoSep);
+        } else {
+            return "";
+        }
+    }
+
+    @NotNull
+    public static String getEventMessageWithoutBotPrefix(@NotNull String eventMessage,
+                                                         Optional<Server> eventServer) {
+        SettingsController settingsController = SettingsController.getInstance();
+        DiscordApi discordApi = settingsController.getDiscordApi();
+        if (discordApi == null) {
+            return "";
+        }
+        User yourself = discordApi.getYourself();
+        String botMentionTag = yourself.getMentionTag();
+        String botMentionNicknameTag = yourself.getNicknameMentionTag();
+        String botPrefix;
+        if (eventMessage.startsWith(botMentionTag)) {
+            botPrefix = botMentionTag;
+        } else if (eventMessage.startsWith(botMentionNicknameTag)) {
+            botPrefix = botMentionNicknameTag;
+        } else if (eventServer.isPresent()) {
+            Server server = eventServer.get();
+            botPrefix = settingsController.getBotPrefix(server.getId());
+        } else {
+            botPrefix = settingsController.getGlobalCommonPrefix();
+        }
+        return getCmdlineWithoutPrefix(botPrefix, eventMessage);
+    }
 
     public static Optional<Message> resolveByLink(String messageWithLink) {
         if (CommonUtils.isTrStringEmpty(messageWithLink)) return Optional.empty();

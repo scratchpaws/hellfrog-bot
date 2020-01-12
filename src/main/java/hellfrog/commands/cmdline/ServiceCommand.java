@@ -277,6 +277,7 @@ public class ServiceCommand
 
         SettingsController settingsController = SettingsController.getInstance();
 
+        settingsController.getHttpClientsPool().stop();
         settingsController.getVoteController().stop();
         settingsController.getServerStatisticTask().stop();
         settingsController.getSessionsCheckTask().stop();

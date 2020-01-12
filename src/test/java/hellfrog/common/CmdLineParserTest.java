@@ -1,6 +1,5 @@
 package hellfrog.common;
 
-import hellfrog.core.EventsListener;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -29,9 +28,7 @@ public class CmdLineParserTest {
         String prefix = ">>";
         String await = "help";
 
-        EventsListener eventsListener = new EventsListener();
-
-        Assertions.assertEquals(await, eventsListener.getCmdlineWithoutPrefix(prefix, cmdlineWithoutSpace));
-        Assertions.assertEquals(await, eventsListener.getCmdlineWithoutPrefix(prefix, cmdlineWithSpace));
+        Assertions.assertEquals(await, MessageUtils.getCmdlineWithoutPrefix(prefix, cmdlineWithoutSpace));
+        Assertions.assertEquals(await, MessageUtils.getCmdlineWithoutPrefix(prefix, cmdlineWithSpace));
     }
 }

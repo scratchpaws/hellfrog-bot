@@ -3,10 +3,7 @@ package hellfrog.core;
 import hellfrog.commands.ACLCommand;
 import hellfrog.commands.cmdline.BotCommand;
 import hellfrog.commands.scenes.Scenario;
-import hellfrog.common.BroadCast;
-import hellfrog.common.CommonConstants;
-import hellfrog.common.CommonUtils;
-import hellfrog.common.UserCachedData;
+import hellfrog.common.*;
 import hellfrog.reacts.*;
 import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
@@ -141,21 +138,8 @@ public class EventsListener
                 new ArrayList<>(inputLines.subList(1, inputLines.size())) : new ArrayList<>(0);
 
         SettingsController settingsController = SettingsController.getInstance();
-        String botMentionTag = event.getApi().getYourself().getMentionTag();
-        String botMentionNicknameTag = event.getApi().getYourself().getNicknameMentionTag();
-        String botPrefix;
-        String withoutCommonPrefix;
-        if (inputLines.get(0).startsWith(botMentionTag)) {
-            botPrefix = botMentionTag;
-        } else if (inputLines.get(0).startsWith(botMentionNicknameTag)) {
-            botPrefix = botMentionNicknameTag;
-        } else if (mayBeServer.isPresent()) {
-            Server server = mayBeServer.get();
-            botPrefix = settingsController.getBotPrefix(server.getId());
-        } else {
-            botPrefix = settingsController.getGlobalCommonPrefix();
-        }
-        withoutCommonPrefix = getCmdlineWithoutPrefix(botPrefix, inputLines.get(0));
+        String withoutCommonPrefix =
+                MessageUtils.getEventMessageWithoutBotPrefix(inputLines.get(0), mayBeServer);
 
         if (mayBeUser.isPresent() && !mayBeUser.get().isBot()) {
             for (Scenario scenario : Scenario.all()) {
@@ -245,17 +229,6 @@ public class EventsListener
             }
         }
         return false;
-    }
-
-    public String getCmdlineWithoutPrefix(String prefixNoSep, String cmdLine) {
-        String prefixWithSep = prefixNoSep + " ";
-        if (cmdLine.startsWith(prefixWithSep)) {
-            return CommonUtils.cutLeftString(cmdLine, prefixWithSep);
-        } else if (cmdLine.startsWith(prefixNoSep)) {
-            return CommonUtils.cutLeftString(cmdLine, prefixNoSep);
-        } else {
-            return "";
-        }
     }
 
     private void showFirstLoginHelp(ServerTextChannel channel) {

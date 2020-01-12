@@ -3,6 +3,7 @@ package hellfrog.settings;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import hellfrog.common.CommonUtils;
+import hellfrog.common.HttpClientsPool;
 import hellfrog.core.ServerStatisticTask;
 import hellfrog.core.SessionsCheckTask;
 import hellfrog.core.VoteController;
@@ -45,6 +46,7 @@ public class SettingsController {
     private final ReentrantLock serverStatCreateLock = new ReentrantLock();
     private final ReentrantLock serverStatSaveLock = new ReentrantLock();
     private final VoteController voteController;
+    private final HttpClientsPool httpClientsPool;
     private final ServerStatisticTask serverStatisticTask;
     private final SessionsCheckTask sessionsCheckTask;
     private CommonPreferences commonPreferences = new CommonPreferences();
@@ -64,6 +66,7 @@ public class SettingsController {
         }
         loadCommonSettings();
         loadServersSettings();
+        httpClientsPool = new HttpClientsPool();
         voteController = new VoteController();
         serverStatisticTask = new ServerStatisticTask();
         sessionsCheckTask = new SessionsCheckTask();
@@ -408,5 +411,9 @@ public class SettingsController {
 
     public MainDBController getMainDBController() {
         return this.mainDBController;
+    }
+
+    public HttpClientsPool getHttpClientsPool() {
+        return httpClientsPool;
     }
 }

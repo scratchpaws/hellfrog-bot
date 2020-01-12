@@ -1,11 +1,8 @@
 package hellfrog.commands.scenes;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import hellfrog.common.BroadCast;
-import hellfrog.common.CommonUtils;
-import hellfrog.common.MessageUtils;
 import hellfrog.common.SimpleHttpClient;
-import hellfrog.core.ServerSideResolver;
+import hellfrog.common.Tuple;
 import hellfrog.core.SessionState;
 import hellfrog.settings.SettingsController;
 import io.github.bucket4j.Bandwidth;
@@ -14,37 +11,42 @@ import io.github.bucket4j.Bucket4j;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.util.EntityUtils;
 import org.javacord.api.entity.channel.PrivateChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
-import org.javacord.api.entity.message.Message;
+import org.javacord.api.entity.message.MessageBuilder;
+import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.reaction.SingleReactionEvent;
 import org.jetbrains.annotations.NotNull;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
+import java.net.URISyntaxException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-public class GptScenario
+public class GotovScucoScenario
         extends Scenario {
 
-    private static final String PREFIX = "gpt";
-    private static final String DESCRIPTION = "Randomly appends the specified text";
-    private static final URI GPT_URI = URI.create("https://models.dobro.ai/gpt2/medium/");
+    private static final String PREFIX = "gotov";
+    private static final String DESCRIPTION = "Get a custom recipe from gotov-suka.ru";
+    private static final URI SERVICE_URI = URI.create("https://gotov-suka.ru/get_recipe/-1/-1/");
     private final Bucket bucket;
 
-    public GptScenario() {
+    public GotovScucoScenario() {
         super(PREFIX, DESCRIPTION);
-        Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(3L));
+        Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(1L));
         bucket = Bucket4j.builder().addLimit(bandwidth).build();
     }
 
@@ -116,36 +118,15 @@ public class GptScenario
         } catch (InterruptedException breakSignal) {
             return;
         }
-        String eventMessage = event.getMessageContent();
-        String messageWoBotPrefix = MessageUtils.getEventMessageWithoutBotPrefix(eventMessage,
-                event.getServer());
-        messageWoBotPrefix = ServerSideResolver.getReadableContent(messageWoBotPrefix, event.getServer());
-        final String messageWoCommandPrefix =
-                CommonUtils.cutLeftString(messageWoBotPrefix, PREFIX).trim();
-        if (CommonUtils.isTrStringEmpty(messageWoCommandPrefix)) {
-            return;
-        }
-        ObjectMapper objectMapper = new ObjectMapper();
-        GptRequest gptRequest = new GptRequest();
-        gptRequest.setPrompt(messageWoCommandPrefix);
-        String postData;
-        try {
-            postData = objectMapper.writeValueAsString(gptRequest);
-        } catch (Exception err) {
-            showErrorMessage("Internal bot error", event);
-            String errMsg = String.format("Unable serialize \"%s\" to JSON: %s",
-                    gptRequest.toString(), err.getMessage());
-            BroadCast.sendServiceMessage(errMsg);
-            log.error(errMsg, err);
-            return;
-        }
+
         SimpleHttpClient client = SettingsController.getInstance()
                 .getHttpClientsPool()
                 .borrowClient();
         try {
-            HttpPost post = generatePost(postData);
+            HttpGet request = new HttpGet(SERVICE_URI);
             String responseText;
-            try (CloseableHttpResponse httpResponse = client.execute(post)) {
+            URI targetURL;
+            try (CloseableHttpResponse httpResponse = client.execute(request)) {
                 HttpEntity entity = httpResponse.getEntity();
                 if (entity == null) {
                     responseText = "";
@@ -159,57 +140,81 @@ public class GptScenario
                     BroadCast.sendServiceMessage(message);
                     showErrorMessage(message, event);
                 }
+                targetURL = client.getLatestURI(request);
             } catch (Exception err) {
                 String errMsg = String.format("Unable send request to GPT-server: %s", err.getMessage());
                 log.error(errMsg, err);
                 BroadCast.sendServiceMessage(errMsg);
                 return;
             }
-
-            GptResponse gptResponse;
-            try {
-                gptResponse = objectMapper.readValue(responseText, GptResponse.class);
-            } catch (Exception err) {
-                String errMsg = String.format("Unable decode json \"%s\": %s", responseText,
-                        err.getMessage());
-                BroadCast.sendServiceMessage(errMsg);
-                log.error(errMsg, err);
-                return;
+            Document htmlDocument = Jsoup.parse(responseText, targetURL.toString());
+            String title = "";
+            Elements headers = htmlDocument.getElementsByClass("lead");
+            if (!headers.isEmpty()) {
+                title = headers.first().text();
             }
-
-            if (CommonUtils.isTrStringNotEmpty(gptResponse.getDetail())) {
-                BroadCast.sendServiceMessage("Fail to send request to GPT: " +
-                        gptResponse.getDetail());
-                return;
-            }
-            if (gptResponse.getReplies() == null || gptResponse.getReplies().isEmpty()) {
-                return;
-            }
-            List<String> listOfMessagesText = CommonUtils.splitEqually(
-                    "**" + messageWoCommandPrefix + "** " + gptResponse.getReplies().get(0), 1999);
-            for (String msgText : listOfMessagesText) {
-                EmbedBuilder embedBuilder = new EmbedBuilder()
-                        .setDescription(msgText);
-                Optional<Message> msg = super.displayMessage(embedBuilder, event.getChannel());
-                if (msg.isEmpty()) {
-                    return;
+            List<Tuple<String, String>> ingredients = new ArrayList<>();
+            Elements tables = htmlDocument.getElementsByTag("table");
+            if (!tables.isEmpty()) {
+                Element tableWithIngredients = tables.first();
+                Elements tableRolls = tableWithIngredients.getElementsByTag("tr");
+                for (Element roll : tableRolls) {
+                    Elements cells = roll.getElementsByTag("td");
+                    if (cells.size() >= 2) {
+                        String product = cells.get(0).text();
+                        String count = cells.get(1).text();
+                        ingredients.add(Tuple.of(product, count));
+                    }
                 }
             }
+            String imageUrl = "";
+            Elements imageDivs = htmlDocument.getElementsByClass("col-lg-7");
+            if (!imageDivs.isEmpty()) {
+                Elements images = imageDivs.first().getElementsByTag("img");
+                if (!images.isEmpty()) {
+                    String source = images.first().attr("src");
+                    try {
+                        URI resultUrl = new URIBuilder()
+                                .setScheme(SERVICE_URI.getScheme())
+                                .setHost(SERVICE_URI.getHost())
+                                .setPath(source)
+                                .build();
+                        imageUrl = resultUrl.toASCIIString();
+                    } catch (URISyntaxException warn) {
+                        String errMsg = String.format("Unable create URI of %s: %s",
+                                source, warn.getMessage());
+                        log.warn(errMsg, warn);
+                        BroadCast.sendServiceMessage(errMsg);
+                    }
+                }
+            }
+            MessageBuilder description = new MessageBuilder()
+                    .append("Тебе, сука, понадобятся:", MessageDecoration.UNDERLINE)
+                    .appendNewLine();
+            if (ingredients.isEmpty()) {
+                description.append("(ингридиентов, сука, на сайте нет)")
+                        .appendNewLine();
+            } else {
+                ingredients.forEach(ingredient -> description.append(ingredient.left)
+                        .append(" ")
+                        .append(ingredient.right)
+                        .appendNewLine());
+            }
+            description.appendNewLine()
+                    .append("Если руки не из жопы, получится:", MessageDecoration.UNDERLINE);
+            new MessageBuilder()
+                    .setEmbed(new EmbedBuilder()
+                            .setTitle(title)
+                            .setUrl(targetURL.toASCIIString())
+                            .setDescription(description.getStringBuilder().toString())
+                            .setTimestampToNow()
+                            .setFooter("Нажми на заголовок, что бы открыть сайт")
+                            .setImage(imageUrl))
+                    .send(event.getChannel());
         } finally {
             SettingsController.getInstance()
                     .getHttpClientsPool()
                     .returnClient(client);
         }
-    }
-
-    @NotNull
-    private HttpPost generatePost(@NotNull String postData) {
-        HttpPost post = new HttpPost(GPT_URI);
-        post.addHeader("Origin", "https://porfirevich.ru");
-        post.addHeader("Referer", "https://porfirevich.ru/");
-        post.addHeader("Host", "models.dobro.ai");
-        post.addHeader("Content-Type", "text/plain;charset=UTF-8");
-        post.setEntity(new StringEntity(postData, StandardCharsets.UTF_8));
-        return post;
     }
 }

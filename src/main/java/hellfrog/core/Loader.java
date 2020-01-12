@@ -6,11 +6,15 @@ import hellfrog.reacts.MsgCreateReaction;
 import hellfrog.settings.SettingsController;
 import hellfrog.settings.db.MainDBController;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.activity.ActivityType;
 import org.jetbrains.annotations.Contract;
 
 public class Loader {
+
+    private static final Logger log = LogManager.getLogger("Core");
 
     public static void main(String... args) {
             SettingsController settingsController = SettingsController.getInstance();
@@ -44,8 +48,7 @@ public class Loader {
     @Contract("null -> null")
     private static Void onException(Throwable th) {
         if (th != null) {
-            String msg = ExceptionUtils.getStackTrace(th);
-            System.out.println(msg);
+            log.error(th);
         }
         return null;
     }

@@ -2,15 +2,20 @@ package hellfrog.core;
 
 import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
+import hellfrog.settings.SettingsController;
+import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.ChannelCategory;
 import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
+import org.javacord.api.entity.emoji.CustomEmoji;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
+import org.javacord.api.util.DiscordRegexPattern;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,12 +23,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.javacord.api.entity.message.Message.ESCAPED_CHARACTER;
+
 public class ServerSideResolver
-    implements CommonConstants {
+        implements CommonConstants {
 
     private static final Pattern USER_TAG_REGEXP = Pattern.compile("^<@!?[0-9]+>$"); // <@!516251605864153099>
     private static final Pattern USER_TAG_SEARCH = Pattern.compile("<@!?[0-9]+>", Pattern.MULTILINE);
@@ -303,6 +309,62 @@ public class ServerSideResolver
             }
         }
         return message;
+    }
+
+    /**
+     * Method, works same as {@link Message#getReadableContent()} (contain same code).
+     *
+     * @param messageContent message text
+     * @param mayBeServer optional server object
+     * @return text with replaced mentions
+     */
+    public static String getReadableContent(@NotNull String messageContent,
+                                            Optional<Server> mayBeServer) {
+        DiscordApi api = SettingsController.getInstance().getDiscordApi();
+        Matcher userMention = DiscordRegexPattern.USER_MENTION.matcher(messageContent);
+        while (userMention.find()) {
+            String userId = userMention.group("id");
+            Optional<User> userOptional = api.getCachedUserById(userId);
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                String userName = mayBeServer.map(user::getDisplayName).orElseGet(user::getName);
+                messageContent = userMention.replaceFirst("@" + userName);
+                userMention.reset(messageContent);
+            }
+        }
+        Matcher roleMention = DiscordRegexPattern.ROLE_MENTION.matcher(messageContent);
+        while (roleMention.find()) {
+            String roleId = roleMention.group("id");
+            String roleName = mayBeServer
+                    .flatMap(server -> server
+                            .getRoleById(roleId)
+                            .map(Role::getName))
+                    .orElse("deleted-role");
+            messageContent = roleMention.replaceFirst("@" + roleName);
+            roleMention.reset(messageContent);
+        }
+        Matcher channelMention = DiscordRegexPattern.CHANNEL_MENTION.matcher(messageContent);
+        while (channelMention.find()) {
+            String channelId = channelMention.group("id");
+            String channelName = mayBeServer
+                    .flatMap(server -> server
+                            .getTextChannelById(channelId)
+                            .map(ServerChannel::getName))
+                    .orElse("deleted-channel");
+            messageContent = channelMention.replaceFirst("#" + channelName);
+            channelMention.reset(messageContent);
+        }
+        Matcher customEmoji = DiscordRegexPattern.CUSTOM_EMOJI.matcher(messageContent);
+        while (customEmoji.find()) {
+            String emojiId = customEmoji.group("id");
+            String name = api
+                    .getCustomEmojiById(emojiId)
+                    .map(CustomEmoji::getName)
+                    .orElseGet(() -> customEmoji.group("name"));
+            messageContent = customEmoji.replaceFirst(":" + name + ":");
+            customEmoji.reset(messageContent);
+        }
+        return ESCAPED_CHARACTER.matcher(messageContent).replaceAll("${char}");
     }
 
     @NotNull
