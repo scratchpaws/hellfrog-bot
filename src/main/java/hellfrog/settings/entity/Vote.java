@@ -21,9 +21,8 @@ public class Vote {
         IS_EXCEPTIONAL(8, 7),
         HAS_DEFAULT(9, 8),
         WIN_THRESHOLD(10, 9),
-        ROLES_FILTER(11, 10),
-        CREATE_DATE(12, 11),
-        UPDATE_DATE(13, 12);
+        CREATE_DATE(11, 10),
+        UPDATE_DATE(12, 11);
 
         public final int selectColumn;
         public final int insertColumn;

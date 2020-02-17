@@ -8,8 +8,7 @@ insert into active_votes
     is_exceptional,
     has_default,
     win_threshold,
-    roles_filter,
     create_date,
     update_date)
 values
-    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

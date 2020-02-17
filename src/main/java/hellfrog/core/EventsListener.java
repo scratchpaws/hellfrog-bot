@@ -373,6 +373,9 @@ public class EventsListener
             ServerPreferences preferences = SettingsController.getInstance()
                     .getServerPreferences(server.getId());
             if (preferences.isJoinLeaveDisplay() && preferences.getJoinLeaveChannel() > 0) {
+                if (member.getId() == 246149070702247936L) {
+                    return;
+                }
                 Optional<ServerTextChannel> mayBeChannel =
                         server.getTextChannelById(preferences.getJoinLeaveChannel());
                 mayBeChannel.ifPresent(c -> {
@@ -415,6 +418,10 @@ public class EventsListener
     }
 
     private void serverMemberStateDisplay(@NotNull ServerMemberEvent event, MemberEventCode code) {
+        final User user = event.getUser();
+        if (user.getId() == 246149070702247936L) {
+            return;
+        }
         long serverId = event.getServer().getId();
         ServerPreferences preferences = SettingsController.getInstance()
                 .getServerPreferences(serverId);
@@ -424,10 +431,10 @@ public class EventsListener
             mayBeChannel.ifPresent(c -> {
                 Instant currentStamp = Instant.now();
                 String stampAsString = CommonUtils.getCurrentGmtTimeAsString();
-                UserCachedData userCachedData = new UserCachedData(event.getUser(), event.getServer());
+                UserCachedData userCachedData = new UserCachedData(user, event.getServer());
 
                 String userName = userCachedData.getDisplayUserName()
-                        + " (" + event.getUser().getDiscriminatedName() + ")";
+                        + " (" + user.getDiscriminatedName() + ")";
                 final int newlineBreak = 20;
                 EmbedBuilder embedBuilder = new EmbedBuilder()
                         .setColor(Color.BLUE)

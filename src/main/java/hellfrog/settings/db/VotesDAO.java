@@ -72,6 +72,14 @@ public class VotesDAO {
     private String deleteVotePointsQuery = null;
     @FromTextFile(fileName = "sql/votes/delete_vote_query.sql")
     private String deleteVoteQuery = null;
+    @FromTextFile(fileName = "sql/votes/insert_vote_roles_query.sql")
+    private String insertVoteRolesQuery = null;
+    @FromTextFile(fileName = "sql/votes/get_vote_roles_by_vote.sql")
+    private String getVoteRolesByVoteIdQuery = null;
+    @FromTextFile(fileName = "sql/votes/get_vote_roles_by_message.sql")
+    private String getVoteRolesByMessageIdQuery = null;
+    @FromTextFile(fileName = "sql/votes/delete_vote_roles_query.sql")
+    private String deleteVoteRolesQuery = null;
 
     public VotesDAO(@NotNull Connection connection) {
         this.connection = connection;
@@ -134,6 +142,30 @@ public class VotesDAO {
         }
     }
 
+    public List<Long> getAllowedRolesForVoteByMessageId(long messageId) {
+        List<Long> result = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(getVoteRolesByMessageIdQuery)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Query:\n{}\nParam 1: {}", getVoteRolesByMessageIdQuery, messageId);
+            }
+            statement.setLong(1, messageId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    result.add(resultSet.getLong(1));
+                }
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Allowed roles for vote with message_id {}: {}", messageId,
+                        result.toString());
+            }
+        } catch (SQLException err) {
+            String errMsg = String.format("Unable to fetch allowed roles for vote with message id \"%d\": %s",
+                    messageId, err.getMessage());
+            log.error(errMsg, err);
+        }
+        return Collections.unmodifiableList(result);
+    }
+
     /**
      * Adding voting to the database.<br>
      * <p>First, checks are carried out on the correctness of filling
@@ -168,18 +200,14 @@ public class VotesDAO {
         long exceptionalVote = vote.isExceptional() ? 1L : 0L;
         long hasDefault = vote.isHasDefault() ? 1L : 0L;
         long winThreshold = vote.getWinThreshold();
-        String rolesFilter = vote.getRolesFilter() == null ? " " : vote.getRolesFilter()
-                .stream()
-                .map(String::valueOf)
-                .reduce(CommonUtils::reduceConcat)
-                .orElse(" ");
+        List<Long> rolesFilter = vote.getRolesFilter() == null ? Collections.emptyList() : vote.getRolesFilter();
         long currentDateTime = Instant.now().getEpochSecond();
         if (log.isDebugEnabled()) {
             log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}\n" +
                             "Param 5: {}\nParam 6: {}\nParam 7: {}\nParam 8: {}\nParam 9: {}\n" +
-                            "Param 10: {}\nParam 11: {}\nParam 12: {}", insertVoteQuery, serverId,
+                            "Param 10: {}\nParam 11: {}", insertVoteQuery, serverId,
                     textChatId, messageId, finishTime, voteText, hasTimer, exceptionalVote, hasDefault,
-                    winThreshold, rolesFilter, currentDateTime, currentDateTime);
+                    winThreshold, currentDateTime, currentDateTime);
         }
         try (PreparedStatement statement = connection.prepareStatement(insertVoteQuery)) {
             statement.setLong(Vote.Columns.SERVER_ID.insertColumn, serverId);
@@ -191,7 +219,6 @@ public class VotesDAO {
             statement.setLong(Vote.Columns.IS_EXCEPTIONAL.insertColumn, exceptionalVote);
             statement.setLong(Vote.Columns.HAS_DEFAULT.insertColumn, hasDefault);
             statement.setLong(Vote.Columns.WIN_THRESHOLD.insertColumn, winThreshold);
-            statement.setString(Vote.Columns.ROLES_FILTER.insertColumn, rolesFilter);
             statement.setLong(Vote.Columns.CREATE_DATE.insertColumn, currentDateTime);
             statement.setLong(Vote.Columns.UPDATE_DATE.insertColumn, currentDateTime);
             int insertCount = statement.executeUpdate();
@@ -250,6 +277,28 @@ public class VotesDAO {
                 }
             } catch (SQLException err) {
                 String errMsg = String.format("Unable insert vote point: %s", err.getMessage());
+                log.error(errMsg, err);
+                throw new VoteCreateException("database error", err);
+            }
+        }
+        for (long roleId : rolesFilter) {
+            currentDateTime = Instant.now().getEpochSecond();
+            try (PreparedStatement statement = connection.prepareStatement(insertVoteRolesQuery)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}\nParam 5: {}",
+                            insertVoteRolesQuery, voteId, messageId, roleId, currentDateTime, currentDateTime);
+                }
+                statement.setLong(1, voteId);
+                statement.setLong(2, messageId);
+                statement.setLong(3, roleId);
+                statement.setLong(4, currentDateTime);
+                statement.setLong(5, currentDateTime);
+                int count = statement.executeUpdate();
+                if (log.isDebugEnabled()) {
+                    log.debug("Inserted {} values", count);
+                }
+            } catch (SQLException err) {
+                String errMsg = String.format("Unable insert vote role: %s", err.getMessage());
                 log.error(errMsg, err);
                 throw new VoteCreateException("database error", err);
             }
@@ -359,15 +408,6 @@ public class VotesDAO {
             long voteId = resultSet.getLong(Vote.Columns.ID.selectColumn);
             if (currentVote == null || voteId != currentVote.getId()) {
                 currentVote = new Vote();
-                String rawRolesFilter = resultSet.getString(Vote.Columns.ROLES_FILTER.selectColumn);
-                if (CommonUtils.isTrStringNotEmpty(rawRolesFilter)) {
-                    List<Long> rolesFilter = currentVote.getRolesFilter();
-                    for (String item : rawRolesFilter.split(",")) {
-                        long roleId = CommonUtils.onlyNumbersToLong(item);
-                        if (roleId > 0L)
-                            rolesFilter.add(roleId);
-                    }
-                }
                 currentVote.setId(voteId)
                         .setServerId(resultSet.getLong(Vote.Columns.SERVER_ID.selectColumn))
                         .setTextChatId(resultSet.getLong(Vote.Columns.TEXT_CHAT_ID.selectColumn))
@@ -408,6 +448,23 @@ public class VotesDAO {
                             : null);
             currentVote.getVotePoints().add(votePoint);
         }
+        for (Vote vote : result) {
+            long voteId = vote.getId();
+            try (PreparedStatement statement = connection.prepareStatement(getVoteRolesByVoteIdQuery)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Query:\n{}\nParam 1: {}", getVoteRolesByVoteIdQuery, voteId);
+                }
+                statement.setLong(1, voteId);
+                List<Long> allowedRoles = new ArrayList<>();
+                try (ResultSet rs = statement.executeQuery()) {
+                    while (rs.next()) {
+                        long roleId = rs.getLong(1);
+                        allowedRoles.add(roleId);
+                    }
+                }
+                vote.setRolesFilter(allowedRoles);
+            }
+        }
         return Collections.unmodifiableList(result);
     }
 
@@ -440,12 +497,27 @@ public class VotesDAO {
                 log.error("Deleted {} votes with vote_id {}", count, vote.getId());
                 return false;
             }
-            return true;
         } catch (SQLException err) {
             String errMsg = String.format("Unable to delete vote with vote_id \"%d\": %s",
                     vote.getId(), err.getMessage());
             log.error(errMsg, err);
             return false;
         }
+        if (log.isDebugEnabled()) {
+            log.debug("Query:\n{}\nParam 1: {}", deleteVoteRolesQuery, vote.getId());
+        }
+        try (PreparedStatement statement = connection.prepareStatement(deleteVoteRolesQuery)) {
+            statement.setLong(1, vote.getId());
+            int count = statement.executeUpdate();
+            if (log.isDebugEnabled()) {
+                log.debug("Deleted {} vote roles for vote_id {}", count, vote.getId());
+            }
+        } catch (SQLException err) {
+            String errMsg = String.format("Unable to deleve vote roles filter with vote_id \"%d\": %s",
+                    vote.getId(), err.getMessage());
+            log.error(errMsg, err);
+            return false;
+        }
+        return true;
     }
 }

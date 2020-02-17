@@ -25,7 +25,6 @@ CREATE TABLE "active_votes" (
     "is_exceptional"    INTEGER NOT NULL DEFAULT 0,
     "has_default"       INTEGER NOT NULL DEFAULT 0,
     "win_threshold"     INTEGER NOT NULL DEFAULT 0,
-    "roles_filter"      TEXT NOT NULL,
     "create_date"       INTEGER NOT NULL DEFAULT 0,
     "update_date"       INTEGER NOT NULL DEFAULT 0
 );
@@ -39,6 +38,20 @@ CREATE TABLE "vote_points" (
     "update_date"       INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY("vote_id") REFERENCES "active_votes"("vote_id")
 );
+CREATE TABLE "vote_roles" (
+    "id"                INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+    "vote_id"           INTEGER NOT NULL,
+    "message_id"        INTEGER NOT NULL,
+    "role_id"           INTEGER NOT NULL,
+    "create_date"       INTEGER NOT NULL DEFAULT 0,
+    "update_date"       INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY("vote_id") REFERENCES "active_votes"("vote_id")
+);
+CREATE UNIQUE INDEX "uniq_vote_role" ON "vote_roles" (
+    "vote_id",
+    "role_id"
+);
+CREATE INDEX "vote_roles_msg" ON "vote_roles" ("message_id");
 CREATE TABLE "bot_owners" (
     "user_id"       INTEGER NOT NULL UNIQUE,
     "create_date"   INTEGER NOT NULL DEFAULT 0,
