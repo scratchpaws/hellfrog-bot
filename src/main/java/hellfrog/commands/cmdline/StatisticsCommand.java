@@ -1,10 +1,12 @@
 package hellfrog.commands.cmdline;
 
+import hellfrog.common.CommonUtils;
 import hellfrog.common.MessageUtils;
 import hellfrog.common.OptionalUtils;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.ServerStatistic;
 import hellfrog.settings.SettingsController;
+import hellfrog.settings.SmileStatistic;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.ServerTextChannel;
@@ -232,7 +234,17 @@ public class StatisticsCommand
                             }
                         });
 
-                if (emojiStat.isEmpty() && userStats.isEmpty() && textChatStat.isEmpty()) {
+                Optional<String> zeroUsageEmojiStat = server.getCustomEmojis().stream()
+                        .filter(kki -> {
+                            SmileStatistic smileStatistic = serverStatistic.getNonDefaultSmileStats().get(kki.getId());
+                            if (parsedCustomEmoji.hasFound() && !parsedCustomEmoji.getFound().contains(kki)) {
+                                return false;
+                            }
+                            return smileStatistic == null || smileStatistic.getUsagesCount().get() <= 0L;
+                        }).map(KnownCustomEmoji::getMentionTag)
+                        .reduce(CommonUtils::reduceConcat);
+
+                if (emojiStat.isEmpty() && userStats.isEmpty() && textChatStat.isEmpty() && zeroUsageEmojiStat.isEmpty()) {
                     new MessageBuilder()
                             .append("Message statistic is empty")
                             .send(getMessageTargetByRights(event));
@@ -242,11 +254,19 @@ public class StatisticsCommand
                     resultMessage.append("Collected statistic" + sinceStr + ":", MessageDecoration.BOLD)
                             .appendNewLine();
 
-                    if (emojiStat.size() > 0 && !textChatsFilter && !usersStatsFilter) {
+                    if ((emojiStat.size() > 0 || zeroUsageEmojiStat.isPresent()) && !textChatsFilter && !usersStatsFilter) {
                         resultMessage.append(">> Custom emoji usage statistic:", MessageDecoration.ITALICS)
                                 .appendNewLine();
 
-                        ServerStatistic.appendResultStats(resultMessage, emojiStat, 1);
+                        if (emojiStat.size() > 0) {
+                            ServerStatistic.appendResultStats(resultMessage, emojiStat, 1);
+                        }
+                        if (zeroUsageEmojiStat.isPresent()) {
+                            resultMessage.append("Emoji that has never been used:", MessageDecoration.ITALICS)
+                                    .appendNewLine();
+                            resultMessage.append(zeroUsageEmojiStat.get())
+                                    .appendNewLine();
+                        }
                     }
 
                     if (userStats.size() > 0 && !smilesOnly && !textChatsFilter) {
