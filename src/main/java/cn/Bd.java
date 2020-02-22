@@ -189,14 +189,21 @@ public class Bd {
             boolean successCreate = false;
             try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(
                     Files.newOutputStream(tmpZip)))) {
+                TreeSet<String> knownNames = new TreeSet<>();
                 for (KnownCustomEmoji emoji : selectedServer.getCustomEmojis()) {
                     String fileName = emoji.getName() + (emoji.isAnimated() ? ".gif" : ".png");
+                    int suffix = 1;
+                    while (knownNames.contains(fileName)) {
+                        fileName = emoji.getName() + suffix + (emoji.isAnimated() ? ".gif" : ".png");
+                        suffix++;
+                    }
                     ZipEntry zipEntry = new ZipEntry(fileName);
                     byte[] rawData = emoji.getImage().asByteArray().join();
                     zipEntry.setSize(rawData.length);
                     zos.putNextEntry(zipEntry);
                     zos.write(rawData);
                     zos.closeEntry();
+                    knownNames.add(fileName);
                 }
                 BroadCast.sendServiceMessage("Grab emoji from " + selectedServer +
                         " complete at file " + tmpZip);
