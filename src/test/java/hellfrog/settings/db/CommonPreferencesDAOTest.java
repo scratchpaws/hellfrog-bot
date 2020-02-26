@@ -43,7 +43,7 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(CommonPreferencesDAO.PREFIX_DEFAULT, oldPrefix);
             Assertions.assertEquals(CommonPreferencesDAO.OFFICIAL_SERVER_DEFAULT, oldOfficialServerId);
             Assertions.assertEquals(CommonPreferencesDAO.SERVICE_CHANNEL_DEFAULT, oldServiceChannelId);
-            Assertions.assertEquals(CommonPreferencesDAO.HIGH_ROLL_CHANNEL_KEY_DEFAULT, oldHighChannelId);
+            Assertions.assertEquals(CommonPreferencesDAO.HIGH_ROLL_CHANNEL_DEFAULT, oldHighChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.LOW_ROLL_CHANNEL_DEFAULT, oldLowChannelId);
 
             // проверяем замену данных, должны извлечься умолчания
@@ -60,7 +60,7 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(CommonPreferencesDAO.PREFIX_DEFAULT, oldPrefix);
             Assertions.assertEquals(CommonPreferencesDAO.OFFICIAL_SERVER_DEFAULT, oldOfficialServerId);
             Assertions.assertEquals(CommonPreferencesDAO.SERVICE_CHANNEL_DEFAULT, oldServiceChannelId);
-            Assertions.assertEquals(CommonPreferencesDAO.HIGH_ROLL_CHANNEL_KEY_DEFAULT, oldHighChannelId);
+            Assertions.assertEquals(CommonPreferencesDAO.HIGH_ROLL_CHANNEL_DEFAULT, oldHighChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.LOW_ROLL_CHANNEL_DEFAULT, oldLowChannelId);
 
             // проверяем, что данные сохранились

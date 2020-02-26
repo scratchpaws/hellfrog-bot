@@ -1,5 +1,8 @@
 package hellfrog.settings.db;
 
+import com.j256.ormlite.field.DataPersisterManager;
+import com.j256.ormlite.jdbc.JdbcConnectionSource;
+import com.j256.ormlite.support.ConnectionSource;
 import hellfrog.common.CommonUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,13 +17,15 @@ import java.nio.file.Paths;
 import java.sql.*;
 
 public class MainDBController
-    implements Closeable, AutoCloseable {
+        implements Closeable, AutoCloseable {
 
     private final Path SETTINGS_PATH = Paths.get("./settings/");
 
     private final Logger sqlLog = LogManager.getLogger("DB controller");
     private final Logger mainLog = LogManager.getLogger("Main");
+    @Deprecated
     private Connection connection;
+    private ConnectionSource connectionSource;
     private CommonPreferencesDAO commonPreferencesDAO = null;
     private BotOwnersDAO botOwnersDAO = null;
     private ServerPreferencesDAO serverPreferencesDAO = null;
@@ -43,6 +48,7 @@ public class MainDBController
     private void init(@NotNull String dbFileName,
                       boolean migrateOldSettings) throws IOException, SQLException {
 
+        DataPersisterManager.registerDataPersisters(InstantPersister.getSingleton());
         Path pathToDb = SETTINGS_PATH.resolve(dbFileName);
         String JDBC_PREFIX = "jdbc:sqlite:";
         String connectionURL = JDBC_PREFIX + pathToDb.toString();
@@ -55,9 +61,10 @@ public class MainDBController
             throw err;
         }
         try {
+            connectionSource = new JdbcConnectionSource(connectionURL);
             connection = DriverManager.getConnection(connectionURL);
-            commonPreferencesDAO = new CommonPreferencesDAO(connection);
-            botOwnersDAO = new BotOwnersDAO(connection);
+            commonPreferencesDAO = new CommonPreferencesDAOImpl(connectionSource);
+            botOwnersDAO = new BotOwnersDAOImpl(connectionSource);
             serverPreferencesDAO = new ServerPreferencesDAO(connection);
             userRightsDAO = new UserRightsDAO(connection);
             roleRightsDAO = new RoleRightsDAO(connection);
@@ -126,6 +133,15 @@ public class MainDBController
 
     @Override
     public void close() {
+        if (connectionSource != null) {
+            try {
+                connectionSource.close();
+            } catch (IOException err) {
+                sqlLog.warn("Unable to close main database: " + err.getMessage(), err);
+            } finally {
+                connection = null;
+            }
+        }
         if (connection != null) {
             try {
                 connection.close();
