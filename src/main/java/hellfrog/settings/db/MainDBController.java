@@ -65,7 +65,7 @@ public class MainDBController
             connection = DriverManager.getConnection(connectionURL);
             commonPreferencesDAO = new CommonPreferencesDAOImpl(connectionSource);
             botOwnersDAO = new BotOwnersDAOImpl(connectionSource);
-            serverPreferencesDAO = new ServerPreferencesDAO(connection);
+            serverPreferencesDAO = new ServerPreferencesDAOImpl(connectionSource);
             userRightsDAO = new UserRightsDAO(connection);
             roleRightsDAO = new RoleRightsDAO(connection);
             textChannelRightsDAO = new TextChannelRightsDAO(connection);

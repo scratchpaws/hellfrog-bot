@@ -1,8 +1,11 @@
 package hellfrog.settings.db;
 
+import com.j256.ormlite.dao.BaseDaoImpl;
+import com.j256.ormlite.support.ConnectionSource;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.FromTextFile;
 import hellfrog.common.ResourcesLoader;
+import hellfrog.settings.entity.RightEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -28,97 +31,72 @@ import java.util.List;
  * );<br>
  * </p>
  */
-public abstract class EntityRightsDAO {
+public abstract class EntityRightsDAO<T extends RightEntity, ID extends Long>
+        extends BaseDaoImpl<T, ID> {
 
     private final Logger log;
-    private final Connection connection;
+    private Connection connection;
 
-    private final String columnName;
-    private final String tableName;
+    private String columnName = "";
+    private String tableName = "";
 
-    private static final String TABLE_NAME_TEMPLATE = "%table_name%";
-    private static final String COLUMN_NAME_TEMPLATE = "%column_name%";
-
-    @FromTextFile(fileName = "sql/entity_rights/get_all_for_server_query.sql")
-    private String getAllAllowedOnServerQuery = null;
-    @FromTextFile(fileName = "sql/entity_rights/check_is_allowed_on_server_query.sql")
-    private String checkIsAllowedOnServerQuery = null;
     @FromTextFile(fileName = "sql/entity_rights/allow_on_server_query.sql")
     private String allowOnServerQuery = null;
     @FromTextFile(fileName = "sql/entity_rights/deny_on_server_query.sql")
     private String denyOnServerQuery = null;
 
-    public EntityRightsDAO(@NotNull Connection connection,
-                           @NotNull String tableName,
-                           @NotNull String columnName) {
-        this.connection = connection;
-        this.columnName = columnName;
-        this.tableName = tableName;
-        this.log = LogManager.getLogger("Entity rights (" + tableName + ")");
-        ResourcesLoader.initFileResources(this, EntityRightsDAO.class);
-        getAllAllowedOnServerQuery = getAllAllowedOnServerQuery.replace(TABLE_NAME_TEMPLATE, tableName)
-                .replace(COLUMN_NAME_TEMPLATE, columnName);
-        checkIsAllowedOnServerQuery = checkIsAllowedOnServerQuery.replace(TABLE_NAME_TEMPLATE, tableName)
-                .replace(COLUMN_NAME_TEMPLATE, columnName);
-        allowOnServerQuery = allowOnServerQuery.replace(TABLE_NAME_TEMPLATE, tableName)
-                .replace(COLUMN_NAME_TEMPLATE, columnName);
-        denyOnServerQuery = denyOnServerQuery.replace(TABLE_NAME_TEMPLATE, tableName)
-                .replace(COLUMN_NAME_TEMPLATE, columnName);
+    public EntityRightsDAO(@NotNull ConnectionSource connectionSource, Class<T> dataClass) throws SQLException {
+        super(connectionSource, dataClass);
+        this.log = LogManager.getLogger("Entity rights (" + dataClass.getSimpleName() + ")");
     }
 
     public List<Long> getAllAllowed(long serverId, @NotNull String commandPrefix) {
         List<Long> result = new ArrayList<>();
-        if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}", getAllAllowedOnServerQuery,
-                    serverId, commandPrefix);
-        }
-        try (PreparedStatement statement = connection.prepareStatement(getAllAllowedOnServerQuery)) {
-            statement.setLong(1, serverId);
-            statement.setString(2, commandPrefix);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                while (resultSet.next()) {
-                    result.add(resultSet.getLong(1));
-                }
+        try {
+            List<T> list = super.queryBuilder().where()
+                    .eq(RightEntity.SERVER_ID_FIELD_NAME, serverId)
+                    .and().eq(RightEntity.COMMAND_PREFIX_FIELD_NAME, commandPrefix)
+                    .query();
+            for (T entry : list) {
+                result.add(entry.getEntityId());
             }
         } catch (SQLException err) {
-            String errMsg = String.format("Unable to get all allowed %s for command \"%s\" " +
-                            "and server id \"%d\" from table \"%s\": %s", columnName, commandPrefix,
-                    serverId, tableName, err.getMessage());
+            String errMsg = String.format("Unable to get allowed %s for command \"%s\" and server id \"%d\": %s",
+                    super.getDataClass().getSimpleName(), commandPrefix, serverId, err.getMessage());
             log.error(errMsg, err);
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Found allowed entities ids for {}: {}", super.getDataClass().getSimpleName(),
+                    result.stream().map(String::valueOf).reduce(CommonUtils::reduceConcat).orElse("[EMPTY]"));
         }
         return Collections.unmodifiableList(result);
     }
 
+    protected abstract String getEntityFieldName();
+
     public boolean isAllowed(long serverId, long who, @NotNull String commandPrefix) {
-        if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}",
-                    checkIsAllowedOnServerQuery, serverId, who, commandPrefix);
-        }
-        try (PreparedStatement statement = connection.prepareStatement(checkIsAllowedOnServerQuery)) {
-            statement.setLong(1, serverId);
-            statement.setLong(2, who);
-            statement.setString(3, commandPrefix);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    int result = resultSet.getInt(1);
-                    if (log.isDebugEnabled()) {
-                        log.debug("Found {} values for serverId {}, entityId {}, commandPrefix {}, " +
-                                "table name {}", result, serverId, who, commandPrefix, tableName);
-                    }
-                    return result > 0;
+        try {
+            T entity = super.queryBuilder().where()
+                    .eq(RightEntity.SERVER_ID_FIELD_NAME, serverId)
+                    .and().eq(RightEntity.COMMAND_PREFIX_FIELD_NAME, commandPrefix)
+                    .and().eq(getEntityFieldName(), who)
+                    .queryForFirst();
+            if (log.isDebugEnabled()) {
+                if (entity == null) {
+                    log.debug("No values found for serverId {}, entityId {}, commandPrefix {}, entity {}"
+                            , serverId, who, commandPrefix, super.getDataClass().getSimpleName());
+                } else {
+                    log.debug("Found value for serverId {}, entityId {}, commandPrefix {}, " +
+                            "entity {}: {}", serverId, who, commandPrefix, super.getDataClass().getSimpleName(), entity.toString());
                 }
             }
-            if (log.isDebugEnabled()) {
-                log.debug("No values found for serverId {}, entityId {}, commandPrefix {}, table name {}"
-                        , serverId, who, commandPrefix, tableName);
-            }
+            return entity != null;
         } catch (SQLException err) {
-            String errMsg = String.format("Unable to check what %s with id \"%d\" is granted " +
-                            "to execute command \"%s\" on server with id \"%d\" (table \"%s\"): %s",
-                    columnName, who, commandPrefix, serverId, tableName, err.getMessage());
+            String errMsg = String.format("Unable to check what %s with server id \"%d\" and entity id \"%d\" is" +
+                            "allow execute command %s: %s", super.getDataClass().getSimpleName(), serverId, who,
+                    commandPrefix, err.getMessage());
             log.error(errMsg, err);
         }
-
         return false;
     }
 

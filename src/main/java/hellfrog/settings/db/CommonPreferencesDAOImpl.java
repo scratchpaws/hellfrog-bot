@@ -54,7 +54,6 @@ public class CommonPreferencesDAOImpl extends BaseDaoImpl<CommonPreference, Stri
             preference.setKey(key);
             preference.setStringValue(stringValue);
             preference.setLongValue(longValue);
-            preference.setNumeric(longValue > 0L);
             Instant now = Instant.now();
             preference.setCreateDate(currentValue == null ? now : currentValue.getCreateDate());
             preference.setUpdateDate(now);
@@ -62,7 +61,11 @@ public class CommonPreferencesDAOImpl extends BaseDaoImpl<CommonPreference, Stri
                 if (log.isDebugEnabled()) {
                     log.debug("Storing object {}", preference);
                 }
-                super.createOrUpdate(preference);
+                CreateOrUpdateStatus status = super.createOrUpdate(preference);
+                if (log.isDebugEnabled()) {
+                    log.debug("Update status: created - {}, updated - {}, lines changed - {}",
+                            status.isCreated(), status.isUpdated(), status.getNumLinesChanged());
+                }
             } catch (SQLException err) {
                 String errMsg = String.format("Unable to persist %s: %s", preference, err.getMessage());
                 log.error(errMsg, err);

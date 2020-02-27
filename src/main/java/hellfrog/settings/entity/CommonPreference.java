@@ -14,7 +14,6 @@ public class CommonPreference {
     public static final String KEY_FIELD_NAME = "key";
     public static final String STRING_VALUE_FIELD_NAME = "string_value";
     public static final String NUMERIC_VALUE_FIELD_NAME = "numeric_value";
-    public static final String IS_NUMERIC_FIELD_NAME = "is_numeric";
 
     @DatabaseField(columnName = KEY_FIELD_NAME, id = true, unique = true, canBeNull = false)
     private String key;
@@ -22,8 +21,6 @@ public class CommonPreference {
     private String stringValue;
     @DatabaseField(columnName = NUMERIC_VALUE_FIELD_NAME)
     private long longValue;
-    @DatabaseField(columnName = IS_NUMERIC_FIELD_NAME, canBeNull = false)
-    private boolean isNumeric;
     @DatabaseField(columnName = "create_date", canBeNull = false, persisterClass = InstantPersister.class)
     private Instant createDate;
     @DatabaseField(columnName = "update_date", canBeNull = false, persisterClass = InstantPersister.class)
@@ -71,21 +68,12 @@ public class CommonPreference {
         this.longValue = longValue;
     }
 
-    public boolean isNumeric() {
-        return isNumeric;
-    }
-
-    public void setNumeric(boolean numeric) {
-        isNumeric = numeric;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CommonPreference that = (CommonPreference) o;
         return longValue == that.longValue &&
-                isNumeric == that.isNumeric &&
                 Objects.equals(key, that.key) &&
                 Objects.equals(stringValue, that.stringValue) &&
                 Objects.equals(createDate, that.createDate) &&
@@ -94,7 +82,7 @@ public class CommonPreference {
 
     @Override
     public int hashCode() {
-        return Objects.hash(key, stringValue, longValue, isNumeric, createDate, updateDate);
+        return Objects.hash(key, stringValue, longValue, createDate, updateDate);
     }
 
     @Override
@@ -103,7 +91,6 @@ public class CommonPreference {
                 "key='" + key + '\'' +
                 ", stringValue='" + stringValue + '\'' +
                 ", longValue=" + longValue +
-                ", isNumeric=" + isNumeric +
                 ", createDate=" + createDate +
                 ", updateDate=" + updateDate +
                 '}';
