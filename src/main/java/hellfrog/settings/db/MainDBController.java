@@ -1,9 +1,12 @@
 package hellfrog.settings.db;
 
+import com.j256.ormlite.dao.GenericRawResults;
 import com.j256.ormlite.field.DataPersisterManager;
 import com.j256.ormlite.jdbc.JdbcConnectionSource;
+import com.j256.ormlite.logger.LoggerFactory;
 import com.j256.ormlite.support.ConnectionSource;
 import hellfrog.common.CommonUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -14,7 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.*;
+import java.sql.SQLException;
 
 public class MainDBController
         implements Closeable, AutoCloseable {
@@ -23,8 +26,6 @@ public class MainDBController
 
     private final Logger sqlLog = LogManager.getLogger("DB controller");
     private final Logger mainLog = LogManager.getLogger("Main");
-    @Deprecated
-    private Connection connection;
     private ConnectionSource connectionSource;
     private CommonPreferencesDAO commonPreferencesDAO = null;
     private BotOwnersDAO botOwnersDAO = null;
@@ -61,16 +62,16 @@ public class MainDBController
             throw err;
         }
         try {
+            System.setProperty("com.j256.ormlite.logger.type", "LOG4J2");
             connectionSource = new JdbcConnectionSource(connectionURL);
-            connection = DriverManager.getConnection(connectionURL);
             commonPreferencesDAO = new CommonPreferencesDAOImpl(connectionSource);
             botOwnersDAO = new BotOwnersDAOImpl(connectionSource);
             serverPreferencesDAO = new ServerPreferencesDAOImpl(connectionSource);
-            userRightsDAO = new UserRightsDAO(connection);
-            roleRightsDAO = new RoleRightsDAO(connection);
-            textChannelRightsDAO = new TextChannelRightsDAO(connection);
-            channelCategoryRightsDAO = new ChannelCategoryRightsDAO(connection);
-            votesDAO = new VotesDAO(connection);
+            userRightsDAO = new UserRightsDAOImpl(connectionSource);
+            roleRightsDAO = new RoleRightsDAOImpl(connectionSource);
+            textChannelRightsDAO = new TextChannelRightsDAOImpl(connectionSource);
+            channelCategoryRightsDAO = new ChannelCategoryRightsDAOImpl(connectionSource);
+            votesDAO = new VotesDAO(connectionSource);
             sqlLog.info("Main database opened");
         } catch (SQLException err) {
             sqlLog.fatal("Unable to open main database: " + err.getMessage(), err);
@@ -79,50 +80,36 @@ public class MainDBController
         new SchemaVersionChecker(this, migrateOldSettings).checkSchemaVersion();
     }
 
-    Connection getConnection() {
-        return this.connection;
-    }
-
     public String executeRawQuery(@Nullable String rawQuery) {
         if (CommonUtils.isTrStringEmpty(rawQuery)) {
             return "(Query is empty or null)";
         }
-        try {
-            if (connection == null || connection.isClosed()) {
-                return "(Connection is closed)";
-            }
-        } catch (SQLException err) {
-            return err.getMessage();
-        }
         StringBuilder result = new StringBuilder();
-        try (Statement statement = connection.createStatement()) {
-            boolean hasResult = statement.execute(rawQuery);
-            if (!hasResult) {
-                int updateCount = statement.getUpdateCount();
+        try {
+            if (StringUtils.startsWithAny(rawQuery.toLowerCase(),
+                    "update", "delete", "alter", "create", "drop", "truncate")) {
+                int updateCount = commonPreferencesDAO.updateRaw(rawQuery);
                 return "Successful. Updated " + updateCount + " rows";
             } else {
-                try (ResultSet resultSet = statement.getResultSet()) {
-                    ResultSetMetaData metaData = resultSet.getMetaData();
-                    for (int i = 1; i <= metaData.getColumnCount(); i++) {
-                        String label = metaData.getColumnLabel(i);
-                        result.append(label);
-                        if (i < metaData.getColumnCount()) {
-                            result.append("|");
+                GenericRawResults<String[]> results = commonPreferencesDAO.queryRaw(rawQuery);
+                String[] columnNames = results.getColumnNames();
+                for (int i = 0; i < columnNames.length; i++) {
+                    result.append(columnNames[i]);
+                    if (i < (columnNames.length - 1)) {
+                        result.append('|');
+                    }
+                }
+                result.append('\n');
+                result.append("-".repeat(Math.max(0, result.length())));
+                result.append('\n');
+                for (String[] line : results.getResults()) {
+                    for (int i = 0; i < line.length; i++) {
+                        result.append(line[i]);
+                        if (i < (line.length - 1)) {
+                            result.append('|');
                         }
                     }
                     result.append('\n');
-                    result.append("-".repeat(Math.max(0, result.length())));
-                    result.append('\n');
-                    while (resultSet.next()) {
-                        for (int i = 1; i <= metaData.getColumnCount(); i++) {
-                            String value = resultSet.getString(i);
-                            result.append(value);
-                            if (i < metaData.getColumnCount()) {
-                                result.append("|");
-                            }
-                        }
-                        result.append('\n');
-                    }
                 }
             }
         } catch (SQLException err) {
@@ -139,19 +126,13 @@ public class MainDBController
             } catch (IOException err) {
                 sqlLog.warn("Unable to close main database: " + err.getMessage(), err);
             } finally {
-                connection = null;
+                connectionSource = null;
             }
         }
-        if (connection != null) {
-            try {
-                connection.close();
-                sqlLog.info("Main database closed");
-            } catch (SQLException err) {
-                sqlLog.warn("Unable to close main database: " + err.getMessage(), err);
-            } finally {
-                connection = null;
-            }
-        }
+    }
+
+    ConnectionSource getConnectionSource() {
+        return connectionSource;
     }
 
     public CommonPreferencesDAO getCommonPreferencesDAO() {

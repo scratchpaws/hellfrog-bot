@@ -11,10 +11,13 @@ import java.util.Objects;
 @DatabaseTable(tableName = "bot_owners", daoClass = BotOwnersDAOImpl.class)
 public class BotOwner {
 
-    @DatabaseField(columnName = "user_id", id = true, unique = true, canBeNull = false)
+    public static final String USER_ID_FIELD_NAME = "user_id";
+    public static final String CREATE_DATE_FIELD_NAME = "create_date";
+
+    @DatabaseField(columnName = USER_ID_FIELD_NAME, id = true, unique = true, canBeNull = false)
     private long userId;
 
-    @DatabaseField(columnName = "create_date", canBeNull = false, persisterClass = InstantPersister.class)
+    @DatabaseField(columnName = CREATE_DATE_FIELD_NAME, canBeNull = false, persisterClass = InstantPersister.class)
     private Instant createDate;
 
     public BotOwner() {

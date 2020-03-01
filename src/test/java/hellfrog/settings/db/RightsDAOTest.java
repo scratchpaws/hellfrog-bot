@@ -55,7 +55,8 @@ public class RightsDAOTest {
                                             userId, cmd);
                                     Assertions.assertFalse(isAllowed);
                                     boolean isAdded = userRightsDAO.allow(testServer.serverId, userId, cmd);
-                                    Assertions.assertTrue(isAdded);
+                                    Assertions.assertTrue(isAdded, String.format("Must be allowed: server id - %d, " +
+                                            "user id - %d, command - %s", testServer.serverId, userId, cmd));
                                     isAllowed = userRightsDAO.isAllowed(testServer.serverId, userId, cmd);
                                     Assertions.assertTrue(isAllowed);
                                 });
@@ -66,7 +67,8 @@ public class RightsDAOTest {
                                             cmd);
                                     Assertions.assertFalse(isAllowed);
                                     boolean isAdded = roleRightsDAO.allow(testServer.serverId, roleId, cmd);
-                                    Assertions.assertTrue(isAdded);
+                                    Assertions.assertTrue(isAdded, String.format("Must be allowed: server id - %d, " +
+                                            "role id - %d, command - %s", testServer.serverId, roleId, cmd));
                                     isAllowed = roleRightsDAO.isAllowed(testServer.serverId, roleId, cmd);
                                     Assertions.assertTrue(isAllowed);
                                 });

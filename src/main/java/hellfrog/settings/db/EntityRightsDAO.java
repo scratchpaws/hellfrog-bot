@@ -1,19 +1,17 @@
 package hellfrog.settings.db;
 
 import com.j256.ormlite.dao.BaseDaoImpl;
+import com.j256.ormlite.stmt.DeleteBuilder;
 import com.j256.ormlite.support.ConnectionSource;
 import hellfrog.common.CommonUtils;
-import hellfrog.common.FromTextFile;
-import hellfrog.common.ResourcesLoader;
 import hellfrog.settings.entity.RightEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,29 +19,11 @@ import java.util.List;
 /**
  * DAO прав пользователя, роли, либо канала/категории.
  * Таблицы для данных сущностей однотипны и вынесены в данный класс
- * <p>
- * CREATE TABLE        "entity_name_rights" (<br>
- * "id"                INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,<br>
- * "server_id"         INTEGER NOT NULL,<br>
- * "command_prefix"    TEXT NOT NULL,<br>
- * "entity_name_id"    INTEGER NOT NULL,<br>
- * "create_date"       INTEGER NOT NULL DEFAULT 0,<br>
- * );<br>
- * </p>
  */
 public abstract class EntityRightsDAO<T extends RightEntity, ID extends Long>
         extends BaseDaoImpl<T, ID> {
 
     private final Logger log;
-    private Connection connection;
-
-    private String columnName = "";
-    private String tableName = "";
-
-    @FromTextFile(fileName = "sql/entity_rights/allow_on_server_query.sql")
-    private String allowOnServerQuery = null;
-    @FromTextFile(fileName = "sql/entity_rights/deny_on_server_query.sql")
-    private String denyOnServerQuery = null;
 
     public EntityRightsDAO(@NotNull ConnectionSource connectionSource, Class<T> dataClass) throws SQLException {
         super(connectionSource, dataClass);
@@ -72,14 +52,17 @@ public abstract class EntityRightsDAO<T extends RightEntity, ID extends Long>
         return Collections.unmodifiableList(result);
     }
 
-    protected abstract String getEntityFieldName();
+    protected abstract String getEntityFieldIdName();
 
-    public boolean isAllowed(long serverId, long who, @NotNull String commandPrefix) {
+    protected abstract T createEntity();
+
+    @Nullable
+    private T fetchValue(long serverId, long who, @NotNull String commandPrefix) {
         try {
             T entity = super.queryBuilder().where()
                     .eq(RightEntity.SERVER_ID_FIELD_NAME, serverId)
                     .and().eq(RightEntity.COMMAND_PREFIX_FIELD_NAME, commandPrefix)
-                    .and().eq(getEntityFieldName(), who)
+                    .and().eq(getEntityFieldIdName(), who)
                     .queryForFirst();
             if (log.isDebugEnabled()) {
                 if (entity == null) {
@@ -90,79 +73,83 @@ public abstract class EntityRightsDAO<T extends RightEntity, ID extends Long>
                             "entity {}: {}", serverId, who, commandPrefix, super.getDataClass().getSimpleName(), entity.toString());
                 }
             }
-            return entity != null;
+            return entity;
         } catch (SQLException err) {
             String errMsg = String.format("Unable to check what %s with server id \"%d\" and entity id \"%d\" is" +
                             "allow execute command %s: %s", super.getDataClass().getSimpleName(), serverId, who,
                     commandPrefix, err.getMessage());
             log.error(errMsg, err);
+            return null;
         }
-        return false;
+    }
+
+    public boolean isAllowed(long serverId, long who, @NotNull String commandPrefix) {
+        return fetchValue(serverId, who, commandPrefix) != null;
     }
 
     public boolean allow(long serverId, long who, @NotNull String commandPrefix) {
-        if (!isAllowed(serverId, who, commandPrefix)) {
-            long createDate = CommonUtils.getCurrentGmtTimeAsMillis();
+        T entity = fetchValue(serverId, who, commandPrefix);
+        if (entity == null) {
+            T newEntity = createEntity();
+            newEntity.setCommandPrefix(commandPrefix);
+            newEntity.setCreateDate(Instant.now());
+            newEntity.setServerId(serverId);
+            newEntity.setEntityId(who);
             if (log.isDebugEnabled()) {
-                log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}",
-                        allowOnServerQuery, serverId, commandPrefix, who, createDate);
+                log.debug("Storing object {}", newEntity.toString());
             }
-            try (PreparedStatement statement = connection.prepareStatement(allowOnServerQuery)) {
-                statement.setLong(1, serverId);
-                statement.setString(2, commandPrefix);
-                statement.setLong(3, who);
-                statement.setLong(4, createDate);
-                int count = statement.executeUpdate();
+            try {
+                CreateOrUpdateStatus status = super.createOrUpdate(newEntity);
                 if (log.isDebugEnabled()) {
-                    log.debug("Inserted {} values", count);
+                    log.debug("Update status: created - {}, updated - {}, lines changed - {}",
+                            status.isCreated(), status.isUpdated(), status.getNumLinesChanged());
                 }
-                return count == 1;
+                return status.isCreated() || status.isUpdated();
             } catch (SQLException err) {
-                String errMsg = String.format("Unable to allow %s with id \"%d\" execute command " +
-                                "\"%s\" on server with id \"%d\" (table \"%s\"): %s",
-                        columnName, who, commandPrefix, serverId, tableName, err.getMessage());
+                String errMsg = String.format("Unable to persist %s: %s", newEntity, err.getMessage());
                 log.error(errMsg, err);
-                return false;
             }
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Entity {} with id {} already allowed to execute command " +
-                                "with prefix {} on serverId {}, table {}",
-                        columnName, who, commandPrefix, serverId, tableName);
+                                "with prefix {} on serverId {}: {}",
+                        super.getDataClass().getSimpleName(), who, commandPrefix, serverId, entity);
             }
-            return false;
         }
+        return false;
     }
 
     public boolean deny(long serverId, long who, @NotNull String commandPrefix) {
-        if (isAllowed(serverId, who, commandPrefix)) {
+        T entity = fetchValue(serverId, who, commandPrefix);
+        if (entity != null) {
             if (log.isDebugEnabled()) {
-                log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}",
-                        denyOnServerQuery, serverId, who, commandPrefix);
+                log.debug("Deleting {}", entity.toString());
             }
-            try (PreparedStatement statement = connection.prepareStatement(denyOnServerQuery)) {
-                statement.setLong(1, serverId);
-                statement.setLong(2, who);
-                statement.setString(3, commandPrefix);
-                int count = statement.executeUpdate();
+            try {
+                DeleteBuilder<T, ID> deleteBuilder = super.deleteBuilder();
+                deleteBuilder.where()
+                        .eq(RightEntity.COMMAND_PREFIX_FIELD_NAME, commandPrefix)
+                        .and().eq(RightEntity.SERVER_ID_FIELD_NAME, serverId)
+                        .and().eq(getEntityFieldIdName(), who);
+                int count = deleteBuilder.delete();
                 if (log.isDebugEnabled()) {
-                    log.debug("Deleted {} values", count);
+                    log.debug("Deleted {} entities with server id {}, entity id {}, command prefix {}",
+                            count, serverId, who, commandPrefix);
                 }
                 return count > 0;
             } catch (SQLException err) {
                 String errMsg = String.format("Unable to deny %s with id \"%d\" execute command " +
-                                "\"%s\" on server with id \"%d\" (table \"%s\"): %s",
-                        columnName, who, commandPrefix, serverId, tableName, err.getMessage());
+                                "\"%s\" on server with id \"%d\": %s",
+                        super.getDataClass().getSimpleName(), who, commandPrefix, serverId, err.getMessage());
                 log.error(errMsg, err);
-                return false;
             }
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Entity {} with id {} already denied to execute command " +
-                                "with prefix {} on serverId {}, table {}",
-                        columnName, who, commandPrefix, serverId, tableName);
+                                "with prefix {} on serverId {}",
+                        super.getDataClass().getSimpleName(), who, commandPrefix, serverId);
             }
-            return false;
         }
+        return false;
     }
 }

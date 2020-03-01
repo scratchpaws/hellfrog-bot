@@ -3,12 +3,13 @@ package hellfrog.settings.entity;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 import hellfrog.settings.db.InstantPersister;
+import hellfrog.settings.db.TextChannelRightsDAOImpl;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.StringJoiner;
 
-@DatabaseTable(tableName = "text_channel_rights")
+@DatabaseTable(tableName = "text_channel_rights", daoClass = TextChannelRightsDAOImpl.class)
 public class TextChannelRight
         implements RightEntity {
 

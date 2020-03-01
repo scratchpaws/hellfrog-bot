@@ -2,13 +2,14 @@ package hellfrog.settings.entity;
 
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
+import hellfrog.settings.db.ChannelCategoryRightsDAOImpl;
 import hellfrog.settings.db.InstantPersister;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.StringJoiner;
 
-@DatabaseTable(tableName = "category_rights")
+@DatabaseTable(tableName = "category_rights", daoClass = ChannelCategoryRightsDAOImpl.class)
 public class ChannelCategoryRight
         implements RightEntity {
 
@@ -58,6 +59,16 @@ public class ChannelCategoryRight
 
     public void setCategoryId(long categoryId) {
         this.categoryId = categoryId;
+    }
+
+    @Override
+    public long getEntityId() {
+        return categoryId;
+    }
+
+    @Override
+    public void setEntityId(long newEntityId) {
+        this.categoryId = newEntityId;
     }
 
     public Instant getCreateDate() {

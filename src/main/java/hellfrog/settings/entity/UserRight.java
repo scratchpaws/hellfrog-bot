@@ -3,12 +3,13 @@ package hellfrog.settings.entity;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 import hellfrog.settings.db.InstantPersister;
+import hellfrog.settings.db.UserRightsDAOImpl;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.StringJoiner;
 
-@DatabaseTable(tableName = "user_rights")
+@DatabaseTable(tableName = "user_rights", daoClass = UserRightsDAOImpl.class)
 public class UserRight
         implements RightEntity {
 

@@ -2,6 +2,8 @@ package hellfrog.settings.db;
 
 import com.j256.ormlite.dao.BaseDaoImpl;
 import com.j256.ormlite.dao.CloseableIterator;
+import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.stmt.DeleteBuilder;
 import com.j256.ormlite.support.ConnectionSource;
 import hellfrog.common.CommonUtils;
 import hellfrog.settings.entity.BotOwner;
@@ -72,7 +74,12 @@ public class BotOwnersDAOImpl extends BaseDaoImpl<BotOwner, Long>
                 BotOwner botOwner = new BotOwner();
                 botOwner.setUserId(userId);
                 botOwner.setCreateDate(Instant.now());
-                super.createOrUpdate(botOwner);
+                Dao.CreateOrUpdateStatus status = super.createOrUpdate(botOwner);
+                if (log.isDebugEnabled()) {
+                    log.debug("Storing {}: inserted - {}, updated - {}, modified rows - {}",
+                            botOwner, status.isCreated(), status.isUpdated(), status.getNumLinesChanged());
+                }
+                return status.isCreated();
             } catch (SQLException err) {
                 String errMsg = String.format("Unable to add %d to global bot owners: %s", userId, err.getMessage());
                 log.error(errMsg, err);
@@ -85,8 +92,13 @@ public class BotOwnersDAOImpl extends BaseDaoImpl<BotOwner, Long>
     public boolean deleteFromOwners(long userId) {
         if (isPresent(userId)) {
             try {
-                BotOwner botOwner = super.queryForId(userId);
-                super.delete(botOwner);
+                DeleteBuilder<BotOwner, Long> deleteBuilder = super.deleteBuilder();
+                deleteBuilder.where().eq(BotOwner.USER_ID_FIELD_NAME, userId);
+                int count = deleteBuilder.delete();
+                if (log.isDebugEnabled()) {
+                    log.debug("Deleted {} owners with id {}", count, userId);
+                }
+                return count > 0;
             } catch (SQLException err) {
                 String errMsg = String.format("Unable to delete %d from global bot owners: %s", userId, err.getMessage());
                 log.error(errMsg, err);

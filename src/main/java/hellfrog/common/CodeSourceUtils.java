@@ -1,5 +1,6 @@
 package hellfrog.common;
 
+import com.j256.ormlite.table.DatabaseTable;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
@@ -17,6 +18,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class CodeSourceUtils {
 
@@ -88,7 +90,7 @@ public final class CodeSourceUtils {
                     .map(ClassInfo::getName)
                     .forEachOrdered(name -> {
                         try {
-                            Class childClass = Class.forName(name);
+                            Class<?> childClass = Class.forName(name);
                             Object instance = childClass.getDeclaredConstructor()
                                     .newInstance();
                             if (superClassFQDN.isInstance(instance)) {
@@ -107,5 +109,37 @@ public final class CodeSourceUtils {
                 .reduce((s1, s2) -> s1 + '\n' + s2)
                 .ifPresent(s -> log.info("Unable to create instances of:\n" + s));
         return Collections.unmodifiableList(collectedCommandsList);
+    }
+
+    public static List<Class<?>> findDataTableClass() {
+        List<Class<?>> classes = new ArrayList<>();
+        List<String> successList = new ArrayList<>();
+        List<String> failList = new ArrayList<>();
+        try (ScanResult scanResult = new ClassGraph()
+                .enableAllInfo()
+                .whitelistPackages("hellfrog")
+                .scan()) {
+            scanResult.getAllClasses().stream()
+                    .filter(ClassInfo::isPublic)
+                    .filter(ci -> !ci.isAbstract())
+                    .filter(ci -> ci.hasAnnotation(DatabaseTable.class.getName()))
+                    .map(ClassInfo::getName)
+                    .forEach(name -> {
+                        try {
+                            Class<?> dataClass = Class.forName(name);
+                            classes.add(dataClass);
+                            successList.add(dataClass.getName());
+                        } catch (Exception err) {
+                            failList.add(name + ": " + err);
+                        }
+                    });
+        }
+        successList.stream()
+                .reduce((s1, s2) -> s1 + ", " + s2)
+                .ifPresent(s -> log.info("Found data classes: " + s));
+        failList.stream()
+                .reduce((s1, s2) -> s1 + '\n' + s2)
+                .ifPresent(s -> log.info("Unable to find data classes: " + s));
+        return Collections.unmodifiableList(classes);
     }
 }

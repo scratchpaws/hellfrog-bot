@@ -1,16 +1,18 @@
 package hellfrog.settings.db;
 
-import hellfrog.common.CommonUtils;
-import hellfrog.common.FromTextFile;
-import hellfrog.common.ResourcesLoader;
-import hellfrog.settings.entity.Vote;
-import hellfrog.settings.entity.VotePoint;
+import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.stmt.DeleteBuilder;
+import com.j256.ormlite.stmt.UpdateBuilder;
+import com.j256.ormlite.support.ConnectionSource;
+import hellfrog.settings.entity.ActiveVote;
+import hellfrog.settings.entity.ActiveVotePoint;
+import hellfrog.settings.entity.VoteRole;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.sql.*;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,141 +20,108 @@ import java.util.List;
 
 /**
  * DAO for working with voting in the database.
- * <p>
- * CREATE TABLE "active_votes" (<br>
- * "vote_id"           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,<br>
- * "server_id"         INTEGER NOT NULL,<br>
- * "text_chat_id"      INTEGER NOT NULL,<br>
- * "message_id"        INTEGER NOT NULL,<br>
- * "finish_date"       INTEGER NOT NULL,<br>
- * "vote_text"         TEXT NOT NULL,<br>
- * "has_timer"         INTEGER NOT NULL DEFAULT 0,<br>
- * "is_exceptional"    INTEGER NOT NULL DEFAULT 0,<br>
- * "has_default"       INTEGER NOT NULL DEFAULT 0,<br>
- * "win_threshold"     INTEGER NOT NULL DEFAULT 0,<br>
- * "roles_filter"      TEXT NOT NULL,<br>
- * "create_date"       INTEGER NOT NULL DEFAULT 0,<br>
- * "update_date"       INTEGER NOT NULL DEFAULT 0<br>
- * );
- * </p>
- * <p>
- * CREATE TABLE "vote_points" (<br>
- * "id"                INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,<br>
- * "vote_id"           INTEGER NOT NULL,<br>
- * "point_text"        INTEGER NOT NULL,<br>
- * "unicode_emoji"     TEXT,<br>
- * "custom_emoji_id"   INTEGER,<br>
- * "create_date"       INTEGER NOT NULL DEFAULT 0,<br>
- * "update_date"       INTEGER NOT NULL DEFAULT 0,<br>
- * FOREIGN KEY("vote_id") REFERENCES "active_votes"("vote_id")<br>
- * );
- * </p>
  */
 public class VotesDAO {
 
     private static final Logger log = LogManager.getLogger("Votes");
 
-    private final Connection connection;
+    private final ActiveVotesDAO activeVotesDAO;
+    private final ActiveVotePointsDAO activeVotePointsDAO;
+    private final VoteRolesDAO voteRolesDAO;
 
-    @FromTextFile(fileName = "sql/votes/get_all_votes_query.sql")
-    private String getAllVotesQuery = null;
-    @FromTextFile(fileName = "sql/votes/get_all_expired_votes_query.sql")
-    private String getAllExpiredVotesQuery = null;
-    @FromTextFile(fileName = "sql/votes/insert_vote_query.sql")
-    private String insertVoteQuery = null;
-    @FromTextFile(fileName = "sql/votes/insert_vote_point_query.sql")
-    private String insertVotePointQuery = null;
-    @FromTextFile(fileName = "sql/votes/get_last_insert_vote_id_query.sql")
-    private String getLastInsertVoteIdQuery = null;
-    @FromTextFile(fileName = "sql/votes/get_vote_by_id_query.sql")
-    private String getVoteByIdQuery = null;
-    @FromTextFile(fileName = "sql/votes/activate_vote_query.sql")
-    private String activateVoteQuery = null;
-    @FromTextFile(fileName = "sql/votes/delete_vote_points_query.sql")
-    private String deleteVotePointsQuery = null;
-    @FromTextFile(fileName = "sql/votes/delete_vote_query.sql")
-    private String deleteVoteQuery = null;
-    @FromTextFile(fileName = "sql/votes/insert_vote_roles_query.sql")
-    private String insertVoteRolesQuery = null;
-    @FromTextFile(fileName = "sql/votes/get_vote_roles_by_vote.sql")
-    private String getVoteRolesByVoteIdQuery = null;
-    @FromTextFile(fileName = "sql/votes/get_vote_roles_by_message.sql")
-    private String getVoteRolesByMessageIdQuery = null;
-    @FromTextFile(fileName = "sql/votes/delete_vote_roles_query.sql")
-    private String deleteVoteRolesQuery = null;
-
-    public VotesDAO(@NotNull Connection connection) {
-        this.connection = connection;
-        ResourcesLoader.initFileResources(this, VotesDAO.class);
+    public VotesDAO(@NotNull ConnectionSource connectionSource) throws SQLException {
+        this.activeVotesDAO = new ActiveVotesDAOImpl(connectionSource);
+        this.activeVotePointsDAO = new ActiveVotePointsDAOImpl(connectionSource);
+        this.voteRolesDAO = new VoteRolesDAOImpl(connectionSource);
     }
 
-    public List<Vote> getAll(long serverId) {
-        if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}", getAllVotesQuery, serverId);
-        }
-
-        try (PreparedStatement statement = connection.prepareStatement(getAllVotesQuery)) {
-            statement.setLong(1, serverId);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                List<Vote> extracted = extractVotes(resultSet);
-                if (log.isDebugEnabled()) {
-                    log.debug("Extracted votes for server id {}:", serverId);
-                    for (Vote vote : extracted) {
-                        log.debug(vote.toString());
-                    }
-                }
-                return extracted;
+    public List<ActiveVote> getAll(long serverId) {
+        try {
+            List<ActiveVote> allActiveVotes = activeVotesDAO.queryBuilder().where()
+                    .eq(ActiveVote.SERVER_ID_FIELD_NAME, serverId)
+                    .and().gt(ActiveVote.MESSAGE_ID_FIELD_NAME, 0L)
+                    .query();
+            if (allActiveVotes == null) {
+                allActiveVotes = Collections.emptyList();
             }
+            fillVotesChildItems(allActiveVotes);
+            if (log.isDebugEnabled()) {
+                log.debug("Extracted votes for server id {}:", serverId);
+                allActiveVotes.forEach(log::debug);
+            }
+            return Collections.unmodifiableList(allActiveVotes);
         } catch (SQLException err) {
             String errMsg = String.format("Unable extract votes for serverId \"%d\": %s",
                     serverId, err.getMessage());
             log.error(errMsg, err);
-            return Collections.emptyList();
+
+        }
+        return Collections.emptyList();
+    }
+
+    private void fillVoteChildItems(@NotNull ActiveVote activeVote) throws SQLException {
+        List<ActiveVotePoint> votePoints = activeVotePointsDAO.queryBuilder().where()
+                .eq(ActiveVotePoint.ACTIVE_VOTE_FIELD_NAME, activeVote.getId())
+                .query();
+        if (votePoints == null) {
+            votePoints = Collections.emptyList();
+        }
+        activeVote.setVotePoints(Collections.unmodifiableList(votePoints));
+        List<VoteRole> voteRoles = voteRolesDAO.queryBuilder().where()
+                .eq(VoteRole.VOTE_ID_FIELD_NAME, activeVote.getId())
+                .query();
+        if (voteRoles == null) {
+            voteRoles = Collections.emptyList();
+        }
+        activeVote.setRolesFilter(Collections.unmodifiableList(voteRoles));
+    }
+
+    private void fillVotesChildItems(@NotNull List<ActiveVote> activeVotes) throws SQLException {
+        for (ActiveVote activeVote : activeVotes) {
+            fillVoteChildItems(activeVote);
         }
     }
 
-    public List<Vote> getAllExpired(long serverId) {
+    public List<ActiveVote> getAllExpired(long serverId) {
         return getAllExpired(serverId, Instant.now());
     }
 
-    List<Vote> getAllExpired(long serverId, @NotNull Instant dateTime) {
-        long currentDateTime = dateTime.getEpochSecond();
-        if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}", getAllExpiredVotesQuery, serverId,
-                    currentDateTime);
-        }
-        try (PreparedStatement statement = connection.prepareStatement(getAllExpiredVotesQuery)) {
-            statement.setLong(1, serverId);
-            statement.setLong(2, currentDateTime);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                List<Vote> extracted = extractVotes(resultSet);
-                if (log.isDebugEnabled()) {
-                    log.debug("Extracted votes for server id {}:", serverId);
-                    for (Vote vote : extracted) {
-                        log.debug(vote.toString());
-                    }
-                }
-                return extracted;
+    List<ActiveVote> getAllExpired(long serverId, @NotNull Instant dateTime) {
+        try {
+            List<ActiveVote> allExpired = activeVotesDAO.queryBuilder().where()
+                    .eq(ActiveVote.SERVER_ID_FIELD_NAME, serverId)
+                    .and().gt(ActiveVote.MESSAGE_ID_FIELD_NAME, 0L)
+                    .and().eq(ActiveVote.HAS_TIMER_FIELD_NAME, true)
+                    .and().ge(ActiveVote.FINISH_TIME_FIELD_NAME, dateTime)
+                    .query();
+            if (allExpired == null) {
+                allExpired = Collections.emptyList();
             }
+            fillVotesChildItems(allExpired);
+            if (log.isDebugEnabled()) {
+                log.debug("Extracted votes for server id {}:", serverId);
+                allExpired.forEach(log::debug);
+            }
+            return Collections.unmodifiableList(allExpired);
         } catch (SQLException err) {
             String errMsg = String.format("Unable extract expired votes for serverId \"%d\": %s",
                     serverId, err.getMessage());
             log.error(errMsg, err);
-            return Collections.emptyList();
         }
+        return Collections.emptyList();
     }
 
-    public List<Long> getAllowedRolesForVoteByMessageId(long messageId) {
+    public List<Long> getAllowedRoles(long messageId) {
         List<Long> result = new ArrayList<>();
-        try (PreparedStatement statement = connection.prepareStatement(getVoteRolesByMessageIdQuery)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Query:\n{}\nParam 1: {}", getVoteRolesByMessageIdQuery, messageId);
+        try {
+            List<VoteRole> allowedRoles = voteRolesDAO.queryBuilder().where()
+                    .eq(VoteRole.MESSAGE_ID_FIELD_NAME, messageId)
+                    .query();
+            if (allowedRoles == null) {
+                allowedRoles = Collections.emptyList();
             }
-            statement.setLong(1, messageId);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                while (resultSet.next()) {
-                    result.add(resultSet.getLong(1));
-                }
+            for (VoteRole voteRole : allowedRoles) {
+                result.add(voteRole.getRoleId());
             }
             if (log.isDebugEnabled()) {
                 log.debug("Allowed roles for vote with message_id {}: {}", messageId,
@@ -176,7 +145,7 @@ public class VotesDAO {
      * (since there may be a situation that there will be insufficient
      * rights to send a message in the chat, or a network error).</p>
      * <p>After successful publication, voting is activated by
-     * the appropriate method {@link #activateVote(Vote)}.</p>
+     * the appropriate method {@link #activateVote(ActiveVote)}.</p>
      *
      * @param vote added vote. Fields such as identifier,
      *             creation date, and change are ignored during insertion.
@@ -186,137 +155,61 @@ public class VotesDAO {
      *                             the correctness of filling in the voting fields. It only requires
      *                             that the vote have at least one point.
      */
-    public synchronized Vote addVote(@NotNull Vote vote) throws VoteCreateException {
-        if (vote.getVotePoints().isEmpty()) {
+    public synchronized ActiveVote addVote(@NotNull ActiveVote vote) throws VoteCreateException {
+        if (vote.getVotePoints() == null || vote.getVotePoints().isEmpty()) {
             log.error("Vote points is empty: {}", vote.toString());
             throw new VoteCreateException("one or more vote points required");
         }
-        long serverId = vote.getServerId();
-        long textChatId = vote.getTextChatId();
-        long messageId = 0L;
-        long finishTime = vote.getFinishTime().map(Instant::getEpochSecond).orElse(0L);
-        String voteText = vote.getVoteText().orElse(" ");
-        long hasTimer = vote.isHasTimer() ? 1L : 0L;
-        long exceptionalVote = vote.isExceptional() ? 1L : 0L;
-        long hasDefault = vote.isHasDefault() ? 1L : 0L;
-        long winThreshold = vote.getWinThreshold();
-        List<Long> rolesFilter = vote.getRolesFilter() == null ? Collections.emptyList() : vote.getRolesFilter();
-        long currentDateTime = Instant.now().getEpochSecond();
-        if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}\n" +
-                            "Param 5: {}\nParam 6: {}\nParam 7: {}\nParam 8: {}\nParam 9: {}\n" +
-                            "Param 10: {}\nParam 11: {}", insertVoteQuery, serverId,
-                    textChatId, messageId, finishTime, voteText, hasTimer, exceptionalVote, hasDefault,
-                    winThreshold, currentDateTime, currentDateTime);
-        }
-        try (PreparedStatement statement = connection.prepareStatement(insertVoteQuery)) {
-            statement.setLong(Vote.Columns.SERVER_ID.insertColumn, serverId);
-            statement.setLong(Vote.Columns.TEXT_CHAT_ID.insertColumn, textChatId);
-            statement.setLong(Vote.Columns.MESSAGE_ID.insertColumn, messageId);
-            statement.setLong(Vote.Columns.FINISH_DATE.insertColumn, finishTime);
-            statement.setString(Vote.Columns.VOTE_TEXT.insertColumn, voteText);
-            statement.setLong(Vote.Columns.HAS_TIMER.insertColumn, hasTimer);
-            statement.setLong(Vote.Columns.IS_EXCEPTIONAL.insertColumn, exceptionalVote);
-            statement.setLong(Vote.Columns.HAS_DEFAULT.insertColumn, hasDefault);
-            statement.setLong(Vote.Columns.WIN_THRESHOLD.insertColumn, winThreshold);
-            statement.setLong(Vote.Columns.CREATE_DATE.insertColumn, currentDateTime);
-            statement.setLong(Vote.Columns.UPDATE_DATE.insertColumn, currentDateTime);
-            int insertCount = statement.executeUpdate();
-            if (log.isDebugEnabled()) {
-                log.debug("Inserted {} values", insertCount);
-            }
-        } catch (SQLException err) {
-            String errMsg = String.format("Unable to insert new active_vote value: %s",
-                    err.getMessage());
-            log.error(errMsg, err);
-            throw new VoteCreateException("database error", err);
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}", getLastInsertVoteIdQuery);
-        }
-        long voteId = -1L;
-        try (Statement statement = connection.createStatement()) {
-            try (ResultSet resultSet = statement.executeQuery(getLastInsertVoteIdQuery)) {
-                if (resultSet.next()) {
-                    voteId = resultSet.getLong(1);
-                }
-            }
-        } catch (SQLException err) {
-            String errMsg = String.format("Unable to extract latest inserted vote id from table: %s",
-                    err.getMessage());
-            log.error(errMsg, err);
-            throw new VoteCreateException("database error", err);
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Latest inserted vote id: {}", voteId);
-        }
-        if (voteId <= 0) {
-            log.error("Latest inserted vote id is {} (may be NULL)", voteId);
-            throw new VoteCreateException("database error");
-        }
-        for (VotePoint votePoint : vote.getVotePoints()) {
-            String pointText = votePoint.getPointText().orElse(" ");
-            String emojiText = votePoint.getUnicodeEmoji().orElse(" ");
-            long customEmojiId = votePoint.getCustomEmojiId();
-            currentDateTime = Instant.now().getEpochSecond();
-            if (log.isDebugEnabled()) {
-                log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}" +
-                                "\nParam 5: {}\nParam 6: {}", insertVotePointQuery, voteId, pointText,
-                        emojiText, customEmojiId, currentDateTime, currentDateTime);
-            }
-            try (PreparedStatement statement = connection.prepareStatement(insertVotePointQuery)) {
-                statement.setLong(VotePoint.Columns.VOTE_ID.insertColumn, voteId);
-                statement.setString(VotePoint.Columns.POINT_TEXT.insertColumn, pointText);
-                statement.setString(VotePoint.Columns.UNICODE_EMOJI.insertColumn, emojiText);
-                statement.setLong(VotePoint.Columns.CUSTOM_EMOJI_ID.insertColumn, customEmojiId);
-                statement.setLong(VotePoint.Columns.CREATE_DATE.insertColumn, currentDateTime);
-                statement.setLong(VotePoint.Columns.UPDATE_DATE.insertColumn, currentDateTime);
-                int count = statement.executeUpdate();
-                if (log.isDebugEnabled()) {
-                    log.debug("Inserted {} values", count);
-                }
-            } catch (SQLException err) {
-                String errMsg = String.format("Unable insert vote point: %s", err.getMessage());
-                log.error(errMsg, err);
-                throw new VoteCreateException("database error", err);
-            }
-        }
-        for (long roleId : rolesFilter) {
-            currentDateTime = Instant.now().getEpochSecond();
-            try (PreparedStatement statement = connection.prepareStatement(insertVoteRolesQuery)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}\nParam 5: {}",
-                            insertVoteRolesQuery, voteId, messageId, roleId, currentDateTime, currentDateTime);
-                }
-                statement.setLong(1, voteId);
-                statement.setLong(2, messageId);
-                statement.setLong(3, roleId);
-                statement.setLong(4, currentDateTime);
-                statement.setLong(5, currentDateTime);
-                int count = statement.executeUpdate();
-                if (log.isDebugEnabled()) {
-                    log.debug("Inserted {} values", count);
-                }
-            } catch (SQLException err) {
-                String errMsg = String.format("Unable insert vote role: %s", err.getMessage());
-                log.error(errMsg, err);
-                throw new VoteCreateException("database error", err);
-            }
-        }
+        Instant now = Instant.now();
         try {
-            Vote result = getVoteById(voteId);
-            if (result == null) {
-                log.error("Unable to extract inserted vote from database, getting vote by voteId {} " +
-                        "is empty", voteId);
-                throw new VoteCreateException("database error");
+            vote.setCreateDate(now);
+            vote.setUpdateDate(now);
+            if (vote.getRolesFilter() == null) {
+                vote.setRolesFilter(Collections.emptyList());
             }
-            return result;
+            Dao.CreateOrUpdateStatus status = activeVotesDAO.createOrUpdate(vote);
+            if (log.isDebugEnabled()) {
+                log.debug("Created - {}, updated - {}, lines changed - {}",
+                        status.isCreated(), status.isUpdated(), status.getNumLinesChanged());
+            }
         } catch (SQLException err) {
-            String errMsg = String.format("Unable to extract inserted vote from database with voteId " +
-                    "\"%d\": %s", voteId, err.getMessage());
+            String errMsg = String.format("Unable to insert new %s: %s",
+                    vote, err.getMessage());
             log.error(errMsg, err);
             throw new VoteCreateException("database error", err);
         }
+        for (ActiveVotePoint votePoint : vote.getVotePoints()) {
+            votePoint.setActiveVote(vote);
+            votePoint.setCreateDate(now);
+            votePoint.setUpdateDate(now);
+            try {
+                Dao.CreateOrUpdateStatus status = activeVotePointsDAO.createOrUpdate(votePoint);
+                if (log.isDebugEnabled()) {
+                    log.debug("Created - {}, updated - {}, lines changed - {}",
+                            status.isCreated(), status.isUpdated(), status.getNumLinesChanged());
+                }
+            } catch (SQLException err) {
+                String errMsg = String.format("Unable to insert new %s: %s", votePoint, err.getMessage());
+                log.error(errMsg, err);
+                throw new VoteCreateException("database error", err);
+            }
+        }
+        for (VoteRole voteRole : vote.getRolesFilter()) {
+            voteRole.setActiveVote(vote);
+            voteRole.setCreateDate(now);
+            try {
+                Dao.CreateOrUpdateStatus status = voteRolesDAO.createOrUpdate(voteRole);
+                if (log.isDebugEnabled()) {
+                    log.debug("Created - {}, updated - {}, lines changed - {}",
+                            status.isCreated(), status.isUpdated(), status.getNumLinesChanged());
+                }
+            } catch (SQLException err) {
+                String errMsg = String.format("Unable to insert %s: %s", voteRole, err.getMessage());
+                log.error(errMsg, err);
+                throw new VoteCreateException("database error", err);
+            }
+        }
+        return vote;
     }
 
     /**
@@ -330,7 +223,7 @@ public class VotesDAO {
      * @throws VoteCreateException one or another error in the process of updating
      *                             voting to the database.
      */
-    public Vote activateVote(@NotNull Vote vote) throws VoteCreateException {
+    public ActiveVote activateVote(@NotNull ActiveVote vote) throws VoteCreateException {
         if (vote.getMessageId() <= 0L) {
             log.error("messageId required (must be great that zero): {}", vote.toString());
             throw new VoteCreateException("message not sent, voting message identifier missing");
@@ -340,184 +233,94 @@ public class VotesDAO {
                     vote.toString());
             throw new VoteCreateException("this vote was not stored in the database");
         }
-        long currentDateTime = Instant.now().getEpochSecond();
-        if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}", activateVoteQuery,
-                    vote.getMessageId(), currentDateTime, vote.getId());
-        }
-        try (PreparedStatement statement = connection.prepareStatement(activateVoteQuery)) {
-            statement.setLong(1, vote.getMessageId());
-            statement.setLong(2, currentDateTime);
-            statement.setLong(3, vote.getId());
-            int count = statement.executeUpdate();
+        Instant now = Instant.now();
+        vote.setUpdateDate(now);
+        try {
+            int count = activeVotesDAO.update(vote);
             if (log.isDebugEnabled()) {
-                log.debug("Updated {} values", count);
+                log.debug("Updated {} votes", count);
             }
-            if (count != 1) {
-                log.error("Unable update vote with id {} by message_id {} - {} values updated " +
-                        "(missing vote?)", vote.getId(), vote.getMessageId(), count);
+            if (count < 1) {
+                log.error("Unable update vote {} - {} values updated (missing vote?)",
+                        vote, count);
+                throw new VoteCreateException("this vote was now stored in the database");
+            } else if (count > 1) {
+                log.error("Updated more that one - {}: {}", count, vote);
                 throw new VoteCreateException("database error");
             }
         } catch (SQLException err) {
-            String errMsg = String.format("Unable to update vote with vote_id \"%d\": %s",
-                    vote.getId(), err.getMessage());
+            String errMsg = String.format("Unable to update vote %s: %s",
+                    vote, err.getMessage());
             log.error(errMsg, err);
             throw new VoteCreateException("database error");
         }
         try {
-            Vote result = getVoteById(vote.getId());
-            if (result == null) {
-                log.error("Unable to extract updated vote from database, getting vote by voteId {} " +
-                        "is empty", vote.getId());
-                throw new VoteCreateException("database error");
+            UpdateBuilder<VoteRole, Long> updateBuilder = voteRolesDAO.updateBuilder();
+            updateBuilder.updateColumnValue(VoteRole.MESSAGE_ID_FIELD_NAME, vote.getMessageId());
+            updateBuilder.where().eq(VoteRole.VOTE_ID_FIELD_NAME, vote.getId());
+            int count = updateBuilder.update();
+            if (log.isDebugEnabled()) {
+                log.debug("Updated {} vote role filters", count);
             }
-            return result;
         } catch (SQLException err) {
-            String errMsg = String.format("Unable to extract updated vote from database with voteId " +
-                    "\"%d\": %s", vote.getId(), err.getMessage());
+            String errMsg = String.format("Unable to update role filters for vote %s: %s",
+                    vote, err.getMessage());
             log.error(errMsg, err);
-            throw new VoteCreateException("database error", err);
+            throw new VoteCreateException("database error");
         }
+        return vote;
     }
 
     @Nullable
-    public Vote getVoteById(long voteId) throws SQLException {
+    public ActiveVote getVoteById(long voteId) throws SQLException {
+        ActiveVote vote = activeVotesDAO.queryForId(voteId);
+        if (vote == null) {
+            return null;
+        }
+        fillVoteChildItems(vote);
         if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}", getVoteByIdQuery, voteId);
+            log.debug("Extracted vote for vote id {}: {}", voteId, vote);
         }
-        try (PreparedStatement statement = connection.prepareStatement(getVoteByIdQuery)) {
-            statement.setLong(1, voteId);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                List<Vote> result = extractVotes(resultSet);
-                if (log.isDebugEnabled()) {
-                    log.debug("Extracted votes for vote id {}:", voteId);
-                    for (Vote vote : result) {
-                        log.debug(vote.toString());
-                    }
-                }
-                return !result.isEmpty() ? result.get(0) : null;
-            }
-        }
+        return vote;
     }
 
-    @NotNull
-    private List<Vote> extractVotes(@NotNull ResultSet resultSet) throws SQLException {
-        List<Vote> result = new ArrayList<>();
-        Vote currentVote = null;
-        while (resultSet.next()) {
-            long voteId = resultSet.getLong(Vote.Columns.ID.selectColumn);
-            if (currentVote == null || voteId != currentVote.getId()) {
-                currentVote = new Vote();
-                currentVote.setId(voteId)
-                        .setServerId(resultSet.getLong(Vote.Columns.SERVER_ID.selectColumn))
-                        .setTextChatId(resultSet.getLong(Vote.Columns.TEXT_CHAT_ID.selectColumn))
-                        .setMessageId(resultSet.getLong(Vote.Columns.MESSAGE_ID.selectColumn))
-                        .setFinishTime(resultSet.getLong(Vote.Columns.FINISH_DATE.selectColumn) > 0
-                                ? Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.FINISH_DATE.selectColumn))
-                                : null)
-                        .setVoteText(CommonUtils.isTrStringNotEmpty(resultSet.getString(Vote.Columns.VOTE_TEXT.selectColumn))
-                                ? resultSet.getString(Vote.Columns.VOTE_TEXT.selectColumn)
-                                : null)
-                        .setHasTimer(resultSet.getLong(Vote.Columns.HAS_TIMER.selectColumn) > 0)
-                        .setExceptional(resultSet.getLong(Vote.Columns.IS_EXCEPTIONAL.selectColumn) > 0)
-                        .setHasDefault(resultSet.getLong(Vote.Columns.HAS_DEFAULT.selectColumn) > 0)
-                        .setWinThreshold(resultSet.getLong(Vote.Columns.WIN_THRESHOLD.selectColumn))
-                        .setCreateDate(resultSet.getLong(Vote.Columns.CREATE_DATE.selectColumn) > 0
-                                ? Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.CREATE_DATE.selectColumn))
-                                : null)
-                        .setUpdateDate(resultSet.getLong(Vote.Columns.UPDATE_DATE.selectColumn) > 0
-                                ? Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.UPDATE_DATE.selectColumn))
-                                : null);
-                result.add(currentVote);
-            }
-            if (resultSet.getString(VotePoint.Columns.ID.selectColumn) == null) {
-                continue;
-            }
-            VotePoint votePoint = new VotePoint()
-                    .setId(resultSet.getLong(VotePoint.Columns.ID.selectColumn));
-            votePoint.setPointText(resultSet.getString(VotePoint.Columns.POINT_TEXT.selectColumn))
-                    .setUnicodeEmoji(CommonUtils.isTrStringNotEmpty(resultSet.getString(VotePoint.Columns.UNICODE_EMOJI.selectColumn))
-                            ? resultSet.getString(VotePoint.Columns.UNICODE_EMOJI.selectColumn)
-                            : null)
-                    .setCustomEmojiId(resultSet.getLong(VotePoint.Columns.CUSTOM_EMOJI_ID.selectColumn))
-                    .setCreateDate(resultSet.getLong(VotePoint.Columns.CREATE_DATE.selectColumn) > 0
-                            ? Instant.ofEpochSecond(resultSet.getLong(VotePoint.Columns.CREATE_DATE.selectColumn))
-                            : null)
-                    .setUpdateDate(resultSet.getLong(VotePoint.Columns.UPDATE_DATE.selectColumn) > 0
-                            ? Instant.ofEpochSecond(resultSet.getLong(VotePoint.Columns.UPDATE_DATE.selectColumn))
-                            : null);
-            currentVote.getVotePoints().add(votePoint);
-        }
-        for (Vote vote : result) {
-            long voteId = vote.getId();
-            try (PreparedStatement statement = connection.prepareStatement(getVoteRolesByVoteIdQuery)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Query:\n{}\nParam 1: {}", getVoteRolesByVoteIdQuery, voteId);
-                }
-                statement.setLong(1, voteId);
-                List<Long> allowedRoles = new ArrayList<>();
-                try (ResultSet rs = statement.executeQuery()) {
-                    while (rs.next()) {
-                        long roleId = rs.getLong(1);
-                        allowedRoles.add(roleId);
-                    }
-                }
-                vote.setRolesFilter(allowedRoles);
-            }
-        }
-        return Collections.unmodifiableList(result);
-    }
-
-    public boolean deleteVote(@NotNull Vote vote) {
-        if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}", deleteVotePointsQuery, vote.getId());
-        }
-        try (PreparedStatement statement = connection.prepareStatement(deleteVotePointsQuery)) {
-            statement.setLong(1, vote.getId());
-            int count = statement.executeUpdate();
+    public boolean deleteVote(@NotNull ActiveVote vote) {
+        try {
+            DeleteBuilder<VoteRole, Long> deleteBuilder = voteRolesDAO.deleteBuilder();
+            deleteBuilder.where()
+                    .eq(VoteRole.VOTE_ID_FIELD_NAME, vote.getId());
+            int count = deleteBuilder.delete();
             if (log.isDebugEnabled()) {
-                log.debug("Deleted {} values", count);
-            }
-            if (count == 0) {
-                log.error("Deleted {} vote points with vote_id {}", count, vote.getId());
+                log.debug("Deleted {} role filters for vote {}", count, vote);
             }
         } catch (SQLException err) {
-            String errMsg = String.format("Unable to delete vote points with vote_id \"%d\": %s",
-                    vote.getId(), err.getMessage());
+            String errMsg = String.format("Unable to delete role filters for vote %s: %s", vote, err.getMessage());
             log.error(errMsg, err);
             return false;
         }
-        if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}", deleteVoteQuery, vote.getId());
-        }
-        try (PreparedStatement statement = connection.prepareStatement(deleteVoteQuery)) {
-            statement.setLong(1, vote.getId());
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                log.error("Deleted {} votes with vote_id {}", count, vote.getId());
-                return false;
-            }
-        } catch (SQLException err) {
-            String errMsg = String.format("Unable to delete vote with vote_id \"%d\": %s",
-                    vote.getId(), err.getMessage());
-            log.error(errMsg, err);
-            return false;
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}", deleteVoteRolesQuery, vote.getId());
-        }
-        try (PreparedStatement statement = connection.prepareStatement(deleteVoteRolesQuery)) {
-            statement.setLong(1, vote.getId());
-            int count = statement.executeUpdate();
+        try {
+            DeleteBuilder<ActiveVotePoint, Long> deleteBuilder = activeVotePointsDAO.deleteBuilder();
+            deleteBuilder.where()
+                    .eq(ActiveVotePoint.ACTIVE_VOTE_FIELD_NAME, vote.getId());
+            int count = deleteBuilder.delete();
             if (log.isDebugEnabled()) {
-                log.debug("Deleted {} vote roles for vote_id {}", count, vote.getId());
+                log.debug("Deleted {} vote points for vote {}", count, vote);
             }
         } catch (SQLException err) {
-            String errMsg = String.format("Unable to deleve vote roles filter with vote_id \"%d\": %s",
-                    vote.getId(), err.getMessage());
+            String errMsg = String.format("Unable to delete vote points for vote %s: %s", vote, err.getMessage());
             log.error(errMsg, err);
             return false;
         }
-        return true;
+        try {
+            int count = activeVotesDAO.delete(vote);
+            if (log.isDebugEnabled()) {
+                log.debug("Deleted {} vote points for vote {}", count, vote);
+            }
+            return count == 1;
+        } catch (SQLException err) {
+            String errMsg = String.format("Unable to delete vote %s: %s", vote, err.getMessage());
+            log.error(errMsg);
+            return false;
+        }
     }
 }
