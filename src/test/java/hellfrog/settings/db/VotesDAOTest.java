@@ -151,8 +151,8 @@ public class VotesDAOTest {
         if (first == second) {
             return;
         }
-        long finishEpochSeconds = first.getFinishTime() != null ? first.getFinishTime().getEpochSecond() : -1L;
-        long otherFinishEpochSeconds = second.getFinishTime() != null ? second.getFinishTime().getEpochSecond() : -1L;
+        long finishEpochSeconds = first.getFinishTime() != null ? first.getFinishTime().getEpochSecond() : 0L;
+        long otherFinishEpochSeconds = second.getFinishTime() != null ? second.getFinishTime().getEpochSecond() : 0L;
         Assertions.assertEquals(finishEpochSeconds, otherFinishEpochSeconds);
         Assertions.assertEquals(first.getId(), second.getId());
         Assertions.assertEquals(first.getServerId(), second.getServerId());

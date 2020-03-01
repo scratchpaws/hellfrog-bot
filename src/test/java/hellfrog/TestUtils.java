@@ -135,4 +135,9 @@ public class TestUtils {
         uniqes = new TreeSet<>(sublist);
         Assertions.assertEquals(uniqes.size(), sublist.size());
     }
+
+    public static boolean isWin32Used() {
+        String osName = System.getProperty("os.name").toLowerCase();
+        return osName.contains("win");
+    }
 }

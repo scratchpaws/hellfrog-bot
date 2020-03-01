@@ -37,8 +37,10 @@ public abstract class EntityRightsDAO<T extends RightEntity, ID extends Long>
                     .eq(RightEntity.SERVER_ID_FIELD_NAME, serverId)
                     .and().eq(RightEntity.COMMAND_PREFIX_FIELD_NAME, commandPrefix)
                     .query();
-            for (T entry : list) {
-                result.add(entry.getEntityId());
+            if (list != null && !list.isEmpty()) {
+                for (T entry : list) {
+                    result.add(entry.getEntityId());
+                }
             }
         } catch (SQLException err) {
             String errMsg = String.format("Unable to get allowed %s for command \"%s\" and server id \"%d\": %s",
