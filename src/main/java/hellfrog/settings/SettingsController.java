@@ -18,10 +18,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +31,8 @@ public class SettingsController {
     private static final Logger log = LogManager.getLogger("Settings controller");
     private final Path SETTINGS_PATH = Paths.get("./settings/");
 
-    private final Path COMMON_SETTINGS = SETTINGS_PATH.resolve("common.json");
+    private final String COMMON_SETTINGS_FILE_NAME = "common.json";
+    private final Path COMMON_SETTINGS = SETTINGS_PATH.resolve(COMMON_SETTINGS_FILE_NAME);
     private final String SERVER_SETTINGS_FILES_SUFFIX = "_server.json";
     private final String SERVER_STATISTICS_FILES_SUFFIX = "_stat.json";
 
@@ -306,50 +304,61 @@ public class SettingsController {
     }
 
     public void saveServerSideParameters(long serverId) {
-        ObjectMapper objectMapper = buildMapper();
         String fileName = serverId + SERVER_SETTINGS_FILES_SUFFIX;
-        Path serverSideConfig = SETTINGS_PATH.resolve(fileName);
         ServerPreferences toSave = getServerPreferences(serverId);
         serverPrefSaveLock.lock();
         try {
-            try (BufferedWriter bufferedWriter = Files.newBufferedWriter(serverSideConfig, StandardCharsets.UTF_8)) {
-                objectMapper.writeValue(bufferedWriter, toSave);
-            } catch (IOException err) {
-                System.err.println("Unable to save server-side settings: " + err);
-            }
+            saveWithReplace(toSave, fileName);
         } finally {
             serverPrefSaveLock.unlock();
         }
     }
 
     public void saveServerSideStatistic(long serverId) {
-        ObjectMapper objectMapper = buildMapper();
         String fileName = serverId + SERVER_STATISTICS_FILES_SUFFIX;
-        Path serverSideStatPath = SETTINGS_PATH.resolve(fileName);
         ServerStatistic toSave = getServerStatistic(serverId);
         serverStatSaveLock.lock();
         try {
-            try (BufferedWriter bufferedWriter = Files.newBufferedWriter(serverSideStatPath, StandardCharsets.UTF_8)) {
-                objectMapper.writeValue(bufferedWriter, toSave);
-            } catch (IOException err) {
-                System.err.println("Unable to save server-side statistic: " + err);
-            }
+            saveWithReplace(toSave, fileName);
         } finally {
             serverStatSaveLock.unlock();
         }
     }
 
     public void saveCommonPreferences() {
-        ObjectMapper objectMapper = buildMapper();
         commonPrefSaveLock.lock();
         try {
-            try (BufferedWriter bufferedWriter = Files.newBufferedWriter(COMMON_SETTINGS)) {
-                objectMapper.writeValue(bufferedWriter, commonPreferences);
-            } catch (IOException err) {
-                System.err.println("Unable to save common bot settings: " + err);
-            }
+            saveWithReplace(commonPreferences, COMMON_SETTINGS_FILE_NAME);
         } finally {
             commonPrefSaveLock.unlock();
+        }
+    }
+
+    private void saveWithReplace(@NotNull Object value,
+                                 @NotNull String fileName) {
+        String tempFileName = fileName + ".tmp";
+        Path tempFile = SETTINGS_PATH.resolve(tempFileName);
+        Path configFile = SETTINGS_PATH.resolve(fileName);
+        ObjectMapper objectMapper = buildMapper();
+        try (BufferedWriter bufferedWriter = Files.newBufferedWriter(tempFile, StandardCharsets.UTF_8)) {
+            objectMapper.writeValue(bufferedWriter, value);
+        } catch (IOException err) {
+            String errMsg = String.format("Unable to save temp file \"%s\": %s",
+                    tempFile, err.getMessage());
+            log.error(errMsg, err);
+            return;
+        }
+        try {
+            Files.move(tempFile, configFile, StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException first) {
+            try {
+                Files.move(tempFile, configFile, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException err) {
+                String errMsg = String.format("Unable to replace old settings file \"%s\" by temp file \"%s\": %s",
+                        configFile, tempFile, err.getMessage());
+                log.error(errMsg, err);
+            }
         }
     }
 
