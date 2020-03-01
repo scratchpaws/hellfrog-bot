@@ -75,9 +75,6 @@
         <Logger name="Votes" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
-        <Logger name="com.j256.ormlite" level="debug" additivity="false">
-            <AppenderRef ref="sqlLogger"/>
-        </Logger>
         <Root level="debug">
             <AppenderRef ref="plainLogger"/>
         </Root>

@@ -1,12 +1,6 @@
 package hellfrog.settings.db;
 
-import com.j256.ormlite.dao.GenericRawResults;
-import com.j256.ormlite.field.DataPersisterManager;
-import com.j256.ormlite.jdbc.JdbcConnectionSource;
-import com.j256.ormlite.logger.LoggerFactory;
-import com.j256.ormlite.support.ConnectionSource;
 import hellfrog.common.CommonUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -17,16 +11,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.SQLException;
+import java.sql.*;
 
 public class MainDBController
-        implements Closeable, AutoCloseable {
+    implements Closeable, AutoCloseable {
 
     private final Path SETTINGS_PATH = Paths.get("./settings/");
 
     private final Logger sqlLog = LogManager.getLogger("DB controller");
     private final Logger mainLog = LogManager.getLogger("Main");
-    private ConnectionSource connectionSource;
+    private Connection connection;
     private CommonPreferencesDAO commonPreferencesDAO = null;
     private BotOwnersDAO botOwnersDAO = null;
     private ServerPreferencesDAO serverPreferencesDAO = null;
@@ -49,7 +43,6 @@ public class MainDBController
     private void init(@NotNull String dbFileName,
                       boolean migrateOldSettings) throws IOException, SQLException {
 
-        DataPersisterManager.registerDataPersisters(InstantPersister.getSingleton());
         Path pathToDb = SETTINGS_PATH.resolve(dbFileName);
         String JDBC_PREFIX = "jdbc:sqlite:";
         String connectionURL = JDBC_PREFIX + pathToDb.toString();
@@ -62,16 +55,15 @@ public class MainDBController
             throw err;
         }
         try {
-            System.setProperty("com.j256.ormlite.logger.type", "LOG4J2");
-            connectionSource = new JdbcConnectionSource(connectionURL);
-            commonPreferencesDAO = new CommonPreferencesDAOImpl(connectionSource);
-            botOwnersDAO = new BotOwnersDAOImpl(connectionSource);
-            serverPreferencesDAO = new ServerPreferencesDAOImpl(connectionSource);
-            userRightsDAO = new UserRightsDAOImpl(connectionSource);
-            roleRightsDAO = new RoleRightsDAOImpl(connectionSource);
-            textChannelRightsDAO = new TextChannelRightsDAOImpl(connectionSource);
-            channelCategoryRightsDAO = new ChannelCategoryRightsDAOImpl(connectionSource);
-            votesDAO = new VotesDAO(connectionSource);
+            connection = DriverManager.getConnection(connectionURL);
+            commonPreferencesDAO = new CommonPreferencesDAO(connection);
+            botOwnersDAO = new BotOwnersDAO(connection);
+            serverPreferencesDAO = new ServerPreferencesDAO(connection);
+            userRightsDAO = new UserRightsDAO(connection);
+            roleRightsDAO = new RoleRightsDAO(connection);
+            textChannelRightsDAO = new TextChannelRightsDAO(connection);
+            channelCategoryRightsDAO = new ChannelCategoryRightsDAO(connection);
+            votesDAO = new VotesDAO(connection);
             sqlLog.info("Main database opened");
         } catch (SQLException err) {
             sqlLog.fatal("Unable to open main database: " + err.getMessage(), err);
@@ -80,36 +72,50 @@ public class MainDBController
         new SchemaVersionChecker(this, migrateOldSettings).checkSchemaVersion();
     }
 
+    Connection getConnection() {
+        return this.connection;
+    }
+
     public String executeRawQuery(@Nullable String rawQuery) {
         if (CommonUtils.isTrStringEmpty(rawQuery)) {
             return "(Query is empty or null)";
         }
-        StringBuilder result = new StringBuilder();
         try {
-            if (StringUtils.startsWithAny(rawQuery.toLowerCase(),
-                    "update", "delete", "alter", "create", "drop", "truncate")) {
-                int updateCount = commonPreferencesDAO.updateRaw(rawQuery);
+            if (connection == null || connection.isClosed()) {
+                return "(Connection is closed)";
+            }
+        } catch (SQLException err) {
+            return err.getMessage();
+        }
+        StringBuilder result = new StringBuilder();
+        try (Statement statement = connection.createStatement()) {
+            boolean hasResult = statement.execute(rawQuery);
+            if (!hasResult) {
+                int updateCount = statement.getUpdateCount();
                 return "Successful. Updated " + updateCount + " rows";
             } else {
-                GenericRawResults<String[]> results = commonPreferencesDAO.queryRaw(rawQuery);
-                String[] columnNames = results.getColumnNames();
-                for (int i = 0; i < columnNames.length; i++) {
-                    result.append(columnNames[i]);
-                    if (i < (columnNames.length - 1)) {
-                        result.append('|');
-                    }
-                }
-                result.append('\n');
-                result.append("-".repeat(Math.max(0, result.length())));
-                result.append('\n');
-                for (String[] line : results.getResults()) {
-                    for (int i = 0; i < line.length; i++) {
-                        result.append(line[i]);
-                        if (i < (line.length - 1)) {
-                            result.append('|');
+                try (ResultSet resultSet = statement.getResultSet()) {
+                    ResultSetMetaData metaData = resultSet.getMetaData();
+                    for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                        String label = metaData.getColumnLabel(i);
+                        result.append(label);
+                        if (i < metaData.getColumnCount()) {
+                            result.append("|");
                         }
                     }
                     result.append('\n');
+                    result.append("-".repeat(Math.max(0, result.length())));
+                    result.append('\n');
+                    while (resultSet.next()) {
+                        for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                            String value = resultSet.getString(i);
+                            result.append(value);
+                            if (i < metaData.getColumnCount()) {
+                                result.append("|");
+                            }
+                        }
+                        result.append('\n');
+                    }
                 }
             }
         } catch (SQLException err) {
@@ -120,19 +126,16 @@ public class MainDBController
 
     @Override
     public void close() {
-        if (connectionSource != null) {
+        if (connection != null) {
             try {
-                connectionSource.close();
-            } catch (IOException err) {
+                connection.close();
+                sqlLog.info("Main database closed");
+            } catch (SQLException err) {
                 sqlLog.warn("Unable to close main database: " + err.getMessage(), err);
             } finally {
-                connectionSource = null;
+                connection = null;
             }
         }
-    }
-
-    ConnectionSource getConnectionSource() {
-        return connectionSource;
     }
 
     public CommonPreferencesDAO getCommonPreferencesDAO() {

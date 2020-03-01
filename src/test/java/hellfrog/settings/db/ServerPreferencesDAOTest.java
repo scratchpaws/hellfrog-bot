@@ -1,7 +1,6 @@
 package hellfrog.settings.db;
 
 import hellfrog.TestUtils;
-import hellfrog.settings.entity.ACLMode;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +39,7 @@ public class ServerPreferencesDAOTest {
             String awaitPrefix = ServerPreferencesDAO.PREFIX_DEFAULT;
             boolean awaitJoinLeaveDisplay = ServerPreferencesDAO.JOIN_LEAVE_DISPLAY_DEFAULT;
             long awaitJoinLeaveChannelId = ServerPreferencesDAO.JOIN_LEAVE_CHANNEL_ID_DEFAULT;
-            boolean awaitNewAclMode = ServerPreferencesDAO.ACL_MODE_DEFAULT.equals(ACLMode.oldRepresentationNewMode());
+            boolean awaitNewAclMode = ServerPreferencesDAO.NEW_ACL_MODE_DEFAULT;
 
             // извлечение значений по-умолчанию
             for (Map.Entry<Long, ServerSettings> entry : servers.entrySet()) {

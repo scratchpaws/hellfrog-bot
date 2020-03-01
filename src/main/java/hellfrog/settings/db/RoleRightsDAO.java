@@ -1,18 +1,12 @@
 package hellfrog.settings.db;
 
-import com.j256.ormlite.dao.Dao;
-import hellfrog.settings.entity.RoleRight;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
+import java.sql.Connection;
 
-public interface RoleRightsDAO extends Dao<RoleRight, Long> {
+public class RoleRightsDAO extends EntityRightsDAO {
 
-    List<Long> getAllAllowed(long serverId, @NotNull String commandPrefix);
-
-    boolean isAllowed(long serverId, long who, @NotNull String commandPrefix);
-
-    boolean allow(long serverId, long who, @NotNull String commandPrefix);
-
-    boolean deny(long serverId, long who, @NotNull String commandPrefix);
+    public RoleRightsDAO(@NotNull Connection connection) {
+        super(connection, "role_rights", "role_id");
+    }
 }

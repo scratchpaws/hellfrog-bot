@@ -1,21 +1,20 @@
 package hellfrog.settings.db;
 
-import com.j256.ormlite.dao.GenericRawResults;
-import com.j256.ormlite.support.ConnectionSource;
-import com.j256.ormlite.table.TableUtils;
-import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.FromTextFile;
 import hellfrog.common.ResourcesLoader;
-import hellfrog.settings.entity.*;
+import hellfrog.settings.entity.Vote;
+import hellfrog.settings.entity.VotePoint;
 import hellfrog.settings.oldjson.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -26,8 +25,8 @@ class SchemaVersionChecker {
 
     private final boolean migrateOldSettings;
     private final Logger sqlLog = LogManager.getLogger("Schema version checker");
+    private final Connection connection;
     private final MainDBController mainDBController;
-    private final ConnectionSource connectionSource;
 
     @FromTextFile(fileName = "sql/scheme_create_queries/schema_create_query_v1.sql")
     private String schemaCreateQuery1 = null;
@@ -36,20 +35,21 @@ class SchemaVersionChecker {
                          boolean migrateOldSettings) {
         this.migrateOldSettings = migrateOldSettings;
         this.mainDBController = mainDBController;
-        this.connectionSource = mainDBController.getConnectionSource();
+        this.connection = mainDBController.getConnection();
         ResourcesLoader.initFileResources(this, SchemaVersionChecker.class);
     }
 
     void checkSchemaVersion() throws SQLException {
-        int currentSchemaVersion;
-        try {
-            GenericRawResults<String[]> result = mainDBController.getCommonPreferencesDAO()
-                    .queryRaw(SCHEMA_VERSION_GET_QUERY);
-            String rawValue = result.getFirstResult()[0];
-            currentSchemaVersion = Integer.parseInt(rawValue);
-        } catch (Exception err) {
+        int currentSchemaVersion = 0;
+        try (Statement statement = connection.createStatement()) {
+            try (ResultSet resultSet = statement.executeQuery(SCHEMA_VERSION_GET_QUERY)) {
+                if (resultSet.next()) {
+                    currentSchemaVersion = resultSet.getInt(1);
+                }
+            }
+        } catch (SQLException err) {
             sqlLog.fatal("Unable to check schema version: " + err.getMessage(), err);
-            throw new SQLException(err);
+            throw err;
         }
         if (currentSchemaVersion == 0) {
             initSchemaVersion();
@@ -58,15 +58,9 @@ class SchemaVersionChecker {
 
     private void initSchemaVersion() throws SQLException {
         sqlLog.info("Initial scheme " + CURRENT_SCHEMA_VERSION);
-        List<Class<?>> dataClasses = CodeSourceUtils.findDataTableClass();
-        // prior classes that has foreign ids for another tables
-        TableUtils.createTableIfNotExists(connectionSource, ActiveVote.class);
-        for (Class<?> dataClass : dataClasses) {
-            TableUtils.createTableIfNotExists(connectionSource, dataClass);
-        }
+        sqlLog.info("Searching legacy settings into JSON files");
         writeSchema(schemaCreateQuery1, CURRENT_SCHEMA_VERSION);
         if (migrateOldSettings) {
-            sqlLog.info("Searching legacy settings into JSON files");
             convertLegacy();
         }
     }
@@ -74,14 +68,19 @@ class SchemaVersionChecker {
     private void writeSchema(@NotNull String schemaQuery, int schemaVersion) throws SQLException {
         sqlLog.info("Write schema from " + schemaVersion);
         String[] buildQueries = schemaQuery.split(";");
-        for (String query : buildQueries) {
-            try {
-                mainDBController.executeRawQuery(query);
-            } catch (Exception updateErr) {
-                sqlLog.fatal("Unable to execute init SQL query \"" + query + "\": " + updateErr.getMessage(),
-                        updateErr);
-                throw new SQLException("Init error", updateErr);
+        try (Statement statement = connection.createStatement()) {
+            for (String query : buildQueries) {
+                try {
+                    statement.executeUpdate(query);
+                } catch (Exception updateErr) {
+                    sqlLog.fatal("Unable to execute init SQL query \"" + query + "\": " + updateErr.getMessage(),
+                            updateErr);
+                    throw new SQLException("Init error", updateErr);
+                }
             }
+        } catch (SQLException err) {
+            sqlLog.fatal("Unable to create statement: " + err.getMessage(), err);
+            throw new SQLException("Init error", err);
         }
     }
 
@@ -215,43 +214,34 @@ class SchemaVersionChecker {
                         for (JSONActiveVote legacyVote : legacyVotes) {
                             sqlLog.info("Vote {}: {}", legacyVote.getId(), legacyVote.getReadableVoteText());
 
-                            ActiveVote vote = new ActiveVote();
-                            vote.setServerId(serverId);
-                            vote.setTextChatId(legacyVote.getTextChatId());
-                            vote.setFinishTime(legacyVote.getEndDate() > 0L
-                                    ? Instant.ofEpochSecond(legacyVote.getEndDate())
-                                    : null);
-                            vote.setVoteText(legacyVote.getReadableVoteText());
-                            vote.setHasTimer(legacyVote.isHasTimer());
-                            vote.setExceptional(legacyVote.isExceptionalVote());
-                            vote.setHasDefault(legacyVote.isWithDefaultPoint());
-                            vote.setWinThreshold(legacyVote.getWinThreshold());
-                            List<VoteRole> rolesFilter = new ArrayList<>();
-                            for (long roleId : legacyVote.getRolesFilter()) {
-                                VoteRole voteRole = new VoteRole();
-                                voteRole.setActiveVote(vote);
-                                voteRole.setMessageId(vote.getMessageId());
-                                voteRole.setRoleId(roleId);
-                                rolesFilter.add(voteRole);
-                            }
-                            vote.setRolesFilter(rolesFilter);
+                            Vote vote = new Vote()
+                                    .setServerId(serverId)
+                                    .setTextChatId(legacyVote.getTextChatId())
+                                    .setFinishTime(legacyVote.getEndDate() > 0L
+                                             ? Instant.ofEpochSecond(legacyVote.getEndDate())
+                                            : null)
+                                    .setVoteText(legacyVote.getReadableVoteText())
+                                    .setHasTimer(legacyVote.isHasTimer())
+                                    .setExceptional(legacyVote.isExceptionalVote())
+                                    .setHasDefault(legacyVote.isWithDefaultPoint())
+                                    .setWinThreshold(legacyVote.getWinThreshold())
+                                    .setRolesFilter(legacyVote.getRolesFilter());
 
-                            List<ActiveVotePoint> votePoints = new ArrayList<>();
+                            List<VotePoint> votePoints = vote.getVotePoints();
                             for (JSONVotePoint legacyVotePoint : legacyVote.getVotePoints()) {
-                                ActiveVotePoint votePoint = new ActiveVotePoint();
-                                votePoint.setPointText(legacyVotePoint.getPointText());
-                                votePoint.setUnicodeEmoji(legacyVotePoint.getEmoji());
-                                votePoint.setCustomEmojiId(legacyVotePoint.getCustomEmoji() != null
-                                        ? legacyVotePoint.getCustomEmoji() : 0L);
+                                VotePoint votePoint = new VotePoint()
+                                        .setPointText(legacyVotePoint.getPointText())
+                                        .setUnicodeEmoji(legacyVotePoint.getEmoji())
+                                        .setCustomEmojiId(legacyVotePoint.getCustomEmoji() != null
+                                                ? legacyVotePoint.getCustomEmoji() : 0L);
                                 votePoints.add(votePoint);
                             }
-                            vote.setVotePoints(votePoints);
 
                             sqlLog.info("Original vote record: {}", legacyVote.toString());
                             try {
-                                ActiveVote added = votesDAO.addVote(vote);
+                                Vote added = votesDAO.addVote(vote);
                                 added.setMessageId(legacyVote.getMessageId());
-                                ActiveVote activated = votesDAO.activateVote(added);
+                                Vote activated = votesDAO.activateVote(added);
                                 sqlLog.info("Converted vote record: {}", activated.toString());
                             } catch (VoteCreateException err) {
                                 sqlLog.error("Unable to add converted vote to database");

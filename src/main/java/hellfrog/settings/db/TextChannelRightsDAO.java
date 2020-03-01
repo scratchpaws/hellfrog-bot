@@ -1,18 +1,12 @@
 package hellfrog.settings.db;
 
-import com.j256.ormlite.dao.Dao;
-import hellfrog.settings.entity.TextChannelRight;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
+import java.sql.Connection;
 
-public interface TextChannelRightsDAO extends Dao<TextChannelRight, Long> {
+public class TextChannelRightsDAO extends EntityRightsDAO {
 
-    List<Long> getAllAllowed(long serverId, @NotNull String commandPrefix);
-
-    boolean isAllowed(long serverId, long who, @NotNull String commandPrefix);
-
-    boolean allow(long serverId, long who, @NotNull String commandPrefix);
-
-    boolean deny(long serverId, long who, @NotNull String commandPrefix);
+    public TextChannelRightsDAO(@NotNull Connection connection) {
+        super(connection, "text_channel_rights", "channel_id");
+    }
 }
