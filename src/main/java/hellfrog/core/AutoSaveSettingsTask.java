@@ -6,12 +6,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public class ServerStatisticTask
+public class AutoSaveSettingsTask
         implements Runnable {
 
     private final ScheduledFuture<?> scheduled;
 
-    public ServerStatisticTask() {
+    public AutoSaveSettingsTask() {
         scheduled = Executors.newSingleThreadScheduledExecutor()
                 .scheduleWithFixedDelay(this, 5L, 5L, TimeUnit.SECONDS);
     }
@@ -21,6 +21,9 @@ public class ServerStatisticTask
         SettingsController settingsController = SettingsController.getInstance();
         settingsController.getServerListWithStatistic()
                 .forEach(settingsController::saveServerSideStatistic);
+        settingsController.getServerListWithConfig()
+                .forEach(settingsController::saveServerSideParameters);
+        settingsController.saveCommonPreferences();
     }
 
     public void stop() {

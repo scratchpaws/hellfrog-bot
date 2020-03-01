@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.HttpClientsPool;
-import hellfrog.core.ServerStatisticTask;
+import hellfrog.core.AutoSaveSettingsTask;
 import hellfrog.core.SessionsCheckTask;
 import hellfrog.core.VoteController;
 import hellfrog.settings.db.MainDBController;
@@ -45,7 +45,7 @@ public class SettingsController {
     private final ReentrantLock serverStatSaveLock = new ReentrantLock();
     private final VoteController voteController;
     private final HttpClientsPool httpClientsPool;
-    private final ServerStatisticTask serverStatisticTask;
+    private final AutoSaveSettingsTask autoSaveSettingsTask;
     private final SessionsCheckTask sessionsCheckTask;
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
@@ -66,7 +66,7 @@ public class SettingsController {
         loadServersSettings();
         httpClientsPool = new HttpClientsPool();
         voteController = new VoteController();
-        serverStatisticTask = new ServerStatisticTask();
+        autoSaveSettingsTask = new AutoSaveSettingsTask();
         sessionsCheckTask = new SessionsCheckTask();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
@@ -366,8 +366,8 @@ public class SettingsController {
         return voteController;
     }
 
-    public ServerStatisticTask getServerStatisticTask() {
-        return serverStatisticTask;
+    public AutoSaveSettingsTask getAutoSaveSettingsTask() {
+        return autoSaveSettingsTask;
     }
 
     public DiscordApi getDiscordApi() {
