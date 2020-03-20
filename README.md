@@ -1,1 +1,1 @@
-A simple stupid bot for Discord(tm)(r)(c). Can vote, dice and more functions.
+A simple stupid bot for Discord(tm)(r)(c). Can vote, dice and more functions. 
