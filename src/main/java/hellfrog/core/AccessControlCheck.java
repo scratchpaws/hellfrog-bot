@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 public class AccessControlCheck {
 
     public static boolean canExecuteOnServer(@NotNull String commandPrefix, @NotNull User user,
-                                              @NotNull Server server, @NotNull TextChannel channel,
-                                              boolean strictByChannels, long... anotherTargetChannel) {
+                                             @NotNull Server server, @NotNull TextChannel channel,
+                                             boolean strictByChannels, long... anotherTargetChannel) {
 
         SettingsController settingsController = SettingsController.getInstance();
 
@@ -50,11 +50,9 @@ public class AccessControlCheck {
             if (anotherTargetChannelsNotEmpty) {
                 for (long anotherChannelId : anotherTargetChannel) {
                     isAllowedForChannel &= isAllowChatOrCategory(server, commandRights, anotherChannelId);
-                    //commandRights.isAllowChat(anotherChannelId);
                 }
             } else {
                 isAllowedForChannel = isAllowChatOrCategory(server, commandRights, channelId);
-                //commandRights.isAllowChat(channelId);
             }
         } else if (strictByChannels && isNewAclMode) {
             isAllowedForChannel = false;

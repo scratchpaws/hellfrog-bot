@@ -4,6 +4,7 @@ import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.core.AccessControlCheck;
 import hellfrog.core.RateLimiter;
+import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -79,10 +80,6 @@ public abstract class ACLCommand {
 
     public boolean isOnlyServerCommand() {
         return onlyServerCommand;
-    }
-
-    public boolean isUpdateLastUsage() {
-        return updateLastUsage;
     }
 
     public boolean isExpertCommand() {
@@ -236,7 +233,7 @@ public abstract class ACLCommand {
                     showEmbedMessage("Unable sent message to text channel! Missing permission!",
                             alternatePrivateTarget, null, ERROR_MESSAGE);
                 } else {
-                    log.error("Unable to send message: " + err.getMessage(), err);
+                    log.error("Unable to send the message: " + err.getMessage(), err);
                 }
                 showEmbedMessage(textMessage, alternatePrivateTarget, null, type);
             }
@@ -254,15 +251,12 @@ public abstract class ACLCommand {
         boolean serverIsLimited = RateLimiter.serverIsLimited(event);
         if (userIsLimited) {
             showErrorMessage("You have exceeded the number of requests", event);
-            String errorMessage = String.format("User %s reached requests limit",
-                    event.getMessageAuthor().asUser().map(u -> u.getDiscriminatedName()
-                    + " (" + u.getId() + ")").orElse(""));
+            String errorMessage = "This user exceeded the number of requests: " + ServerSideResolver.getFullUserDescriptionByEvent(event);
             BroadCast.sendServiceMessage(errorMessage);
             return true;
         } else if (serverIsLimited) {
             showErrorMessage("The number of requests exceeded from this server", event);
-            String errorMessage = String.format("Server %s reached requests limit",
-                    event.getServer().map(s -> s.getName() + " (" + s.getId() + ")").orElse(""));
+            String errorMessage = "This user exceeded the number of request for the server: " + ServerSideResolver.getFullUserDescriptionByEvent(event);
             BroadCast.sendServiceMessage(errorMessage);
             return true;
         } else {

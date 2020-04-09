@@ -5,6 +5,7 @@ import hellfrog.common.CommonUtils;
 import hellfrog.settings.SettingsController;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.ChannelCategory;
+import org.javacord.api.entity.channel.PrivateChannel;
 import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.emoji.CustomEmoji;
@@ -15,6 +16,7 @@ import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
+import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.util.DiscordRegexPattern;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -315,7 +317,7 @@ public class ServerSideResolver
      * Method, works same as {@link Message#getReadableContent()} (contain same code).
      *
      * @param messageContent message text
-     * @param mayBeServer optional server object
+     * @param mayBeServer    optional server object
      * @return text with replaced mentions
      */
     public static String getReadableContent(@NotNull String messageContent,
@@ -423,6 +425,23 @@ public class ServerSideResolver
             );
         }
         return result.toString();
+    }
+
+    @NotNull
+    public static String getFullUserDescriptionByEvent(@NotNull MessageCreateEvent event) {
+        Optional<User> mayBeUser = event.getMessageAuthor().asUser();
+        Optional<Server> mayBeServer = event.getServer();
+        Optional<ServerTextChannel> mayBeTextChannel = event.getServerTextChannel();
+        Optional<PrivateChannel> mayBePrivate = event.getPrivateChannel();
+        String messageContent = "User: " + mayBeUser.map(user -> mayBeServer.map(server -> server.getDisplayName(user)).orElse(user.getName())
+                + " (" + user.getDiscriminatedName() + ", id: " + user.getId() + ")")
+                .orElse("(UNKNOWN USER)")
+                + mayBeServer.map(server -> ", server: " + server.getName() + " (id: " + server.getId() + ")")
+                .orElse("")
+                + mayBeTextChannel.map(channel -> ", text channel: " + channel.getName() + " (id: " + channel.getId() + ")")
+                .orElse("")
+                + mayBePrivate.map(channel -> " (private message)").orElse("");
+        return ESCAPED_CHARACTER.matcher(messageContent).replaceAll("${char}");
     }
 
     public static class ParseResult<T> {

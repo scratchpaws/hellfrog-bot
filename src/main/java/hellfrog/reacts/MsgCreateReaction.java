@@ -6,6 +6,7 @@ import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.core.AccessControlCheck;
 import hellfrog.core.RateLimiter;
+import hellfrog.core.ServerSideResolver;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
@@ -76,14 +77,11 @@ public abstract class MsgCreateReaction
             boolean userIsLimited = RateLimiter.userIsLimited(event);
             boolean serverIsLimited = RateLimiter.serverIsLimited(event);
             if (userIsLimited) {
-                String errorMessage = String.format("User %s reached requests limit",
-                        event.getMessageAuthor().asUser().map(u -> u.getDiscriminatedName()
-                                + " (" + u.getId() + ")").orElse(""));
+                String errorMessage = "This user exceeded the number of requests: " + ServerSideResolver.getFullUserDescriptionByEvent(event);
                 BroadCast.sendServiceMessage(errorMessage);
                 return;
             } else if (serverIsLimited) {
-                String errorMessage = String.format("Server %s reached requests limit",
-                        event.getServer().map(s -> s.getName() + " (" + s.getId() + ")").orElse(""));
+                String errorMessage = "This user exceeded the number of request for the server: " + ServerSideResolver.getFullUserDescriptionByEvent(event);
                 BroadCast.sendServiceMessage(errorMessage);
                 return;
             }
