@@ -14,7 +14,7 @@ import java.nio.file.Paths;
 import java.sql.*;
 
 public class MainDBController
-    implements Closeable, AutoCloseable {
+        implements Closeable, AutoCloseable {
 
     private final Path SETTINGS_PATH = Paths.get("./settings/");
 
@@ -29,6 +29,7 @@ public class MainDBController
     private TextChannelRightsDAO textChannelRightsDAO = null;
     private ChannelCategoryRightsDAO channelCategoryRightsDAO = null;
     private VotesDAO votesDAO = null;
+    private WtfAssignDAO wtfAssignDAO = null;
 
     public MainDBController() throws IOException, SQLException {
         String MAIN_DB_FILE_NAME = "hellfrog_main.sqlite3";
@@ -64,6 +65,7 @@ public class MainDBController
             textChannelRightsDAO = new TextChannelRightsDAO(connection);
             channelCategoryRightsDAO = new ChannelCategoryRightsDAO(connection);
             votesDAO = new VotesDAO(connection);
+            wtfAssignDAO = new WtfAssignDAO(connection);
             sqlLog.info("Main database opened");
         } catch (SQLException err) {
             sqlLog.fatal("Unable to open main database: " + err.getMessage(), err);
@@ -168,5 +170,9 @@ public class MainDBController
 
     public VotesDAO getVotesDAO() {
         return votesDAO;
+    }
+
+    public WtfAssignDAO getWtfAssignDAO() {
+        return wtfAssignDAO;
     }
 }

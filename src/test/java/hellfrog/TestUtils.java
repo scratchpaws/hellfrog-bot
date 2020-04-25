@@ -1,10 +1,15 @@
 package hellfrog;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.message.BasicNameValuePair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.UnmodifiableView;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -18,6 +23,9 @@ public class TestUtils {
             "01234567890" +
             "<>!@\"#$%^&*()[]|^:;-_+=\\/.,`~";
 
+    private static final String URI_CHAR_SEQ = "abcdefghijklmnopqrstuvwxyz" +
+            "01234567890";
+
     public static long randomDiscordEntityId() {
         return ThreadLocalRandom.current()
                 .nextLong(100000000000000000L, 999999999999999999L);
@@ -25,16 +33,24 @@ public class TestUtils {
 
     @NotNull
     public static String randomStringName(int length) {
+        return randomChars(length, CHAR_SEQ);
+    }
+
+    public static @NotNull String randomURIEntryName(int length) {
+        return randomChars(length, URI_CHAR_SEQ);
+    }
+
+    private static @NotNull String randomChars(int length, @NotNull String charSeq) {
         StringBuilder buffer = new StringBuilder(length);
         ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
         for (int i = 0; i < length; i++) {
-            buffer.append(CHAR_SEQ.charAt(threadLocalRandom.nextInt(CHAR_SEQ.length())));
+            buffer.append(charSeq.charAt(threadLocalRandom.nextInt(charSeq.length())));
         }
         return buffer.toString();
     }
 
     @NotNull
-    public static List<Long> randomDiscordEntitiesIds(int minCount, int maxCount) {
+    public static @UnmodifiableView List<Long> randomDiscordEntitiesIds(int minCount, int maxCount) {
         int entitiesCount = ThreadLocalRandom.current().nextInt(minCount, maxCount + 1);
         List<Long> tmp = new ArrayList<>(entitiesCount);
         for (int i = 0; i < entitiesCount; i++) {
@@ -51,12 +67,12 @@ public class TestUtils {
     }
 
     @NotNull
-    public static List<Long> randomDiscordEntitiesIds(int maxCount) {
+    public static @UnmodifiableView List<Long> randomDiscordEntitiesIds(int maxCount) {
         return randomDiscordEntitiesIds(0, maxCount);
     }
 
     @NotNull
-    public static List<String> randomNames(int minCount, int maxCount, int length) {
+    public static @UnmodifiableView List<String> randomNames(int minCount, int maxCount, int length) {
         int entitiesCount = ThreadLocalRandom.current().nextInt(minCount, maxCount + 1);
         List<String> tmp = new ArrayList<>(entitiesCount);
         for (int i = 0; i < entitiesCount; i++) {
@@ -134,5 +150,59 @@ public class TestUtils {
         }
         uniqes = new TreeSet<>(sublist);
         Assertions.assertEquals(uniqes.size(), sublist.size());
+    }
+
+    public static URI randomURI() {
+        URIBuilder uriBuilder = new URIBuilder();
+        ThreadLocalRandom tlr = ThreadLocalRandom.current();
+        if (tlr.nextBoolean()) {
+            uriBuilder.setScheme("https");
+        } else {
+            uriBuilder.setScheme("http");
+        }
+        StringBuilder hostName = new StringBuilder();
+        int hostNameParts = tlr.nextInt(2, 6);
+        for (int i = 1; i <= hostNameParts; i++) {
+            int entryLength = tlr.nextInt(3, 16);
+            hostName.append(randomURIEntryName(entryLength));
+            if (i < hostNameParts) {
+                hostName.append('.');
+            }
+        }
+        uriBuilder.setHost(hostName.toString());
+        StringBuilder path = new StringBuilder();
+        int pathParts = tlr.nextInt(6);
+        for (int i = 1; i <= pathParts; i++) {
+            int entryLength = tlr.nextInt(3, 16);
+            path.append(randomURIEntryName(entryLength));
+            if (i < pathParts) {
+                path.append('/');
+            }
+        }
+        if (tlr.nextBoolean()) {
+            path.append('/');
+        }
+        uriBuilder.setPath(path.toString());
+        if (tlr.nextBoolean()) {
+            List<NameValuePair> nameValuePairs = new ArrayList<>();
+            int paramCount = tlr.nextInt(1, 5);
+            for (int i = 1; i <= paramCount; i++) {
+                int paramLength = tlr.nextInt(2, 11);
+                int valueLength = tlr.nextInt(2, 11);
+                String paramName = randomURIEntryName(paramLength);
+                String paramValue = null;
+                if (tlr.nextBoolean()) {
+                    paramValue = randomURIEntryName(valueLength);
+                }
+                NameValuePair pair = new BasicNameValuePair(paramName, paramValue);
+                nameValuePairs.add(pair);
+            }
+            uriBuilder.setParameters(nameValuePairs);
+        }
+        try {
+            return uriBuilder.build();
+        } catch (Exception err) {
+            return URI.create("https://www.example.com");
+        }
     }
 }

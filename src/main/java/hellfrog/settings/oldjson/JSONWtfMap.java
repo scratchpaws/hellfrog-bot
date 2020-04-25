@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+// hellfrog.settings.db.WtfAssignDAO
+// migration available
 public class JSONWtfMap {
 
     private Map<Long, String> nameValues = Collections.emptyMap();

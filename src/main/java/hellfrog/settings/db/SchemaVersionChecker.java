@@ -5,6 +5,7 @@ import hellfrog.common.FromTextFile;
 import hellfrog.common.ResourcesLoader;
 import hellfrog.settings.entity.Vote;
 import hellfrog.settings.entity.VotePoint;
+import hellfrog.settings.entity.WtfEntry;
 import hellfrog.settings.oldjson.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -218,7 +219,7 @@ class SchemaVersionChecker {
                                     .setServerId(serverId)
                                     .setTextChatId(legacyVote.getTextChatId())
                                     .setFinishTime(legacyVote.getEndDate() > 0L
-                                             ? Instant.ofEpochSecond(legacyVote.getEndDate())
+                                            ? Instant.ofEpochSecond(legacyVote.getEndDate())
                                             : null)
                                     .setVoteText(legacyVote.getReadableVoteText())
                                     .setHasTimer(legacyVote.isHasTimer())
@@ -245,6 +246,52 @@ class SchemaVersionChecker {
                                 sqlLog.info("Converted vote record: {}", activated.toString());
                             } catch (VoteCreateException err) {
                                 sqlLog.error("Unable to add converted vote to database");
+                            }
+                        }
+                    }
+
+                    WtfAssignDAO wtfAssignDAO = mainDBController.getWtfAssignDAO();
+                    if (!jsonServerPreferences.getWtfMapper().isEmpty()) {
+                        sqlLog.info("Server {}, found wtfmap", serverId);
+                        for (Map.Entry<Long, JSONWtfMap> entry : jsonServerPreferences.getWtfMapper().entrySet()) {
+                            long userId = entry.getKey();
+                            if (userId == 0L) {
+                                sqlLog.info("Found wtf assign for user with id 0, skipping");
+                                continue;
+                            }
+                            sqlLog.info("Converting assign for user with id {}", userId);
+                            JSONWtfMap jsonWtfMap = entry.getValue();
+                            WtfEntry lastEntry = null;
+                            for (Map.Entry<Long, String> nameValue : jsonWtfMap.getNameValues().entrySet()) {
+                                long authorId = nameValue.getKey();
+                                String description = nameValue.getValue();
+                                if (CommonUtils.isTrStringNotEmpty(description)) {
+                                    WtfEntry wtfEntry = WtfEntry.newBuilder()
+                                            .description(description)
+                                            .authorId(authorId)
+                                            .build();
+                                    if (jsonWtfMap.getLastName().get() == authorId) {
+                                        lastEntry = wtfEntry;
+                                    }
+                                    sqlLog.info("Converted wtf entry: {}", wtfEntry.toString());
+                                    WtfAssignDAO.AddUpdateState state = wtfAssignDAO.addOrUpdate(serverId, userId, wtfEntry);
+                                    if (state.equals(WtfAssignDAO.AddUpdateState.ADDED)) {
+                                        sqlLog.info("Saved OK");
+                                    } else {
+                                        sqlLog.warn("Saved not ok - {}", state);
+                                    }
+                                } else {
+                                    sqlLog.info("Found empty description from author with id {}, skipping", authorId);
+                                }
+                            }
+                            if (lastEntry != null) {
+                                sqlLog.info("Updating last entry by date: {}", lastEntry);
+                                WtfAssignDAO.AddUpdateState state = wtfAssignDAO.addOrUpdate(serverId, userId, lastEntry);
+                                if (state.equals(WtfAssignDAO.AddUpdateState.UPDATED)) {
+                                    sqlLog.info("Updated OK");
+                                } else {
+                                    sqlLog.warn("Updated not ok - {}", state);
+                                }
                             }
                         }
                     }
