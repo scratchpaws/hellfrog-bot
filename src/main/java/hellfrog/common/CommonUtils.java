@@ -4,6 +4,8 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -170,16 +172,38 @@ public class CommonUtils {
         if (collection == null || collection.isEmpty())
             return Optional.empty();
 
-        return Optional.of(new ArrayList<>(collection).get(0));
+        for (T entry : collection) {
+            return Optional.ofNullable(entry);
+        }
+        return Optional.empty();
     }
 
     // https://stackoverflow.com/questions/3758606/how-to-convert-byte-size-into-human-readable-format-in-java
     public static String humanReadableByteCount(long bytes, boolean si) {
-        int unit = si ? 1000 : 1024;
-        if (bytes < unit) return bytes + " B";
-        int exp = (int) (Math.log(bytes) / Math.log(unit));
-        String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
-        return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
+        if (si) {
+            if (-1000 < bytes && bytes < 1000) {
+                return bytes + " B";
+            }
+            CharacterIterator ci = new StringCharacterIterator("kMGTPE");
+            while (bytes <= -999_950 || bytes >= 999_950) {
+                bytes /= 1000;
+                ci.next();
+            }
+            return String.format("%.1f %cB", bytes / 1000.0, ci.current());
+        } else {
+            long absB = bytes == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(bytes);
+            if (absB < 1024) {
+                return bytes + " B";
+            }
+            long value = absB;
+            CharacterIterator ci = new StringCharacterIterator("KMGTPE");
+            for (int i = 40; i >= 0 && absB > 0xfffccccccccccccL >> i; i -= 10) {
+                value >>= 10;
+                ci.next();
+            }
+            value *= Long.signum(bytes);
+            return String.format("%.1f %ciB", value / 1024.0, ci.current());
+        }
     }
 
     @NotNull
