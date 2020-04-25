@@ -50,7 +50,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.6.1</version>
+            <version>5.7.0-M1</version>
             <scope>test</scope>
         </dependency>
 
@@ -79,14 +79,14 @@
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy</artifactId>
-            <version>3.0.2</version>
+            <version>3.0.3</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/io.github.classgraph/classgraph -->
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.68</version>
+            <version>4.8.75</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.nibor.autolink/autolink -->
@@ -148,8 +148,23 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>3.1.2</version>
                 <executions>
+                    <execution>
+                        <id>download-sources</id>
+                        <goals>
+                            <goal>sources</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>download-javadoc</id>
+                        <configuration>
+                            <classfilter>javadoc</classfilter>
+                        </configuration>
+                        <goals>
+                            <goal>resolve</goal>
+                        </goals>
+                    </execution>
                     <execution>
                         <id>copy-dependencies</id>
                         <phase>prepare-package</phase>
