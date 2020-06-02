@@ -318,26 +318,25 @@ public class Bd {
                     .forEach((id, stat) -> {
                         if (stat.getUsagesCount() != null && stat.getUsagesCount().get() > 0L) {
                             long usagesCount = stat.getUsagesCount().get();
-                            OptionalUtils.ifPresentOrElse(server.getCustomEmojiById(id),
-                                    emoji -> {
-                                        MessageBuilder tmp = new MessageBuilder()
-                                                .append(String.valueOf(usagesCount))
-                                                .append(" - ")
-                                                .append(emoji)
-                                                .append(" ");
-                                        if (stat.getLastUsage() != null && stat.getLastUsage().get() > 0) {
-                                            Calendar last = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-                                            last.setTimeInMillis(stat.getLastUsage().get());
-                                            tmp.append(String.format("last usage at %tF %<tT (UTC)", last));
-                                        }
-                                        if (!emojiStat.containsKey(usagesCount)) {
-                                            List<String> emptyList = new ArrayList<>();
-                                            emojiStat.put(usagesCount, emptyList);
-                                        }
-                                        emojiStat.get(usagesCount)
-                                                .add(tmp.getStringBuilder().toString());
-                                    }, () -> serverStatistic.getNonDefaultSmileStats()
-                                            .remove(id));
+                            server.getCustomEmojiById(id).ifPresentOrElse(emoji -> {
+                                MessageBuilder tmp = new MessageBuilder()
+                                        .append(String.valueOf(usagesCount))
+                                        .append(" - ")
+                                        .append(emoji)
+                                        .append(" ");
+                                if (stat.getLastUsage() != null && stat.getLastUsage().get() > 0) {
+                                    Calendar last = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                                    last.setTimeInMillis(stat.getLastUsage().get());
+                                    tmp.append(String.format("last usage at %tF %<tT (UTC)", last));
+                                }
+                                if (!emojiStat.containsKey(usagesCount)) {
+                                    List<String> emptyList = new ArrayList<>();
+                                    emojiStat.put(usagesCount, emptyList);
+                                }
+                                emojiStat.get(usagesCount)
+                                        .add(tmp.getStringBuilder().toString());
+                            }, () -> serverStatistic.getNonDefaultSmileStats()
+                                    .remove(id));
                         }
                     });
             strWriter.append("Collected statistic").append(sinceStr).append(":")

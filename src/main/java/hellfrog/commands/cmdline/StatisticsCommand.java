@@ -2,7 +2,6 @@ package hellfrog.commands.cmdline;
 
 import hellfrog.common.CommonUtils;
 import hellfrog.common.MessageUtils;
-import hellfrog.common.OptionalUtils;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.ServerStatistic;
 import hellfrog.settings.SettingsController;
@@ -211,26 +210,25 @@ public class StatisticsCommand
                                     if (!found)
                                         return;
                                 }
-                                OptionalUtils.ifPresentOrElse(server.getCustomEmojiById(id),
-                                        emoji -> {
-                                            MessageBuilder tmp = new MessageBuilder()
-                                                    .append(String.valueOf(usagesCount))
-                                                    .append(" - ")
-                                                    .append(emoji)
-                                                    .append(" ");
-                                            if (stat.getLastUsage() != null && stat.getLastUsage().get() > 0) {
-                                                Calendar last = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-                                                last.setTimeInMillis(stat.getLastUsage().get());
-                                                tmp.append(String.format("last usage at %tF %<tT (UTC)", last));
-                                            }
-                                            if (!emojiStat.containsKey(usagesCount)) {
-                                                List<String> emptyList = new ArrayList<>();
-                                                emojiStat.put(usagesCount, emptyList);
-                                            }
-                                            emojiStat.get(usagesCount)
-                                                    .add(tmp.getStringBuilder().toString());
-                                        }, () -> serverStatistic.getNonDefaultSmileStats()
-                                                .remove(id));
+                                server.getCustomEmojiById(id).ifPresentOrElse(emoji -> {
+                                    MessageBuilder tmp = new MessageBuilder()
+                                            .append(String.valueOf(usagesCount))
+                                            .append(" - ")
+                                            .append(emoji)
+                                            .append(" ");
+                                    if (stat.getLastUsage() != null && stat.getLastUsage().get() > 0) {
+                                        Calendar last = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                                        last.setTimeInMillis(stat.getLastUsage().get());
+                                        tmp.append(String.format("last usage at %tF %<tT (UTC)", last));
+                                    }
+                                    if (!emojiStat.containsKey(usagesCount)) {
+                                        List<String> emptyList = new ArrayList<>();
+                                        emojiStat.put(usagesCount, emptyList);
+                                    }
+                                    emojiStat.get(usagesCount)
+                                            .add(tmp.getStringBuilder().toString());
+                                }, () -> serverStatistic.getNonDefaultSmileStats()
+                                        .remove(id));
                             }
                         });
 

@@ -4,14 +4,12 @@ import groovy.lang.GroovyShell;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.MessageUtils;
-import hellfrog.common.OptionalUtils;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.javacord.api.DiscordApi;
-import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.MessageAttachment;
 import org.javacord.api.entity.message.MessageBuilder;
@@ -38,7 +36,7 @@ public class ServiceCommand
 
     private static final String PREF = "srv";
     private static final String DESCRIPTIONS = "Common bot service commands";
-    private GroovyShell groovyShell = new GroovyShell();
+    private final GroovyShell groovyShell = new GroovyShell();
     private static final String SHELL_IMPORTS =
             "import hellfrog.settings.SettingsController \n" +
                     "import hellfrog.common.BroadCast \n" +
@@ -225,44 +223,41 @@ public class ServiceCommand
 
             if (secureTransfer) {
                 MessageUtils.deleteMessageIfCan(event.getMessage());
-                event.getServer().ifPresent(s -> {
-                    Optional<ServerTextChannel> mayBeChannel =
-                            ServerSideResolver.resolveChannel(s, transferChat);
-                    OptionalUtils.ifPresentOrElse(mayBeChannel, ch -> {
-                        settingsController.setServerTransfer(s.getId());
-                        settingsController.setServerTextChatTransfer(ch.getId());
-                        settingsController.saveCommonPreferences();
-                        new MessageBuilder()
-                                .setEmbed(new EmbedBuilder()
-                                        .setDescription("Enabled two-phase transfer from bot private" +
-                                                " to text channel " + ch.getMentionTag())
-                                        .setFooter("This message will be removed after 3 sec.")
-                                        .setTimestampToNow())
-                                .send(channel).thenAccept(msg1 -> {
-                            try {
-                                Thread.sleep(3_000L);
-                            } catch (InterruptedException ignore) {
-                            }
-                            msg1.delete();
-                        });
-                    }, () -> {
-                        settingsController.setServerTransfer(null);
-                        settingsController.setServerTextChatTransfer(null);
-                        settingsController.saveCommonPreferences();
-                        new MessageBuilder()
-                                .setEmbed(new EmbedBuilder()
-                                        .setDescription("Two-phase transfer disabled")
-                                        .setFooter("This message will be removed after 3 sec.")
-                                        .setTimestampToNow())
-                                .send(getMessageTargetByRights(event)).thenAccept(msg1 -> {
-                            try {
-                                Thread.sleep(3_000L);
-                            } catch (InterruptedException ignore) {
-                            }
-                            msg1.delete();
-                        });
-                    });
-                });
+                event.getServer().ifPresent(s ->
+                        ServerSideResolver.resolveChannel(s, transferChat).ifPresentOrElse(ch -> {
+                            settingsController.setServerTransfer(s.getId());
+                            settingsController.setServerTextChatTransfer(ch.getId());
+                            settingsController.saveCommonPreferences();
+                            new MessageBuilder()
+                                    .setEmbed(new EmbedBuilder()
+                                            .setDescription("Enabled two-phase transfer from bot private" +
+                                                    " to text channel " + ch.getMentionTag())
+                                            .setFooter("This message will be removed after 3 sec.")
+                                            .setTimestampToNow())
+                                    .send(channel).thenAccept(msg1 -> {
+                                try {
+                                    Thread.sleep(3_000L);
+                                } catch (InterruptedException ignore) {
+                                }
+                                msg1.delete();
+                            });
+                        }, () -> {
+                            settingsController.setServerTransfer(null);
+                            settingsController.setServerTextChatTransfer(null);
+                            settingsController.saveCommonPreferences();
+                            new MessageBuilder()
+                                    .setEmbed(new EmbedBuilder()
+                                            .setDescription("Two-phase transfer disabled")
+                                            .setFooter("This message will be removed after 3 sec.")
+                                            .setTimestampToNow())
+                                    .send(getMessageTargetByRights(event)).thenAccept(msg1 -> {
+                                try {
+                                    Thread.sleep(3_000L);
+                                } catch (InterruptedException ignore) {
+                                }
+                                msg1.delete();
+                            });
+                        }));
             }
 
             if (executeQuery) {
