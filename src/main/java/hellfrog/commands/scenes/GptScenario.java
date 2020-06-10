@@ -46,6 +46,7 @@ public class GptScenario
         super(PREFIX, DESCRIPTION);
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(3L));
         bucket = Bucket4j.builder().addLimit(bandwidth).build();
+        super.enableStrictByChannels();
     }
 
     @Override

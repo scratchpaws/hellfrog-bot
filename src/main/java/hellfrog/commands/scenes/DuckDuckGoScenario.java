@@ -23,6 +23,7 @@ import org.apache.http.util.EntityUtils;
 import org.javacord.api.entity.channel.PrivateChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.MessageBuilder;
+import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -50,6 +51,7 @@ public class DuckDuckGoScenario
         super(PREFIX, DESCRIPTION);
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(1L));
         bucket = Bucket4j.builder().addLimit(bandwidth).build();
+        super.enableStrictByChannels();
     }
 
     @Override
@@ -167,7 +169,7 @@ public class DuckDuckGoScenario
 
             int innerJsJsonPosStart;
             int innerJsJsonPosEnd;
-            String innerJsonText = "";
+            String innerJsonText;
             try {
                 innerJsJsonPosStart = responseText.indexOf("DDG.pageLayout.load('d',[");
                 if (innerJsJsonPosStart < 0) {
@@ -207,15 +209,24 @@ public class DuckDuckGoScenario
                 return;
             }
 
-            DDGWebResult ddgWebResult = ddgWebResults.getItems()[0];
+            MessageBuilder result = new MessageBuilder();
+            for (int i = 0; i < ddgWebResults.length() && i < 3; i++) {
+                DDGWebResult ddgWebResult = ddgWebResults.getItems()[i];
+                result.append(Jsoup.parse(ddgWebResult.getT()).text(), MessageDecoration.BOLD)
+                        .appendNewLine()
+                        .append("<").append(Jsoup.parse(ddgWebResult.getU()).text()).append(">")
+                        .appendNewLine()
+                        .append(Jsoup.parse(ddgWebResult.getA()).text())
+                        .appendNewLine()
+                        .appendNewLine();
+            }
 
             String title = StringUtils.left(messageWoCommandPrefix, 200);
-            String text = Jsoup.parse(ddgWebResult.getT() + " " + ddgWebResult.getA()).text();
 
             new MessageBuilder()
                     .setEmbed(new EmbedBuilder()
-                            .setDescription(text)
-                            .setUrl(ddgWebResult.getU())
+                            .setDescription(result.getStringBuilder().toString())
+                            .setUrl(nonJsPageQuery.toString())
                             .setTimestampToNow()
                             .setFooter("Powered by DuckDuckGo")
                             .setTitle(title)
