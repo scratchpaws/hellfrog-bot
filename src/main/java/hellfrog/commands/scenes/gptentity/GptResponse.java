@@ -1,4 +1,4 @@
-package hellfrog.commands.scenes;
+package hellfrog.commands.scenes.gptentity;
 
 import hellfrog.common.CommonUtils;
 

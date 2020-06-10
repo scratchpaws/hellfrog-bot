@@ -1,12 +1,13 @@
 package hellfrog.commands.scenes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import hellfrog.commands.scenes.gptentity.GptRequest;
+import hellfrog.commands.scenes.gptentity.GptResponse;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.MessageUtils;
 import hellfrog.common.SimpleHttpClient;
 import hellfrog.core.ServerSideResolver;
-import hellfrog.core.SessionState;
 import hellfrog.settings.SettingsController;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
@@ -24,7 +25,6 @@ import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
-import org.javacord.api.event.message.reaction.SingleReactionEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
@@ -35,7 +35,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class GptScenario
-        extends Scenario {
+        extends OneShotScenario {
 
     private static final String PREFIX = "gpt";
     private static final String DESCRIPTION = "Randomly appends the specified text";
@@ -49,60 +49,13 @@ public class GptScenario
     }
 
     @Override
-    protected void executePrivateFirstRun(@NotNull MessageCreateEvent event,
-                                          @NotNull PrivateChannel privateChannel,
-                                          @NotNull User user,
-                                          boolean isBotOwner) {
+    protected void onPrivate(@NotNull MessageCreateEvent event, @NotNull PrivateChannel privateChannel, @NotNull User user, boolean isBotOwner) {
         detachRun(event);
     }
 
     @Override
-    protected void executeServerFirstRun(@NotNull MessageCreateEvent event,
-                                         @NotNull Server server,
-                                         @NotNull ServerTextChannel serverTextChannel,
-                                         @NotNull User user,
-                                         boolean isBotOwner) {
+    protected void onServer(@NotNull MessageCreateEvent event, @NotNull Server server, @NotNull ServerTextChannel serverTextChannel, @NotNull User user, boolean isBotOwner) {
         detachRun(event);
-    }
-
-    @Override
-    protected boolean privateMessageStep(@NotNull MessageCreateEvent event,
-                                         @NotNull PrivateChannel privateChannel,
-                                         @NotNull User user,
-                                         @NotNull SessionState sessionState,
-                                         boolean isBotOwner) {
-        return false;
-    }
-
-    @Override
-    protected boolean serverMessageStep(@NotNull MessageCreateEvent event,
-                                        @NotNull Server server,
-                                        @NotNull ServerTextChannel serverTextChannel,
-                                        @NotNull User user,
-                                        @NotNull SessionState sessionState,
-                                        boolean isBotOwner) {
-        return false;
-    }
-
-    @Override
-    protected boolean privateReactionStep(boolean isAddReaction,
-                                          @NotNull SingleReactionEvent event,
-                                          @NotNull PrivateChannel privateChannel,
-                                          @NotNull User user,
-                                          @NotNull SessionState sessionState,
-                                          boolean isBotOwner) {
-        return false;
-    }
-
-    @Override
-    protected boolean serverReactionStep(boolean isAddReaction,
-                                         @NotNull SingleReactionEvent event,
-                                         @NotNull Server server,
-                                         @NotNull ServerTextChannel serverTextChannel,
-                                         @NotNull User user,
-                                         @NotNull SessionState sessionState,
-                                         boolean isBotOwner) {
-        return false;
     }
 
     private void detachRun(@NotNull MessageCreateEvent event) {
