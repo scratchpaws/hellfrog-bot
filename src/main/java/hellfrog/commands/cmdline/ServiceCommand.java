@@ -42,7 +42,6 @@ public class ServiceCommand
                     "import hellfrog.common.BroadCast \n" +
                     "import hellfrog.common.CommonUtils \n" +
                     "import hellfrog.common.MessageUtils \n" +
-                    "import hellfrog.common.OptionalUtils \n" +
                     "import hellfrog.core.ServerSideResolver \n" +
                     "import org.javacord.api.entity.message.MessageBuilder \n" +
                     "import org.javacord.api.DiscordApi\n" +
