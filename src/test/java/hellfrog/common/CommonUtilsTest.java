@@ -131,4 +131,35 @@ public class CommonUtilsTest {
         Assertions.assertEquals(one, ofOnce.get());
         Assertions.assertEquals(one, ofMultiple.get());
     }
+
+    @Test
+    public void quoteIfNotPresentTest() {
+        Assertions.assertEquals("", CommonUtils.quoteIfNotPresent(null, null, '`'));
+        Assertions.assertEquals("", CommonUtils.quoteIfNotPresent("", null, '`'));
+        Assertions.assertEquals("", CommonUtils.quoteIfNotPresent("", "", '`'));
+        Assertions.assertEquals("some", CommonUtils.quoteIfNotPresent("some", " ", '`'));
+        Assertions.assertEquals("some `text`", CommonUtils.quoteIfNotPresent("some text", "text", '`'));
+        Assertions.assertEquals("some `text`", CommonUtils.quoteIfNotPresent("some `text`", "text", '`'));
+        Assertions.assertEquals("some ``text`", CommonUtils.quoteIfNotPresent("some `text", "text", '`'));
+        Assertions.assertEquals("`some` `text`", CommonUtils.quoteIfNotPresent("some `text`", "some", '`'));
+        Assertions.assertEquals("`some`` `text`", CommonUtils.quoteIfNotPresent("some` `text`", "some", '`'));
+        Assertions.assertEquals("`text``text``text`", CommonUtils.quoteIfNotPresent("texttexttext", "text", '`'));
+        Assertions.assertEquals("`text``text``text`", CommonUtils.quoteIfNotPresent("text`text`text", "text", '`'));
+    }
+
+    @Test
+    public void prefixIfNotPresentTest() {
+        Assertions.assertEquals("", CommonUtils.prefixIfNotPresent(null, null, '`'));
+        Assertions.assertEquals("", CommonUtils.prefixIfNotPresent("", null, '`'));
+        Assertions.assertEquals("", CommonUtils.prefixIfNotPresent("", "", '`'));
+        Assertions.assertEquals("some", CommonUtils.prefixIfNotPresent("some", " ", '`'));
+        Assertions.assertEquals("some `text", CommonUtils.prefixIfNotPresent("some text", "text", '`'));
+        Assertions.assertEquals("some `text`", CommonUtils.prefixIfNotPresent("some`text`", "`text`", ' '));
+        Assertions.assertEquals("some `text`", CommonUtils.prefixIfNotPresent("some `text`", "text", '`'));
+        Assertions.assertEquals("some `text", CommonUtils.prefixIfNotPresent("some `text", "text", '`'));
+        Assertions.assertEquals("`some `text`", CommonUtils.prefixIfNotPresent("some `text`", "some", '`'));
+        Assertions.assertEquals("`some` `text`", CommonUtils.prefixIfNotPresent("some` `text`", "some", '`'));
+        Assertions.assertEquals("`text`text`text", CommonUtils.prefixIfNotPresent("texttexttext", "text", '`'));
+        Assertions.assertEquals("`text`text`text", CommonUtils.prefixIfNotPresent("text`text`text", "text", '`'));
+    }
 }

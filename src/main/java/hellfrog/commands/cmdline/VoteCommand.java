@@ -441,7 +441,7 @@ public class VoteCommand
                         readableVoteText.append('\n');
                         readableVoteText.append(out);
                     });
-            newVote.setReadableVoteText(readableVoteText.toString());
+            newVote.setReadableVoteText(ServerSideResolver.quoteEveryoneTags(readableVoteText.toString()));
             newVote.setVotePoints(votePoints);
             newVote.setMessageId(null);
             newVote.setTextChatId(null);

@@ -44,6 +44,11 @@ public class ServerSideResolver
     private static final Pattern EMOJI_TAG_REGEXP = Pattern.compile("^<a?:.+?:\\d+>$"); // <:swiborg:530385828157980694>
     private static final Pattern CUSTOM_COMBO_EMOJI_SEARCH = Pattern.compile("(<a?:.+?:\\d+>|:[A-z_0-9]+:)", Pattern.MULTILINE);
 
+    private static final String EVERYONE_TAG = "@everyone";
+    private static final String HERE_TAG = "@here";
+    private static final String QUOTED_EVERYONE_TAG = "`@everyone`";
+    private static final String QUOTED_HERE_TAG = "`@here`";
+
     public static Optional<User> resolveUser(Server server, String rawValue) {
         // 1. вначале ищем по явному id
         if (CommonUtils.isLong(rawValue)) {
@@ -311,15 +316,17 @@ public class ServerSideResolver
                 message = message.replace(textChannelMention, "#" + serverTextChannel.get().getName());
             }
         }
-        return resolveEveryones(message);
+        return quoteEveryoneTags(message);
     }
 
-    public static @NotNull String resolveEveryones(@Nullable String message) {
+    public static @NotNull String quoteEveryoneTags(@Nullable String message) {
         if (CommonUtils.isTrStringEmpty(message)) {
             return "";
         }
-        return message.replace("@everyone", "`@everyone`")
-                .replace("@here", "`@here`");
+        final String quotedEveryone = CommonUtils.quoteIfNotPresent(message, EVERYONE_TAG, '`');
+        final String quotedEveryoneHere = CommonUtils.quoteIfNotPresent(quotedEveryone, HERE_TAG, '`');
+        final String prefixEveryone = CommonUtils.prefixIfNotPresent(quotedEveryoneHere, QUOTED_EVERYONE_TAG, ' ');
+        return CommonUtils.prefixIfNotPresent(prefixEveryone, QUOTED_HERE_TAG, ' ');
     }
 
     /**
@@ -378,7 +385,7 @@ public class ServerSideResolver
             messageContent = customEmoji.replaceFirst(":" + name + ":");
             customEmoji.reset(messageContent);
         }
-        return resolveEveryones(ESCAPED_CHARACTER.matcher(messageContent).replaceAll("${char}"));
+        return quoteEveryoneTags(ESCAPED_CHARACTER.matcher(messageContent).replaceAll("${char}"));
     }
 
     @NotNull

@@ -225,7 +225,7 @@ public class DuckDuckGoScenario
 
             new MessageBuilder()
                     .setEmbed(new EmbedBuilder()
-                            .setDescription(ServerSideResolver.resolveEveryones(result.getStringBuilder().toString()))
+                            .setDescription(ServerSideResolver.quoteEveryoneTags(result.getStringBuilder().toString()))
                             .setUrl(nonJsPageQuery.toString())
                             .setTimestampToNow()
                             .setFooter("Powered by DuckDuckGo")

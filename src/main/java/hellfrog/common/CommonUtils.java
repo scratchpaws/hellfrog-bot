@@ -1,5 +1,6 @@
 package hellfrog.common;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -232,5 +233,68 @@ public class CommonUtils {
             }
         }
         return false;
+    }
+
+    public static @NotNull String quoteIfNotPresent(final @Nullable CharSequence str,
+                                                    final @Nullable CharSequence that,
+                                                    final char quoteChar) {
+        if (isTrStringEmpty(str)) {
+            return "";
+        }
+        if (isTrStringEmpty(that)) {
+            return str.toString();
+        }
+        String thatStr = that.toString();
+        StringBuilder result = new StringBuilder(str);
+        int pos = 0;
+        int prevAt;
+        int postAt;
+        char prev;
+        char post;
+        while ((pos = result.indexOf(thatStr, pos)) >= 0) {
+            prevAt = pos - 1;
+            postAt = pos + thatStr.length();
+            if (prevAt >= 0 && prevAt < result.length() && postAt >= 0 && postAt < result.length()) {
+                prev = result.charAt(prevAt);
+                post = result.charAt(postAt);
+                if (prev == quoteChar && post == quoteChar) {
+                    pos = postAt; // already done
+                    continue;
+                }
+            }
+            result.insert(pos, quoteChar);
+            pos += 1 + thatStr.length();
+            result.insert(pos, quoteChar);
+        }
+        return result.toString();
+    }
+
+    public static @NotNull String prefixIfNotPresent(final @Nullable CharSequence str,
+                                                     final @Nullable CharSequence that,
+                                                     final char prefix) {
+        if (isTrStringEmpty(str)) {
+            return "";
+        }
+        if (isTrStringEmpty(that)) {
+            return str.toString();
+        }
+        String thatStr = that.toString();
+        StringBuilder result = new StringBuilder(str);
+        int pos = 0;
+        int prevAt;
+        char prev;
+        while ((pos = result.indexOf(thatStr, pos)) >= 0) {
+            prevAt = pos - 1;
+            if (prevAt >= 0 && prevAt < result.length()) {
+                prev = result.charAt(prevAt);
+                if (prev == prefix) {
+                    pos += thatStr.length();
+                    continue;
+                }
+            }
+            result.insert(pos, prefix);
+            pos += 1 + thatStr.length();
+        }
+        return result.toString();
     }
 }

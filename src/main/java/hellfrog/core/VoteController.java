@@ -185,7 +185,7 @@ public class VoteController
                             MessageBuilder result = new MessageBuilder()
                                     .append("Voting is over:", MessageDecoration.BOLD)
                                     .append("  ")
-                                    .append(ServerSideResolver.resolveEveryones(activeVote.getReadableVoteText()))
+                                    .append(ServerSideResolver.quoteEveryoneTags(activeVote.getReadableVoteText()))
                                     .appendNewLine()
                                     .append("Results:", MessageDecoration.BOLD)
                                     .appendNewLine();
