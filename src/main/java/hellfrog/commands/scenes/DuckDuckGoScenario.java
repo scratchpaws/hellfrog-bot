@@ -51,7 +51,7 @@ public class DuckDuckGoScenario
         super(PREFIX, DESCRIPTION);
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(1L));
         bucket = Bucket4j.builder().addLimit(bandwidth).build();
-        super.enableStrictByChannels();
+        //super.enableStrictByChannels();
     }
 
     @Override
@@ -225,7 +225,7 @@ public class DuckDuckGoScenario
 
             new MessageBuilder()
                     .setEmbed(new EmbedBuilder()
-                            .setDescription(result.getStringBuilder().toString())
+                            .setDescription(ServerSideResolver.resolveEveryones(result.getStringBuilder().toString()))
                             .setUrl(nonJsPageQuery.toString())
                             .setTimestampToNow()
                             .setFooter("Powered by DuckDuckGo")

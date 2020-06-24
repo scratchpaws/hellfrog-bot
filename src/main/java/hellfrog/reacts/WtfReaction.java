@@ -21,13 +21,12 @@ import java.time.Instant;
 import java.util.Enumeration;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class WtfReaction
-    extends MsgCreateReaction
-    implements CommonConstants {
+        extends MsgCreateReaction
+        implements CommonConstants {
 
     private static final String PREFIX = "wtf";
     private static final String DESCRIPTION = "Get (wtf @user) association for user (or wtfall @user for all)";
@@ -127,7 +126,7 @@ public class WtfReaction
                     .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
             String reporterName = server.getMemberById(reporter).map(server::getDisplayName)
                     .orElse(reporterUser.getName());
-            String value = wtfMap.getNameValues().get(reporter);
+            String value = ServerSideResolver.resolveMentions(server, wtfMap.getNameValues().get(reporter));
             result.append(MessageUtils.escapeSpecialSymbols(reporterName))
                     .append(" say that ")
                     .append(MessageUtils.escapeSpecialSymbols(server.getDisplayName(wtfUser)))

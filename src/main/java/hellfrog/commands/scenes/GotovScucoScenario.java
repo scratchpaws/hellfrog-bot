@@ -46,7 +46,7 @@ public class GotovScucoScenario
         super(PREFIX, DESCRIPTION);
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(1L));
         bucket = Bucket4j.builder().addLimit(bandwidth).build();
-        super.enableStrictByChannels();
+        //super.enableStrictByChannels();
     }
 
     @Override

@@ -23,13 +23,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DefineReaction
-    extends MsgCreateReaction
-    implements CommonConstants {
+        extends MsgCreateReaction
+        implements CommonConstants {
 
     private static final String PREFIX = "dfn";
     private static final String DESCRIPTION = "Set (dfn @user = msg) association for user";
 
-    private ReentrantLock createDefinitionLock = new ReentrantLock();
+    private final ReentrantLock createDefinitionLock = new ReentrantLock();
 
     private static final Pattern DEFINE_PATTERN = Pattern.compile("^(dfn|дфн|def|деф)\\s+.*=.*",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
@@ -66,11 +66,13 @@ public class DefineReaction
             Matcher searchCut = CUT_DEFINE_PATTERN.matcher(strMessage);
             if (searchCut.find()) {
                 String defineSubstring = strMessage.substring(searchCut.end());
-                String[] nameAndDefine = defineSubstring.split("=");
+                String[] nameAndDefine = defineSubstring.split("=", 2);
                 if (nameAndDefine.length >= 1 && nameAndDefine.length <= 2) {
                     Optional<User> mayBeUser = ServerSideResolver.resolveUser(server, nameAndDefine[0].trim());
                     mayBeUser.ifPresentOrElse(dfnUser -> {
-                        String define = nameAndDefine.length == 2 ? nameAndDefine[1].strip() : "";
+                        String define = nameAndDefine.length == 2
+                                ? ServerSideResolver.resolveMentions(server, nameAndDefine[1].strip())
+                                : "";
                         if (!wtfAssign.containsKey(dfnUser.getId())
                                 || wtfAssign.get(dfnUser.getId()) == null) {
                             createDefinitionLock.lock();

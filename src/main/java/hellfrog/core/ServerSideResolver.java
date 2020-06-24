@@ -20,6 +20,7 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.util.DiscordRegexPattern;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -285,7 +286,7 @@ public class ServerSideResolver
         return result;
     }
 
-    public static String resolveMentions(Server server, String message) {
+    public static @NotNull String resolveMentions(Server server, String message) {
         Matcher userMentionMatcher = USER_TAG_SEARCH.matcher(message);
         while (userMentionMatcher.find()) {
             String userMention = userMentionMatcher.group();
@@ -310,7 +311,15 @@ public class ServerSideResolver
                 message = message.replace(textChannelMention, "#" + serverTextChannel.get().getName());
             }
         }
-        return message;
+        return resolveEveryones(message);
+    }
+
+    public static @NotNull String resolveEveryones(@Nullable String message) {
+        if (CommonUtils.isTrStringEmpty(message)) {
+            return "";
+        }
+        return message.replace("@everyone", "`@everyone`")
+                .replace("@here", "`@here`");
     }
 
     /**
@@ -320,9 +329,12 @@ public class ServerSideResolver
      * @param mayBeServer    optional server object
      * @return text with replaced mentions
      */
-    public static String getReadableContent(@NotNull String messageContent,
+    public static String getReadableContent(@Nullable String messageContent,
                                             Optional<Server> mayBeServer) {
         DiscordApi api = SettingsController.getInstance().getDiscordApi();
+        if (CommonUtils.isTrStringEmpty(messageContent)) {
+            return "";
+        }
         Matcher userMention = DiscordRegexPattern.USER_MENTION.matcher(messageContent);
         while (userMention.find()) {
             String userId = userMention.group("id");
@@ -366,7 +378,7 @@ public class ServerSideResolver
             messageContent = customEmoji.replaceFirst(":" + name + ":");
             customEmoji.reset(messageContent);
         }
-        return ESCAPED_CHARACTER.matcher(messageContent).replaceAll("${char}");
+        return resolveEveryones(ESCAPED_CHARACTER.matcher(messageContent).replaceAll("${char}"));
     }
 
     @NotNull

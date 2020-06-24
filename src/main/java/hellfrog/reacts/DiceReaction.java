@@ -168,8 +168,20 @@ public class DiceReaction
                         long sumResult = 0;
                         ThreadLocalRandom currRnd = ThreadLocalRandom.current();
                         int success = 0;
+
+                        long commonModifier = 0L;
+                        for (SumModifier resultModifier : resultModifiers) {
+                            commonModifier = resultModifier.modify(commonModifier);
+                        }
+
+                        final boolean modifyDices = !resultModifiers.isEmpty() && commonModifier != 0L;
+
                         for (long d = 1; d <= numOfDice; d++) {
                             long tr = currRnd.nextLong(1L, numOfFaces + 1);
+                            final long origin = tr;
+                            if (modifyDices) {
+                                tr += commonModifier;
+                            }
                             boolean strike = false;
                             if (!resultFilters.isEmpty()) {
                                 for (ResultFilter resultFilter : resultFilters) {
@@ -182,22 +194,26 @@ public class DiceReaction
                             if (!strike) {
                                 success++;
                                 sumResult += tr;
-                                dicesOutput.append("[").append(tr).append("]");
+                            }
+                            dicesOutput.append("[");
+                            if (!strike) {
+                                dicesOutput.append(tr);
                             } else {
-                                dicesOutput.append("[", MessageDecoration.STRIKEOUT)
-                                        .append(String.valueOf(tr), MessageDecoration.STRIKEOUT)
-                                        .append("]", MessageDecoration.STRIKEOUT);
+                                dicesOutput.append(String.valueOf(tr), MessageDecoration.STRIKEOUT);
+                            }
+                            if (modifyDices) {
+                                dicesOutput.append(" (").append(origin);
+                                if (commonModifier >= 0) {
+                                    dicesOutput.append("+");
+                                }
+                                dicesOutput.append(commonModifier).append(")");
+                            }
+                            dicesOutput.append("]");
+                            if (d < numOfDice) {
+                                dicesOutput.append(" ");
                             }
                         }
-                        long modifiedSum = sumResult;
-                        long commonModifier = 0L;
-                        for (SumModifier resultModifier : resultModifiers) {
-                            modifiedSum = resultModifier.modify(modifiedSum);
-                            commonModifier = resultModifier.modify(commonModifier);
-                        }
-                        if (modifiedSum < 0L) {
-                            modifiedSum = 0L;
-                        }
+
                         if (!resultFilters.isEmpty()) {
                             dicesOutput.append(" (")
                                     .append(String.valueOf(success))
@@ -219,14 +235,7 @@ public class DiceReaction
                                 .append(" and got ")
                                 .append(dicesOutput.getStringBuilder().toString())
                                 .append("...")
-                                .append(String.valueOf(modifiedSum), MessageDecoration.BOLD);
-                        if (!resultModifiers.isEmpty()) {
-                            msg.append(" (")
-                                    .append(sumResult)
-                                    .append(commonModifier >= 0L ? "+" : "")
-                                    .append(commonModifier)
-                                    .append(")");
-                        }
+                                .append(String.valueOf(sumResult), MessageDecoration.BOLD);
                         new MessageBuilder()
                                 .setEmbed(new EmbedBuilder()
                                         .setTitle(anotherString)
@@ -234,8 +243,8 @@ public class DiceReaction
                                         .setDescription(msg.getStringBuilder().toString()))
                                 .send(textChannel);
                         if (doRofl) {
-                            rofling(textChannel, modifiedSum, modifiedSum < max ?
-                                    max - 1 : modifiedSum);
+                            rofling(textChannel, sumResult, sumResult < max ?
+                                    max - 1 : sumResult);
                         }
                     }
 
@@ -344,22 +353,15 @@ public class DiceReaction
 
         boolean isOk(final long value) {
             if (filterValue > 0) {
-                switch (filterType) {
-                    case EQ:
-                        return value == filterValue;
-                    case LT:
-                        return value < filterValue;
-                    case GT:
-                        return value > filterValue;
-                    case LE:
-                        return value <= filterValue;
-                    case GE:
-                        return value >= filterValue;
-                    case NE:
-                        return value != filterValue;
-                    case NOP:
-                        return true;
-                }
+                return switch (filterType) {
+                    case EQ -> value == filterValue;
+                    case LT -> value < filterValue;
+                    case GT -> value > filterValue;
+                    case LE -> value <= filterValue;
+                    case GE -> value >= filterValue;
+                    case NE -> value != filterValue;
+                    case NOP -> true;
+                };
             }
             return true;
         }
