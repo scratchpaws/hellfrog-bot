@@ -144,12 +144,13 @@ CREATE UNIQUE INDEX "uniq_wft_assign" ON "wtf_assigns" (
     );
 CREATE TABLE "emoji_total_statistics"
 (
-    "id"          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-    "server_id"   INTEGER NOT NULL,
-    "emoji_id"    INTEGER NOT NULL,
-    "last_usage"  INTEGER NOT NULL,
-    "create_date" INTEGER NOT NULL DEFAULT 0,
-    "update_date" INTEGER NOT NULL DEFAULT 0
+    "id"           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+    "server_id"    INTEGER NOT NULL,
+    "emoji_id"     INTEGER NOT NULL,
+    "usages_count" INTEGER NOT NULL,
+    "last_usage"   INTEGER NOT NULL,
+    "create_date"  INTEGER NOT NULL DEFAULT 0,
+    "update_date"  INTEGER NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX "uniq_total_emoji_stat" ON "emoji_total_statistics" (
                                                                          "server_id",

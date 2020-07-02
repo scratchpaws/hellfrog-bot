@@ -30,6 +30,7 @@ public class MainDBController
     private ChannelCategoryRightsDAO channelCategoryRightsDAO = null;
     private VotesDAO votesDAO = null;
     private WtfAssignDAO wtfAssignDAO = null;
+    private EmojiTotalStatisticDAO emojiTotalStatisticDAO = null;
 
     public MainDBController() throws IOException, SQLException {
         String MAIN_DB_FILE_NAME = "hellfrog_main.sqlite3";
@@ -66,6 +67,7 @@ public class MainDBController
             channelCategoryRightsDAO = new ChannelCategoryRightsDAO(connection);
             votesDAO = new VotesDAO(connection);
             wtfAssignDAO = new WtfAssignDAO(connection);
+            emojiTotalStatisticDAO = new EmojiTotalStatisticDAO(connection);
             sqlLog.info("Main database opened");
         } catch (SQLException err) {
             sqlLog.fatal("Unable to open main database: " + err.getMessage(), err);
@@ -174,5 +176,9 @@ public class MainDBController
 
     public WtfAssignDAO getWtfAssignDAO() {
         return wtfAssignDAO;
+    }
+
+    public EmojiTotalStatisticDAO getEmojiTotalStatisticDAO() {
+        return emojiTotalStatisticDAO;
     }
 }
