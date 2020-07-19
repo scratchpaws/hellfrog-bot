@@ -18,9 +18,11 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
+import org.apache.logging.log4j.message.MessageCollectionMessage;
 import org.javacord.api.entity.channel.PrivateChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.Message;
+import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -111,12 +113,26 @@ public class GptScenario
                 if (statusCode != HttpStatus.SC_OK) {
                     String message = String.format("Service HTTP error: %d", statusCode);
                     BroadCast.sendServiceMessage(message);
-                    showErrorMessage(message, event);
+                    new MessageBuilder()
+                            .setEmbed(new EmbedBuilder()
+                                    .setAuthor(event.getApi().getYourself())
+                                    .setDescription("The cortex chip does not response")
+                                    .setFooter(String.format("HTTP code: %d", statusCode))
+                                    .setTimestampToNow())
+                            .send(event.getChannel());
+                    return;
                 }
             } catch (Exception err) {
                 String errMsg = String.format("Unable send request to GPT-server: %s", err.getMessage());
                 log.error(errMsg, err);
                 BroadCast.sendServiceMessage(errMsg);
+                new MessageBuilder()
+                        .setEmbed(new EmbedBuilder()
+                                .setAuthor(event.getApi().getYourself())
+                                .setDescription("The cortex chip does not response")
+                                .setFooter(err.getMessage())
+                                .setTimestampToNow())
+                        .send(event.getChannel());
                 return;
             }
 
@@ -140,7 +156,7 @@ public class GptScenario
                 return;
             }
             List<String> listOfMessagesText = CommonUtils.splitEqually(
-                    "**" + messageWoCommandPrefix + "** " + gptResponse.getReplies().get(0), 1999);
+                    "**" + messageWoCommandPrefix + "**" + gptResponse.getReplies().get(0), 1999);
             for (String msgText : listOfMessagesText) {
                 EmbedBuilder embedBuilder = new EmbedBuilder()
                         .setDescription(msgText);
