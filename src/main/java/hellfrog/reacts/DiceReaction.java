@@ -18,14 +18,14 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.UnmodifiableView;
 
 import java.awt.*;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
@@ -38,13 +38,13 @@ public class DiceReaction
     private static final Pattern DICE_PATTERN = Pattern.compile(
             "([rр]\\s?)?" +
                     "([dд]?\\s?\\d+\\s?[dд]\\s?\\d+|[lд]{2})" +
-                    "(\\s?([=<>]{1,2}|[+\\-])\\s?\\d+)*",
+                    "(\\s?([=<>]{1,2}|(\\+{1,2}|-{1,2}))\\s?\\d+)*",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern SEARCH_PATTERN = Pattern.compile(
             "^\\s*" +
                     "([rр]\\s?)?" +
                     "([dд]?\\s?\\d+\\s?[dд]\\s?\\d+|[lд]{2})" +
-                    "(\\s?([=<>]{1,2}|[+\\-])\\s?\\d+)*",
+                    "(\\s?([=<>]{1,2}|(\\+{1,2}|-{1,2}))\\s?\\d+)*",
             Pattern.MULTILINE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final String DEFAULT_ROLL = "1d20";
 
@@ -53,8 +53,11 @@ public class DiceReaction
     private static final Pattern VALUE_PATTERN = Pattern.compile(
             "\\d{1,5}\\s?[dд]\\s?\\d{1,5}",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-    private static final Pattern MODIFIER_PATTERN = Pattern.compile(
-            "[+\\-]\\s?\\d{1,5}",
+    private static final Pattern VALUE_MODIFIER_PATTERN = Pattern.compile(
+            "(\\+{2}|-{2})\\s?\\d{1,5}",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern SUMMARY_MODIFIER_PATTERN = Pattern.compile(
+            "(\\+{1,2}|-{1,2})\\s?\\d{1,5}",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern FILTER_PATTERN = Pattern.compile(
             "[=<>]{1,2}\\s?\\d{1,5}",
@@ -129,17 +132,6 @@ public class DiceReaction
                     if (numOfDice > 0 && numOfDice <= MAX_DICES
                             && numOfFaces > 0 && numOfFaces <= MAX_FACES) {
 
-                        List<SumModifier> resultModifiers = new ArrayList<>();
-                        Matcher foundModifiers = MODIFIER_PATTERN.matcher(diceValue);
-                        while (foundModifiers.find()) {
-                            String rawModifier = foundModifiers.group();
-                            boolean addition = rawModifier.startsWith("+");
-                            long modifierValue = CommonUtils.onlyNumbersToLong(rawModifier);
-                            if (modifierValue > 0) {
-                                resultModifiers.add(new SumModifier(modifierValue, addition));
-                            }
-                        }
-
                         List<ResultFilter> resultFilters = new ArrayList<>();
                         Matcher filterModifiers = FILTER_PATTERN.matcher(diceValue);
                         while (filterModifiers.find()) {
@@ -165,22 +157,18 @@ public class DiceReaction
                         }
 
                         MessageBuilder dicesOutput = new MessageBuilder();
-                        long sumResult = 0;
+                        long totalSumResult = 0;
                         ThreadLocalRandom currRnd = ThreadLocalRandom.current();
                         int success = 0;
 
-                        long commonModifier = 0L;
-                        for (SumModifier resultModifier : resultModifiers) {
-                            commonModifier = resultModifier.modify(commonModifier);
-                        }
-
-                        final boolean modifyDices = !resultModifiers.isEmpty() && commonModifier != 0L;
+                        final long valuesModifier = calculateModifiers(diceValue, false);
+                        final boolean modifyDices = valuesModifier != 0L;
 
                         for (long d = 1; d <= numOfDice; d++) {
                             long tr = currRnd.nextLong(1L, numOfFaces + 1);
                             final long origin = tr;
                             if (modifyDices) {
-                                tr += commonModifier;
+                                tr += valuesModifier;
                             }
                             boolean strike = false;
                             if (!resultFilters.isEmpty()) {
@@ -193,7 +181,7 @@ public class DiceReaction
                             }
                             if (!strike) {
                                 success++;
-                                sumResult += tr;
+                                totalSumResult += tr;
                             }
                             dicesOutput.append("[");
                             if (!strike) {
@@ -203,16 +191,21 @@ public class DiceReaction
                             }
                             if (modifyDices) {
                                 dicesOutput.append(" (").append(origin);
-                                if (commonModifier >= 0) {
+                                if (valuesModifier >= 0) {
                                     dicesOutput.append("+");
                                 }
-                                dicesOutput.append(commonModifier).append(")");
+                                dicesOutput.append(valuesModifier).append(")");
                             }
                             dicesOutput.append("]");
                             if (d < numOfDice) {
                                 dicesOutput.append(" ");
                             }
                         }
+
+                        final long summaryModifier = calculateModifiers(diceValue, true);
+                        final boolean modifyTotalSum = summaryModifier != 0L;
+                        final long origTotalSum = totalSumResult;
+                        totalSumResult += summaryModifier;
 
                         if (!resultFilters.isEmpty()) {
                             dicesOutput.append(" (")
@@ -235,7 +228,14 @@ public class DiceReaction
                                 .append(" and got ")
                                 .append(dicesOutput.getStringBuilder().toString())
                                 .append("...")
-                                .append(String.valueOf(sumResult), MessageDecoration.BOLD);
+                                .append(String.valueOf(totalSumResult), MessageDecoration.BOLD);
+                        if (modifyTotalSum) {
+                            msg.append(" (").append(origTotalSum);
+                            if (summaryModifier >= 0) {
+                                msg.append("+");
+                            }
+                            msg.append(summaryModifier).append(")");
+                        }
                         new MessageBuilder()
                                 .setEmbed(new EmbedBuilder()
                                         .setTitle(anotherString)
@@ -243,8 +243,8 @@ public class DiceReaction
                                         .setDescription(msg.getStringBuilder().toString()))
                                 .send(textChannel);
                         if (doRofl) {
-                            rofling(textChannel, sumResult, sumResult < max ?
-                                    max - 1 : sumResult);
+                            rofling(textChannel, totalSumResult, totalSumResult < max ?
+                                    max - 1 : totalSumResult);
                         }
                     }
 
@@ -254,6 +254,38 @@ public class DiceReaction
         } catch (Exception err) {
             log.error(err.getMessage(), err);
         }
+    }
+
+    @NotNull @UnmodifiableView
+    private List<SumModifier> parseModifiers(@NotNull final String diceValue, boolean getSummaryModifiers) {
+
+        final List<SumModifier> modifiers = new ArrayList<>();
+        final Pattern selectedPattern = getSummaryModifiers ? SUMMARY_MODIFIER_PATTERN : VALUE_MODIFIER_PATTERN;
+        final Matcher modifierMatcher = selectedPattern.matcher(diceValue);
+
+        while (modifierMatcher.find()) {
+            final String rawModifier = modifierMatcher.group();
+            if (selectedPattern == SUMMARY_MODIFIER_PATTERN) {
+                if (rawModifier.contains("++") || rawModifier.contains("--")) {
+                    continue;
+                }
+            }
+            final boolean addition = rawModifier.startsWith("+");
+            final long modifierValue = CommonUtils.onlyNumbersToLong(rawModifier);
+            if (modifierValue > 0) {
+                modifiers.add(new SumModifier(modifierValue, addition));
+            }
+        }
+
+        return Collections.unmodifiableList(modifiers);
+    }
+
+    private long calculateModifiers(@NotNull final String diceValue, boolean getSummaryModifiers) {
+        long valueModifier = 0L;
+        for (SumModifier modifier : parseModifiers(diceValue, getSummaryModifiers)) {
+            valueModifier = modifier.modify(valueModifier);
+        }
+        return valueModifier;
     }
 
     private void rofling(final TextChannel textChannel, final long result, final long max) {
