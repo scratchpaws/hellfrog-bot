@@ -1,30 +1,28 @@
 package hellfrog.settings.db;
 
-import org.jetbrains.annotations.NotNull;
-
 public class VoteCreateException extends Exception {
 
-    VoteCreateException() {
+    public VoteCreateException() {
         super();
     }
 
-    VoteCreateException(String message) {
+    public VoteCreateException(String message) {
         super(message);
     }
 
-    VoteCreateException(String message,
-                        Throwable cause) {
+    public VoteCreateException(String message,
+                               Throwable cause) {
         super(message, cause);
     }
 
-    VoteCreateException(Throwable cause) {
+    public VoteCreateException(Throwable cause) {
         super(cause);
     }
 
-    VoteCreateException(String message,
-                        Throwable cause,
-                        boolean enableSuppression,
-                        boolean writableStackTrace) {
+    public VoteCreateException(String message,
+                               Throwable cause,
+                               boolean enableSuppression,
+                               boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

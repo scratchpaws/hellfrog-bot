@@ -2,16 +2,16 @@ package hellfrog.settings.oldjson;
 
 import java.util.Objects;
 
-// hellfrog.settings.entity.VotePoint
+// hellfrog.settings.db.entity.VotePoint
 public class JSONVotePoint {
 
-    // hellfrog.settings.entity.VotePoint.id
+    // hellfrog.settings.db.entity.VotePoint.id
     private long id;
-    // hellfrog.settings.entity.VotePoint.unicodeEmoji
+    // hellfrog.settings.db.entity.VotePoint.unicodeEmoji
     private String emoji;
-    // hellfrog.settings.entity.VotePoint.customEmojiId
+    // hellfrog.settings.db.entity.VotePoint.customEmojiId
     private Long customEmoji;
-    // hellfrog.settings.entity.VotePoint.pointText
+    // hellfrog.settings.db.entity.VotePoint.pointText
     private String pointText;
 
     public long getId() {

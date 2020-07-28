@@ -8,23 +8,23 @@ import java.util.Map;
 
 public class JSONServerPreferences {
 
-    // hellfrog.settings.db.ServerPreferencesDAO.getPrefix
+    // hellfrog.settings.db.sqlite.ServerPreferencesDAO.getPrefix
     // migrate available
     private String botPrefix = ">>";
-    // hellfrog.settings.db.EntityRightsDAO
+    // hellfrog.settings.db.sqlite.EntityRightsDAO
     // migrate available
     // details into hellfrog.settings.oldjson.JSONCommandRights
     private Map<String, JSONCommandRights> srvCommandRights = Collections.emptyMap();
-    // hellfrog.settings.db.VotesDAO
+    // hellfrog.settings.db.sqlite.VotesDAO
     // migrate available
     private List<JSONActiveVote> activeVotes = Collections.emptyList();
-    // hellfrog.settings.db.ServerPreferencesDAO.isJoinLeaveDisplay
+    // hellfrog.settings.db.sqlite.ServerPreferencesDAO.isJoinLeaveDisplay
     // migrate available
     private boolean joinLeaveDisplay = false;
-    // hellfrog.settings.db.ServerPreferencesDAO.getJoinLeaveChannel
+    // hellfrog.settings.db.sqlite.ServerPreferencesDAO.getJoinLeaveChannel
     // migrate available
     private long joinLeaveChannel = 0L;
-    // hellfrog.settings.db.ServerPreferencesDAO.isNewAclMode
+    // hellfrog.settings.db.sqlite.ServerPreferencesDAO.isNewAclMode
     // migrate available
     private boolean newAclMode = false;
     private boolean autoPromoteEnabled = false;

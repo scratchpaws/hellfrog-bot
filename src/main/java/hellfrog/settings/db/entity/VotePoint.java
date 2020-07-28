@@ -1,4 +1,4 @@
-package hellfrog.settings.entity;
+package hellfrog.settings.db.entity;
 
 import hellfrog.common.CommonUtils;
 

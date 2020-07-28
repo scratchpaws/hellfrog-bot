@@ -1,8 +1,9 @@
-package hellfrog.settings.db;
+package hellfrog.settings.db.sqlite;
 
 import hellfrog.common.CommonUtils;
 import hellfrog.common.FromTextFile;
 import hellfrog.common.ResourcesLoader;
+import hellfrog.settings.db.RoleRightsDAO;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +29,8 @@ import java.util.List;
  * );<br>
  * </p>
  */
-public abstract class EntityRightsDAO {
+public abstract class EntityRightsDAO
+        implements RoleRightsDAO {
 
     private final Logger log;
     private final Connection connection;
@@ -66,6 +68,7 @@ public abstract class EntityRightsDAO {
                 .replace(COLUMN_NAME_TEMPLATE, columnName);
     }
 
+    @Override
     public List<Long> getAllAllowed(long serverId, @NotNull String commandPrefix) {
         List<Long> result = new ArrayList<>();
         if (log.isDebugEnabled()) {
@@ -89,6 +92,7 @@ public abstract class EntityRightsDAO {
         return Collections.unmodifiableList(result);
     }
 
+    @Override
     public boolean isAllowed(long serverId, long who, @NotNull String commandPrefix) {
         if (log.isDebugEnabled()) {
             log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}",
@@ -122,6 +126,7 @@ public abstract class EntityRightsDAO {
         return false;
     }
 
+    @Override
     public boolean allow(long serverId, long who, @NotNull String commandPrefix) {
         if (!isAllowed(serverId, who, commandPrefix)) {
             long createDate = CommonUtils.getCurrentGmtTimeAsMillis();
@@ -156,6 +161,7 @@ public abstract class EntityRightsDAO {
         }
     }
 
+    @Override
     public boolean deny(long serverId, long who, @NotNull String commandPrefix) {
         if (isAllowed(serverId, who, commandPrefix)) {
             if (log.isDebugEnabled()) {

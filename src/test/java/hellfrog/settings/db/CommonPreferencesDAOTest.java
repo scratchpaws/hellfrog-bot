@@ -4,15 +4,7 @@ import hellfrog.TestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 public class CommonPreferencesDAOTest {
-
-    private static final Path SETTINGS_PATH = Paths.get("./settings/");
-    private static final String TEST_DB_NAME = "test.sqlite3";
-    private static final Path tstBase = SETTINGS_PATH.resolve(TEST_DB_NAME);
 
     @Test
     public void testSetValues() throws Exception {
@@ -25,8 +17,8 @@ public class CommonPreferencesDAOTest {
         long highChannelId = TestUtils.randomDiscordEntityId();
         long lowChannelId = TestUtils.randomDiscordEntityId();
 
-        Files.deleteIfExists(tstBase);
-        try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
+        MainDBController.destroyTestDatabase();
+        try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             CommonPreferencesDAO preferencesDAO = mainDBController.getCommonPreferencesDAO();
 
             // проверяем извлечение умолчаний
@@ -96,7 +88,7 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(lowChannelId, newLowChannelId);
         }
 
-        try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
+        try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             CommonPreferencesDAO preferencesDAO = mainDBController.getCommonPreferencesDAO();
             // повторная проверка с новым переподключением
             String newKey = preferencesDAO.getApiKey();

@@ -4,30 +4,30 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-// hellfrog.settings.entity.Vote
+// hellfrog.settings.db.entity.Vote
 public class JSONActiveVote {
 
-    // hellfrog.settings.entity.Vote.id
+    // hellfrog.settings.db.entity.Vote.id
     private short id;
-    // hellfrog.settings.entity.Vote.hasTimer
+    // hellfrog.settings.db.entity.Vote.hasTimer
     private boolean hasTimer;
-    // hellfrog.settings.entity.Vote.finishTime
+    // hellfrog.settings.db.entity.Vote.finishTime
     private long endDate;
-    // hellfrog.settings.entity.Vote.rolesFilter
+    // hellfrog.settings.db.entity.Vote.rolesFilter
     private List<Long> rolesFilter;
-    // hellfrog.settings.entity.Vote.textChatId
+    // hellfrog.settings.db.entity.Vote.textChatId
     private Long textChatId;
-    // hellfrog.settings.entity.Vote.messageId
+    // hellfrog.settings.db.entity.Vote.messageId
     private Long messageId;
-    // hellfrog.settings.entity.Vote.votePoints
+    // hellfrog.settings.db.entity.Vote.votePoints
     private List<JSONVotePoint> votePoints;
-    // hellfrog.settings.entity.Vote.voteText
+    // hellfrog.settings.db.entity.Vote.voteText
     private String readableVoteText;
-    // hellfrog.settings.entity.Vote.isExceptional
+    // hellfrog.settings.db.entity.Vote.isExceptional
     private boolean exceptionalVote;
-    // hellfrog.settings.entity.Vote.hasDefault
+    // hellfrog.settings.db.entity.Vote.hasDefault
     private boolean withDefaultPoint;
-    // hellfrog.settings.entity.Vote.winThreshold
+    // hellfrog.settings.db.entity.Vote.winThreshold
     private long winThreshold;
 
     public short getId() {

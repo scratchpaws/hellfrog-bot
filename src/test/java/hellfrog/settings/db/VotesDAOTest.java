@@ -1,15 +1,12 @@
 package hellfrog.settings.db;
 
 import hellfrog.TestUtils;
-import hellfrog.settings.entity.Vote;
-import hellfrog.settings.entity.VotePoint;
+import hellfrog.settings.db.entity.Vote;
+import hellfrog.settings.db.entity.VotePoint;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -20,13 +17,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class VotesDAOTest {
 
-    private static final Path SETTINGS_PATH = Paths.get("./settings/");
-    private static final String TEST_DB_NAME = "test.sqlite3";
-    private static final Path tstBase = SETTINGS_PATH.resolve(TEST_DB_NAME);
-
     @Test
     public void testPlainVote() throws Exception {
-        Files.deleteIfExists(tstBase);
 
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         List<Vote> testVotesList = new ArrayList<>();
@@ -65,7 +57,8 @@ public class VotesDAOTest {
                 rolesFilter.addAll(TestUtils.randomDiscordEntitiesIds(0, filtersCount));
         }
 
-        try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
+        MainDBController.destroyTestDatabase();
+        try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             VotesDAO votesDAO = mainDBController.getVotesDAO();
 
             for (Vote templateVote : testVotesList) {
@@ -79,7 +72,7 @@ public class VotesDAOTest {
             }
         }
 
-        try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
+        try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             VotesDAO votesDAO = mainDBController.getVotesDAO();
 
             for (Vote testVote : testVotesList) {

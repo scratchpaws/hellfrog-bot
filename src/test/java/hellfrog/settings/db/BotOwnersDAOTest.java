@@ -4,18 +4,12 @@ import hellfrog.TestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class BotOwnersDAOTest {
 
-    private static final Path SETTINGS_PATH = Paths.get("./settings/");
-    private static final String TEST_DB_NAME = "test.sqlite3";
-    private static final Path tstBase = SETTINGS_PATH.resolve(TEST_DB_NAME);
 
     @Test
     public void testValues() throws Exception {
@@ -24,8 +18,8 @@ public class BotOwnersDAOTest {
             targetIds.add(TestUtils.randomDiscordEntityId());
         }
 
-        Files.deleteIfExists(tstBase);
-        try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
+        MainDBController.destroyTestDatabase();
+        try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             BotOwnersDAO botOwnersDAO = mainDBController.getBotOwnersDAO();
 
             Assertions.assertTrue(botOwnersDAO.getAll().isEmpty());
@@ -47,7 +41,7 @@ public class BotOwnersDAOTest {
             }
         }
 
-        try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
+        try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             BotOwnersDAO botOwnersDAO = mainDBController.getBotOwnersDAO();
 
             Assertions.assertFalse(botOwnersDAO.getAll().isEmpty());
@@ -65,8 +59,8 @@ public class BotOwnersDAOTest {
             targetIds.add(TestUtils.randomDiscordEntityId());
         }
 
-        Files.deleteIfExists(tstBase);
-        try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
+        MainDBController.destroyTestDatabase();
+        try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             BotOwnersDAO botOwnersDAO = mainDBController.getBotOwnersDAO();
 
             Assertions.assertTrue(botOwnersDAO.getAll().isEmpty());

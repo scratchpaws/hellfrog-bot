@@ -31,7 +31,7 @@ public class ResourcesLoader {
                     FromTextFile stringResource = method.getAnnotation(FromTextFile.class);
                     String fileName = stringResource.fileName();
                     if (CommonUtils.isTrStringNotEmpty(fileName)) {
-                        String loadedResource = loadResourceFromFile(fileName);
+                        String loadedResource = fromTextFile(fileName);
                         try {
                             method.invoke(obj, loadedResource);
                         } catch (Exception err) {
@@ -51,7 +51,7 @@ public class ResourcesLoader {
                     FromTextFile stringResource = field.getAnnotation(FromTextFile.class);
                     String fileName = stringResource.fileName();
                     if (CommonUtils.isTrStringNotEmpty(fileName)) {
-                        String loadedResource = loadResourceFromFile(fileName);
+                        String loadedResource = fromTextFile(fileName);
                         try {
                             try {
                                 String fieldName = field.getName();
@@ -89,7 +89,7 @@ public class ResourcesLoader {
     }
 
     @NotNull
-    private static String loadResourceFromFile(@NotNull String fileName) {
+    public static String fromTextFile(@NotNull String fileName) {
         ClassLoader loader = ResourcesLoader.class.getClassLoader();
         InputStream input = loader.getResourceAsStream(fileName);
         if (input == null && !fileName.startsWith("/")) {

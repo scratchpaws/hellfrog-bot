@@ -39,6 +39,12 @@ public final class CodeSourceUtils {
             if (Files.isRegularFile(_codeSourcePath)) {
                 codeSourceJarPath = _codeSourcePath;
                 _codeSourcePath = _codeSourcePath.getParent();
+            } else if (Files.isDirectory(_codeSourcePath)) {
+                if (_codeSourcePath.getFileName().toString().equals("classes")
+                        && _codeSourcePath.getParent().getFileName().toString().equals("target")) {
+                    // into maven target/classes
+                    _codeSourcePath = _codeSourcePath.getParent().getParent();
+                }
             }
             codeSourceParentPath = _codeSourcePath;
             return codeSourceParentPath;

@@ -1,11 +1,11 @@
-package hellfrog.settings.db;
+package hellfrog.settings.db.sqlite;
 
 import hellfrog.common.CommonUtils;
-import hellfrog.common.FromTextFile;
 import hellfrog.common.ResourcesLoader;
-import hellfrog.settings.entity.Vote;
-import hellfrog.settings.entity.VotePoint;
-import hellfrog.settings.entity.WtfEntry;
+import hellfrog.settings.db.*;
+import hellfrog.settings.db.entity.Vote;
+import hellfrog.settings.db.entity.VotePoint;
+import hellfrog.settings.db.entity.WtfEntry;
 import hellfrog.settings.oldjson.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,7 +19,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-class SchemaVersionChecker {
+class SchemaVersionCheckerSQLite {
 
     private static final int CURRENT_SCHEMA_VERSION = 1;
     private static final String SCHEMA_VERSION_GET_QUERY = "PRAGMA user_version";
@@ -27,17 +27,15 @@ class SchemaVersionChecker {
     private final boolean migrateOldSettings;
     private final Logger sqlLog = LogManager.getLogger("Schema version checker");
     private final Connection connection;
-    private final MainDBController mainDBController;
+    private final MainDBControllerSQLite mainDBController;
 
-    @FromTextFile(fileName = "sql/scheme_create_queries/schema_create_query_v1.sql")
-    private String schemaCreateQuery1 = null;
+    private final String schemaCreateQuery1 = ResourcesLoader.fromTextFile("sql/scheme_create_queries/schema_create_query_v1.sql");
 
-    SchemaVersionChecker(@NotNull MainDBController mainDBController,
-                         boolean migrateOldSettings) {
+    SchemaVersionCheckerSQLite(@NotNull MainDBControllerSQLite mainDBController,
+                               boolean migrateOldSettings) {
         this.migrateOldSettings = migrateOldSettings;
         this.mainDBController = mainDBController;
         this.connection = mainDBController.getConnection();
-        ResourcesLoader.initFileResources(this, SchemaVersionChecker.class);
     }
 
     void checkSchemaVersion() throws SQLException {
@@ -274,8 +272,8 @@ class SchemaVersionChecker {
                                         lastEntry = wtfEntry;
                                     }
                                     sqlLog.info("Converted wtf entry: {}", wtfEntry.toString());
-                                    WtfAssignDAO.AddUpdateState state = wtfAssignDAO.addOrUpdate(serverId, userId, wtfEntry);
-                                    if (state.equals(WtfAssignDAO.AddUpdateState.ADDED)) {
+                                    AddUpdateState state = wtfAssignDAO.addOrUpdate(serverId, userId, wtfEntry);
+                                    if (state.equals(AddUpdateState.ADDED)) {
                                         sqlLog.info("Saved OK");
                                     } else {
                                         sqlLog.warn("Saved not ok - {}", state);
@@ -286,8 +284,8 @@ class SchemaVersionChecker {
                             }
                             if (lastEntry != null) {
                                 sqlLog.info("Updating last entry by date: {}", lastEntry);
-                                WtfAssignDAO.AddUpdateState state = wtfAssignDAO.addOrUpdate(serverId, userId, lastEntry);
-                                if (state.equals(WtfAssignDAO.AddUpdateState.UPDATED)) {
+                                AddUpdateState state = wtfAssignDAO.addOrUpdate(serverId, userId, lastEntry);
+                                if (state.equals(AddUpdateState.UPDATED)) {
                                     sqlLog.info("Updated OK");
                                 } else {
                                     sqlLog.warn("Updated not ok - {}", state);

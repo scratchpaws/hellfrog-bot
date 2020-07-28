@@ -6,13 +6,13 @@ import java.util.List;
 // DB migration is ok
 public class JSONCommonPreferences {
 
-    private String commonBotPrefix = ">>"; // hellfrog.settings.db.CommonPreferencesDAO.getBotPrefix
-    private String botName = "HellFrog"; // hellfrog.settings.db.CommonPreferencesDAO.getBotName
-    private String apiKey = ""; // hellfrog.settings.db.CommonPreferencesDAO.getApiKey
+    private String commonBotPrefix = ">>"; // hellfrog.settings.db.sqlite.CommonPreferencesDAO.getBotPrefix
+    private String botName = "HellFrog"; // hellfrog.settings.db.sqlite.CommonPreferencesDAO.getBotName
+    private String apiKey = ""; // hellfrog.settings.db.sqlite.CommonPreferencesDAO.getApiKey
     private long serverTransfer = 0L; // will be removed
     private long serverTextChatTransfer = 0L; // will be removed
     private boolean enableRemoteDebug = false; // will be removed
-    private List<Long> globalBotOwners = Collections.emptyList(); // hellfrog.settings.db.BotOwnersDAO
+    private List<Long> globalBotOwners = Collections.emptyList(); // hellfrog.settings.db.sqlite.BotOwnersDAO
 
     public String getCommonBotPrefix() {
         return commonBotPrefix;

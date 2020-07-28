@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-// hellfrog.settings.db.WtfAssignDAO
+// hellfrog.settings.db.sqlite.WtfAssignDAO
 // migration available
 public class JSONWtfMap {
 

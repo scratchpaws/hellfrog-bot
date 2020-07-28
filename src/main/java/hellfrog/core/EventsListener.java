@@ -9,7 +9,6 @@ import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.tools.ant.types.Commandline;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.MessageBuilder;
@@ -38,14 +37,13 @@ import org.javacord.api.listener.server.member.ServerMemberJoinListener;
 import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
 import org.javacord.api.listener.server.member.ServerMemberUnbanListener;
 import org.javacord.core.entity.permission.PermissionsImpl;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class EventsListener
@@ -150,7 +148,7 @@ public class EventsListener
             }
         }
 
-        String[] rawCmdline = Commandline.translateCommandline(withoutCommonPrefix);
+        String[] rawCmdline = translateCommandline(withoutCommonPrefix);
         cmdlog.info(Arrays.toString(rawCmdline));
 
         if (rawCmdline.length >= 1) {
@@ -475,5 +473,81 @@ public class EventsListener
                     return "";
             }
         }
+    }
+
+    /**
+     * Crack a command line.
+     * This is a method that copied from org.apache.tools.ant.types.Commandline class (ant-1.10.7 library). See:
+     * https://ant.apache.org/srcdownload.cgi
+     * https://www-eu.apache.org/dist/ant/source/apache-ant-1.10.7-src.zip
+     * It is necessary in order not to use the entire very large library in the project as a whole.
+     * Only one #translateCommandline function with all dependencies was left from the class.
+     * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements.
+     *
+     * @param toProcess the command line to process.
+     * @return the command line broken into strings.
+     * An empty or null toProcess parameter results in a zero sized array.
+     */
+    @NotNull
+    @Contract("null -> new")
+    public static String[] translateCommandline(String toProcess) {
+        if (toProcess == null || toProcess.isEmpty()) {
+            //no command? no string
+            return new String[0];
+        }
+        // parse with a simple finite state machine
+
+        final int normal = 0;
+        final int inQuote = 1;
+        final int inDoubleQuote = 2;
+        int state = normal;
+        final StringTokenizer tok = new StringTokenizer(toProcess, "\"' ", true);
+        final ArrayList<String> result = new ArrayList<>();
+        final StringBuilder current = new StringBuilder();
+        boolean lastTokenHasBeenQuoted = false;
+
+        while (tok.hasMoreTokens()) {
+            String nextTok = tok.nextToken();
+            switch (state) {
+                case inQuote:
+                    if ("'".equals(nextTok)) {
+                        lastTokenHasBeenQuoted = true;
+                        state = normal;
+                    } else {
+                        current.append(nextTok);
+                    }
+                    break;
+                case inDoubleQuote:
+                    if ("\"".equals(nextTok)) {
+                        lastTokenHasBeenQuoted = true;
+                        state = normal;
+                    } else {
+                        current.append(nextTok);
+                    }
+                    break;
+                default:
+                    if ("'".equals(nextTok)) {
+                        state = inQuote;
+                    } else if ("\"".equals(nextTok)) {
+                        state = inDoubleQuote;
+                    } else if (" ".equals(nextTok)) {
+                        if (lastTokenHasBeenQuoted || current.length() > 0) {
+                            result.add(current.toString());
+                            current.setLength(0);
+                        }
+                    } else {
+                        current.append(nextTok);
+                    }
+                    lastTokenHasBeenQuoted = false;
+                    break;
+            }
+        }
+        if (lastTokenHasBeenQuoted || current.length() > 0) {
+            result.add(current.toString());
+        }
+        if (state == inQuote || state == inDoubleQuote) {
+            throw new RuntimeException("unbalanced quotes in " + toProcess);
+        }
+        return result.toArray(new String[0]);
     }
 }

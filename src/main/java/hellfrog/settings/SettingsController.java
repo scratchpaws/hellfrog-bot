@@ -7,6 +7,7 @@ import hellfrog.common.HttpClientsPool;
 import hellfrog.core.AutoSaveSettingsTask;
 import hellfrog.core.SessionsCheckTask;
 import hellfrog.core.VoteController;
+import hellfrog.settings.db.InstanceType;
 import hellfrog.settings.db.MainDBController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -56,7 +57,7 @@ public class SettingsController {
 
     private SettingsController() {
         try {
-            mainDBController = new MainDBController();
+            mainDBController = MainDBController.getInstance(InstanceType.PROD);
         } catch (Exception err) {
             // todo: will be enable after migration from json configs to db config
             //log.fatal("Terminated", err);

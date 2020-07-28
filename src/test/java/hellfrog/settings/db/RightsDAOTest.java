@@ -4,16 +4,9 @@ import hellfrog.TestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 
 public class RightsDAOTest {
-
-    private static final Path SETTINGS_PATH = Paths.get("./settings/");
-    private static final String TEST_DB_NAME = "test.sqlite3";
-    private static final Path tstBase = SETTINGS_PATH.resolve(TEST_DB_NAME);
 
     private static final List<Long> USERS_LIST = TestUtils.randomDiscordEntitiesIds(10, 100);
 
@@ -38,8 +31,8 @@ public class RightsDAOTest {
             }
         }
 
-        Files.deleteIfExists(tstBase);
-        try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
+        MainDBController.destroyTestDatabase();
+        try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
             RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
             TextChannelRightsDAO textChannelRightsDAO = mainDBController.getTextChannelRightsDAO();
@@ -107,7 +100,7 @@ public class RightsDAOTest {
                     }));
         }
 
-        try (MainDBController mainDBController = new MainDBController(TEST_DB_NAME, false)) {
+        try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
             RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
             TextChannelRightsDAO textChannelRightsDAO = mainDBController.getTextChannelRightsDAO();

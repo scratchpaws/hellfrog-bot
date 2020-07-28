@@ -1,4 +1,4 @@
--- hellfrog.settings.db.CommonPreferencesDAO
+-- hellfrog.settings.db.sqlite.CommonPreferencesDAOImpl
 CREATE TABLE "common_preferences"
 (
     "key"         TEXT    NOT NULL UNIQUE,
@@ -7,7 +7,7 @@ CREATE TABLE "common_preferences"
     "update_date" INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY ("key")
 );
--- hellfrog.settings.db.ServerPreferencesDAO
+-- hellfrog.settings.db.sqlite.ServerPreferencesDAOImpl
 CREATE TABLE "server_preferences"
 (
     "id"          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -18,7 +18,7 @@ CREATE TABLE "server_preferences"
     "update_date" INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT "uniq_serv_key" UNIQUE ("server_id", "key")
 );
--- hellfrog.settings.db.VotesDAO
+-- hellfrog.settings.db.sqlite.VotesDAOImpl
 CREATE TABLE "active_votes"
 (
     "vote_id"        INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -34,7 +34,7 @@ CREATE TABLE "active_votes"
     "create_date"    INTEGER NOT NULL DEFAULT 0,
     "update_date"    INTEGER NOT NULL DEFAULT 0
 );
--- hellfrog.settings.db.VotesDAO
+-- hellfrog.settings.db.sqlite.VotesDAOImpl
 CREATE TABLE "vote_points"
 (
     "id"              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -46,7 +46,7 @@ CREATE TABLE "vote_points"
     "update_date"     INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY ("vote_id") REFERENCES "active_votes" ("vote_id")
 );
--- hellfrog.settings.db.VotesDAO
+-- hellfrog.settings.db.sqlite.VotesDAOImpl
 CREATE TABLE "vote_roles"
 (
     "id"          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -62,14 +62,14 @@ CREATE UNIQUE INDEX "uniq_vote_role" ON "vote_roles" (
                                                       "role_id"
     );
 CREATE INDEX "vote_roles_msg" ON "vote_roles" ("message_id");
--- hellfrog.settings.db.BotOwnersDAO
+-- hellfrog.settings.db.sqlite.BotOwnersDAOImpl
 CREATE TABLE "bot_owners"
 (
     "user_id"     INTEGER NOT NULL UNIQUE,
     "create_date" INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY ("user_id")
 );
--- hellfrog.settings.db.UserRightsDAO
+-- hellfrog.settings.db.sqlite.UserRightsDAOImpl
 CREATE TABLE "user_rights"
 (
     "id"             INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -83,7 +83,7 @@ CREATE UNIQUE INDEX "uniq_user_right" ON "user_rights" (
                                                         "command_prefix",
                                                         "user_id"
     );
--- hellfrog.settings.db.RoleRightsDAO
+-- hellfrog.settings.db.sqlite.RoleRightsDAOImpl
 CREATE TABLE "role_rights"
 (
     "id"             INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -97,7 +97,7 @@ CREATE UNIQUE INDEX "uniq_role_right" ON "role_rights" (
                                                         "command_prefix",
                                                         "role_id"
     );
--- hellfrog.settings.db.TextChannelRightsDAO
+-- hellfrog.settings.db.sqlite.TextChannelRightsDAOImpl
 CREATE TABLE "text_channel_rights"
 (
     "id"             INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -111,7 +111,7 @@ CREATE UNIQUE INDEX "uniq_channel_right" ON "text_channel_rights" (
                                                                    "command_prefix",
                                                                    "channel_id"
     );
--- hellfrog.settings.db.ChannelCategoryRightsDAO
+-- hellfrog.settings.db.sqlite.ChannelCategoryRightsDAOImpl
 CREATE TABLE "category_rights"
 (
     "id"             INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -125,7 +125,7 @@ CREATE UNIQUE INDEX "uniq_category_right" ON "category_rights" (
                                                                 "command_prefix",
                                                                 "category_id"
     );
--- hellfrog.settings.db.WtfAssignDAO
+-- hellfrog.settings.db.sqlite.WtfAssignDAOImpl
 CREATE TABLE "wtf_assigns"
 (
     "id"          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,

@@ -4,16 +4,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-// hellfrog.settings.db.EntityRightsDAO
+// hellfrog.settings.db.sqlite.EntityRightsDAO
 public class JSONCommandRights {
 
     private String commandPrefix = ""; // into table field (command_prefix)
-    // hellfrog.settings.db.UserRightsDAO, migrate available
+    // hellfrog.settings.db.sqlite.UserRightsDAO, migrate available
     private List<Long> allowUsers = Collections.emptyList();
-    // hellfrog.settings.db.RoleRightsDAO, migrate available
+    // hellfrog.settings.db.sqlite.RoleRightsDAO, migrate available
     private List<Long> allowRoles = Collections.emptyList();
-    // hellfrog.settings.db.TextChannelRightsDAO
-    // hellfrog.settings.db.ChannelCategoryRightsDAO
+    // hellfrog.settings.db.sqlite.TextChannelRightsDAO
+    // hellfrog.settings.db.sqlite.ChannelCategoryRightsDAO
     // migrate available
     private List<Long> allowChannels = Collections.emptyList();
 
