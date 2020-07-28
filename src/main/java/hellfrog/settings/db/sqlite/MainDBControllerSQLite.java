@@ -15,7 +15,6 @@ import java.sql.*;
 public class MainDBControllerSQLite
         extends MainDBController {
 
-    private final Logger sqlLog = LogManager.getLogger("DB controller");
     private final Connection connection;
     private boolean closed = false;
     private final CommonPreferencesDAO commonPreferencesDAO;
@@ -53,7 +52,6 @@ public class MainDBControllerSQLite
                 Files.createDirectory(settingsPath);
             }
         } catch (IOException err) {
-            Logger mainLog = LogManager.getLogger("Main");
             mainLog.fatal("Unable to create settings directory: " + err);
             throw err;
         }

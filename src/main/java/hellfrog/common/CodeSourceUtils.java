@@ -7,7 +7,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.UnmodifiableView;
 
+import javax.persistence.Entity;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -78,14 +80,13 @@ public final class CodeSourceUtils {
      * @return список экземпляров дочерних классов данного родительского класса
      */
     @NotNull
-    @SuppressWarnings("unchecked")
     public static <T> List<T> childClassInstancesCollector(@NotNull final Class<T> superClassFQDN) {
         List<T> collectedCommandsList = new ArrayList<>();
         List<String> successList = new ArrayList<>();
         List<String> failList = new ArrayList<>();
         try (ScanResult scanResult = new ClassGraph()
                 .enableAllInfo()
-                .whitelistPackages("hellfrog")
+                .acceptPackages("hellfrog")
                 .scan()) {
             scanResult.getAllClasses().stream()
                     .filter(ci -> ci.extendsSuperclass(superClassFQDN.getName()))
@@ -94,7 +95,7 @@ public final class CodeSourceUtils {
                     .map(ClassInfo::getName)
                     .forEachOrdered(name -> {
                         try {
-                            Class childClass = Class.forName(name);
+                            Class<?> childClass = Class.forName(name);
                             Object instance = childClass.getDeclaredConstructor()
                                     .newInstance();
                             if (superClassFQDN.isInstance(instance)) {
@@ -113,5 +114,39 @@ public final class CodeSourceUtils {
                 .reduce((s1, s2) -> s1 + '\n' + s2)
                 .ifPresent(s -> log.info("Unable to create instances of:\n" + s));
         return Collections.unmodifiableList(collectedCommandsList);
+    }
+
+    @NotNull
+    @UnmodifiableView
+    public static List<Class<?>> entitiesCollector() {
+        List<Class<?>> collectedEntityClasses = new ArrayList<>();
+        List<String> successList = new ArrayList<>();
+        List<String> failList = new ArrayList<>();
+        try (ScanResult scanResult = new ClassGraph()
+                .enableAllInfo()
+                .acceptPackages("hellfrog")
+                .scan()) {
+            scanResult.getAllClasses().stream()
+                    .filter(ci -> ci.hasAnnotation(Entity.class.getName()))
+                    .filter(ci -> !ci.isAbstract())
+                    .filter(ClassInfo::isPublic)
+                    .map(ClassInfo::getName)
+                    .forEachOrdered(name -> {
+                        try {
+                            Class<?> entityClass = Class.forName(name);
+                            collectedEntityClasses.add(entityClass);
+                            successList.add(entityClass.getName());
+                        } catch (Exception err) {
+                            failList.add(name + ": " + err);
+                        }
+                    });
+        }
+        successList.stream()
+                .reduce((s1, s2) -> s1 + ", " + s2)
+                .ifPresent(s -> log.info("Created instances of: " + s));
+        failList.stream()
+                .reduce((s1, s2) -> s1 + '\n' + s2)
+                .ifPresent(s -> log.info("Unable to create instances of:\n" + s));
+        return Collections.unmodifiableList(collectedEntityClasses);
     }
 }

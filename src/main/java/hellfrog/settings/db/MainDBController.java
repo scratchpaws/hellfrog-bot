@@ -1,6 +1,9 @@
 package hellfrog.settings.db;
 
+import hellfrog.settings.db.h2.MainDBControllerH2;
 import hellfrog.settings.db.sqlite.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -12,6 +15,8 @@ import java.sql.SQLException;
 public abstract class MainDBController implements Closeable, AutoCloseable {
 
     protected final InstanceType type;
+    protected final Logger sqlLog = LogManager.getLogger("DB controller");
+    protected final Logger mainLog = LogManager.getLogger("Main");
 
     public MainDBController(@Nullable InstanceType type) {
         this.type = type;
@@ -49,5 +54,6 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
 
     public static void destroyTestDatabase() throws IOException {
         MainDBControllerSQLite.destroyTestDatabase();
+        MainDBControllerH2.destroyTestDatabase();
     }
 }
