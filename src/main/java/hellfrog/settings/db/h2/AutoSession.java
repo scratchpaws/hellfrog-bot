@@ -12,6 +12,7 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.Closeable;
+import java.util.Collection;
 import java.util.List;
 
 class AutoSession
@@ -65,6 +66,13 @@ class AutoSession
 
     public<T> void save(T object) throws Exception {
         hibernateSession.saveOrUpdate(object);
+        success();
+    }
+
+    public<T> void saveAll(@NotNull Collection<T> objects) throws Exception {
+        for (T item : objects) {
+            hibernateSession.saveOrUpdate(item);
+        }
         success();
     }
 

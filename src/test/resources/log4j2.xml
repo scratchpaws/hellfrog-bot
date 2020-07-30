@@ -75,14 +75,14 @@
         <Logger name="Votes" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
-        <Logger name="org.hibernate" level="debug" additivity="false">
+        <Logger name="org.hibernate" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="DB session" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
         <Root level="debug">
             <AppenderRef ref="plainLogger"/>
         </Root>
-        <Logger name="DB session" level="info" additivity="false">
-            <AppenderRef ref="sqlLogger"/>
-        </Logger>
     </Loggers>
 </Configuration>

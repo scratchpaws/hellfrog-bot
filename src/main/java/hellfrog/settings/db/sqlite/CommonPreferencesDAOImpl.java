@@ -28,17 +28,6 @@ class CommonPreferencesDAOImpl
         implements CommonPreferencesDAO {
 
     private static final String TABLE_NAME = "common_preferences";
-    private static final String PREFIX_KEY = "bot.prefix";
-    private static final String API_KEY = "api.key";
-    private static final String BOT_NAME_KEY = "bot.name";
-    private static final String OFFICIAL_SERVER_KEY = "bot.server";
-    static final String OFFICIAL_SERVER_DEFAULT_STR = String.valueOf(OFFICIAL_SERVER_DEFAULT);
-    private static final String SERVICE_CHANNEL_KEY = "bot.service.channel";
-    static final String SERVICE_CHANNEL_DEFAULT_STR = String.valueOf(SERVICE_CHANNEL_DEFAULT);
-    private static final String HIGH_ROLL_CHANNEL_KEY = "bot.high.channel";
-    static final String HIGH_ROLL_CHANNEL_KEY_DEFAULT_STR = String.valueOf(HIGH_ROLL_CHANNEL_KEY_DEFAULT);
-    private static final String LOW_ROLL_CHANNEL_KEY = "bot.low.channel";
-    static final String LOW_ROLL_CHANNEL_DEFAULT_STR = String.valueOf(LOW_ROLL_CHANNEL_DEFAULT);
 
     private final Connection connection;
     private final Logger log = LogManager.getLogger("Common preferences");

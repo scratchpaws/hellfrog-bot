@@ -37,6 +37,7 @@ public class MainDBControllerH2
     private static final String DB_EXTENSION = ".mv.db";
 
     private final BotOwnersDAO botOwnersDAO;
+    private final CommonPreferencesDAO commonPreferencesDAO;
 
     public MainDBControllerH2(@Nullable InstanceType type) throws IOException, SQLException {
         super(type);
@@ -71,7 +72,7 @@ public class MainDBControllerH2
                 xmlCfgGenerator.setProperty(Environment.URL, connectionURL);
                 if (type.equals(InstanceType.TEST)) {
                     xmlCfgGenerator.setProperty(Environment.FORMAT_SQL, "true");
-                    xmlCfgGenerator.setProperty(Environment.SHOW_SQL, "true");
+                    //xmlCfgGenerator.setProperty(Environment.SHOW_SQL, "true");
                 }
                 xmlCfgGenerator.setProperty(Environment.CURRENT_SESSION_CONTEXT_CLASS, "thread");
                 CodeSourceUtils.entitiesCollector().forEach(xmlCfgGenerator::addAnnotatedClass);
@@ -88,6 +89,7 @@ public class MainDBControllerH2
 
             final AutoSessionFactory autoSessionFactory = new AutoSessionFactory(sessionFactory);
             botOwnersDAO = new BotOwnersDAOImpl(autoSessionFactory);
+            commonPreferencesDAO = new CommonPreferencesDAOImpl(autoSessionFactory);
 
         } catch (Exception err) {
             String errMsg = String.format("Unable to create session factory: %s", err.getMessage());
@@ -157,7 +159,7 @@ public class MainDBControllerH2
 
     @Override
     public CommonPreferencesDAO getCommonPreferencesDAO() {
-        return null;
+        return commonPreferencesDAO;
     }
 
     @Override

@@ -73,7 +73,6 @@ class BotOwnersDAOImpl
             botOwner.setCreateDate(Timestamp.from(Instant.now()));
             try (AutoSession session = sessionFactory.openSession()) {
                 session.save(botOwner);
-                session.success();
             } catch (Exception err) {
                 String errMsg = String.format("Unable to add %d to global bot owners: %s", userId, err.getMessage());
                 log.error(errMsg, err);
