@@ -143,10 +143,10 @@ public final class CodeSourceUtils {
         }
         successList.stream()
                 .reduce((s1, s2) -> s1 + ", " + s2)
-                .ifPresent(s -> log.info("Created instances of: " + s));
+                .ifPresent(s -> log.info("Found entity class: " + s));
         failList.stream()
                 .reduce((s1, s2) -> s1 + '\n' + s2)
-                .ifPresent(s -> log.info("Unable to create instances of:\n" + s));
+                .ifPresent(s -> log.info("Cannot parse entity classes:\n" + s));
         return Collections.unmodifiableList(collectedEntityClasses);
     }
 }

@@ -78,6 +78,9 @@
         <Logger name="org.hibernate" level="info" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
+        <Logger name="DB session" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
         <Root level="info">
             <AppenderRef ref="plainLogger"/>
         </Root>

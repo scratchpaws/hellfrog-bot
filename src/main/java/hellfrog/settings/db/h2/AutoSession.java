@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.query.NativeQuery;
 import org.hibernate.query.Query;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,29 +14,18 @@ import javax.persistence.criteria.Root;
 import java.io.Closeable;
 import java.util.List;
 
-public class AutoSession
+class AutoSession
         implements Closeable, AutoCloseable {
 
-    private static SessionFactory sessionFactory = null;
     private final Session hibernateSession;
     private boolean commitRequired = false;
     private boolean rollbackRequired = true;
 
     private static final Logger log = LogManager.getLogger("DB session");
 
-    private AutoSession(Session hibernateSession) {
+    AutoSession(Session hibernateSession) {
         this.hibernateSession = hibernateSession;
-    }
-
-    public static void setSessionFactory(@NotNull SessionFactory factory) {
-        sessionFactory = factory;
-    }
-
-    public static @NotNull AutoSession openSession() throws Exception {
-        if (sessionFactory == null) {
-            throw new RuntimeException("Session factory is null");
-        }
-        return new AutoSession(sessionFactory.openSession());
+        this.hibernateSession.beginTransaction();
     }
 
     public<T> CriteriaQuery<T> createQuery(Class<T> type) {
@@ -56,6 +46,11 @@ public class AutoSession
 
     public<R> Query<R> createQuery(CriteriaQuery<R> criteriaQuery) {
         return hibernateSession.createQuery(criteriaQuery);
+    }
+
+    @SuppressWarnings("unchecked")
+    public NativeQuery createNativeQuery(String queryScript) {
+        return hibernateSession.createNativeQuery(queryScript);
     }
 
     public<T> List<T> getAll(Class<T> type) {

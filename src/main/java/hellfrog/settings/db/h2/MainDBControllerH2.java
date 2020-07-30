@@ -1,14 +1,16 @@
 package hellfrog.settings.db.h2;
 
 import hellfrog.common.CodeSourceUtils;
+import hellfrog.common.CommonUtils;
 import hellfrog.settings.db.*;
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
-import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
+import org.hibernate.query.NativeQuery;
 import org.hibernate.tool.hbm2ddl.SchemaExport;
 import org.hibernate.tool.schema.TargetType;
 import org.jetbrains.annotations.Nullable;
@@ -18,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.EnumSet;
+import java.util.List;
 
 public class MainDBControllerH2
         extends MainDBController {
@@ -32,6 +35,8 @@ public class MainDBControllerH2
     private static final String TEST_DB_FILE_NAME = "hellfrog_test";
     private static final String BACKUP_DB_FILE_NAME = "hellfrog_backup";
     private static final String DB_EXTENSION = ".mv.db";
+
+    private final BotOwnersDAO botOwnersDAO;
 
     public MainDBControllerH2(@Nullable InstanceType type) throws IOException, SQLException {
         super(type);
@@ -57,26 +62,33 @@ public class MainDBControllerH2
             throw err;
         }
         try {
-            Configuration configuration = new Configuration();
-            configuration.setProperty(Environment.DRIVER, "org.h2.Driver");
-            configuration.setProperty(Environment.DIALECT, "org.hibernate.dialect.H2Dialect");
-            configuration.setProperty(Environment.USER, "sa");
-            configuration.setProperty(Environment.PASS, "sa");
-            configuration.setProperty(Environment.HBM2DDL_AUTO, "update");
-            configuration.setProperty(Environment.URL, connectionURL);
-            if (type.equals(InstanceType.TEST)) {
-                configuration.setProperty(Environment.FORMAT_SQL, "true");
-                configuration.setProperty(Environment.SHOW_SQL, "true");
+            try (HibernateXmlCfgGenerator xmlCfgGenerator = new HibernateXmlCfgGenerator(sqlLog)) {
+                xmlCfgGenerator.setProperty(Environment.DRIVER, "org.h2.Driver");
+                xmlCfgGenerator.setProperty(Environment.DIALECT, "org.hibernate.dialect.H2Dialect");
+                xmlCfgGenerator.setProperty(Environment.USER, "sa");
+                xmlCfgGenerator.setProperty(Environment.PASS, "sa");
+                xmlCfgGenerator.setProperty(Environment.HBM2DDL_AUTO, "update");
+                xmlCfgGenerator.setProperty(Environment.URL, connectionURL);
+                if (type.equals(InstanceType.TEST)) {
+                    xmlCfgGenerator.setProperty(Environment.FORMAT_SQL, "true");
+                    xmlCfgGenerator.setProperty(Environment.SHOW_SQL, "true");
+                }
+                xmlCfgGenerator.setProperty(Environment.CURRENT_SESSION_CONTEXT_CLASS, "thread");
+                CodeSourceUtils.entitiesCollector().forEach(xmlCfgGenerator::addAnnotatedClass);
+                xmlCfgGenerator.create();
+
+                registry = new StandardServiceRegistryBuilder()
+                        .configure(xmlCfgGenerator.getFile())
+                        .build();
             }
-            configuration.setProperty(Environment.CURRENT_SESSION_CONTEXT_CLASS, "thread");
-            CodeSourceUtils.entitiesCollector().forEach(configuration::addAnnotatedClass);
-            registry = new StandardServiceRegistryBuilder()
-                    .applySettings(configuration.getProperties())
-                    .build();
+
             MetadataSources metadataSources = new MetadataSources(registry);
             metadata = metadataSources.getMetadataBuilder().build();
             sessionFactory = metadata.buildSessionFactory();
-            AutoSession.setSessionFactory(sessionFactory);
+
+            final AutoSessionFactory autoSessionFactory = new AutoSessionFactory(sessionFactory);
+            botOwnersDAO = new BotOwnersDAOImpl(autoSessionFactory);
+
         } catch (Exception err) {
             String errMsg = String.format("Unable to create session factory: %s", err.getMessage());
             sqlLog.fatal(errMsg, err);
@@ -113,8 +125,34 @@ public class MainDBControllerH2
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public String executeRawQuery(@Nullable String rawQuery) {
-        return null;
+        if (CommonUtils.isTrStringEmpty(rawQuery)) {
+            return "(Query is empty or null)";
+        }
+        if (closed) {
+            return "(Connection is closed)";
+        }
+        StringBuilder output = new StringBuilder();
+        final AutoSessionFactory autoSessionFactory = new AutoSessionFactory(sessionFactory);
+        try (AutoSession autoSession = autoSessionFactory.openSession()) {
+            NativeQuery query = autoSession.createNativeQuery(rawQuery);
+            if (StringUtils.startsWithIgnoreCase(rawQuery, "select")) {
+                List<Object[]> result = query.list();
+                for (Object[] data : result) {
+                    for (int i = 0; i < data.length; i++) {
+                        output.append(data[i].toString());
+                        if (i < (data.length - 1)) {
+                            output.append('|');
+                        }
+                    }
+                    output.append('\n');
+                }
+            }
+        } catch (Exception err) {
+            return err.getMessage();
+        }
+        return output.toString();
     }
 
     @Override
@@ -124,7 +162,7 @@ public class MainDBControllerH2
 
     @Override
     public BotOwnersDAO getBotOwnersDAO() {
-        return null;
+        return botOwnersDAO;
     }
 
     @Override

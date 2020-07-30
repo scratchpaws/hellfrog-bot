@@ -81,5 +81,8 @@
         <Root level="debug">
             <AppenderRef ref="plainLogger"/>
         </Root>
+        <Logger name="DB session" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
     </Loggers>
 </Configuration>
