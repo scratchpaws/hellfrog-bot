@@ -6,8 +6,12 @@ import hellfrog.common.CommonUtils;
 import hellfrog.common.MessageUtils;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
+import org.apache.commons.math3.stat.descriptive.moment.Mean;
+import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.collections.api.list.primitive.MutableDoubleList;
+import org.eclipse.collections.impl.list.mutable.primitive.DoubleArrayList;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
@@ -24,8 +28,8 @@ import org.jetbrains.annotations.UnmodifiableView;
 
 import java.awt.*;
 import java.time.Instant;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
@@ -38,13 +42,15 @@ public class DiceReaction
     private static final Pattern DICE_PATTERN = Pattern.compile(
             "([rр]\\s?)?" +
                     "([dд]?\\s?\\d+\\s?[dд]\\s?\\d+|[lд]{2})" +
-                    "(\\s?([=<>]{1,2}|(\\+{1,2}|-{1,2}))\\s?\\d+)*",
+                    "([mм]|[aа])?" +
+                    "(\\s?([=<>]{1,2}|(\\+{1,2}|-{1,2}|[xх]{1,2}))\\s?\\d+)*",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern SEARCH_PATTERN = Pattern.compile(
             "^\\s*" +
                     "([rр]\\s?)?" +
                     "([dд]?\\s?\\d+\\s?[dд]\\s?\\d+|[lд]{2})" +
-                    "(\\s?([=<>]{1,2}|(\\+{1,2}|-{1,2}))\\s?\\d+)*",
+                    "([mм]|[aа])?" +
+                    "(\\s?([=<>]{1,2}|(\\+{1,2}|-{1,2}|[xх]{1,2}))\\s?\\d+)*",
             Pattern.MULTILINE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final String DEFAULT_ROLL = "1d20";
 
@@ -53,11 +59,15 @@ public class DiceReaction
     private static final Pattern VALUE_PATTERN = Pattern.compile(
             "\\d{1,5}\\s?[dд]\\s?\\d{1,5}",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern MEDIAN_PATTERN = Pattern.compile("([mм])",
+            Pattern.MULTILINE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern AVERAGE_PATTERN = Pattern.compile("([aа])",
+            Pattern.MULTILINE | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern VALUE_MODIFIER_PATTERN = Pattern.compile(
-            "(\\+{2}|-{2})\\s?\\d{1,5}",
+            "(\\+{2}|-{2}|[xх]{2})\\s?\\d{1,5}",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern SUMMARY_MODIFIER_PATTERN = Pattern.compile(
-            "(\\+{1,2}|-{1,2})\\s?\\d{1,5}",
+            "(\\+{1,2}|-{1,2}|[xх]{1,2})\\s?\\d{1,5}",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern FILTER_PATTERN = Pattern.compile(
             "[=<>]{1,2}\\s?\\d{1,5}",
@@ -161,14 +171,27 @@ public class DiceReaction
                         ThreadLocalRandom currRnd = ThreadLocalRandom.current();
                         int success = 0;
 
-                        final long valuesModifier = calculateModifiers(diceValue, false);
-                        final boolean modifyDices = valuesModifier != 0L;
+                        final List<SumModifier> diceModifiers = parseModifiers(diceValue, false);
+                        final List<SumModifier> summaryModifiers = parseModifiers(diceValue, true);
+
+                        final boolean modifyDices = !diceModifiers.isEmpty();
+                        final boolean modifyTotalSum = !summaryModifiers.isEmpty();
+
+                        final String diceModifiersString = generatePrintable(diceModifiers);
+                        final String summaryModifiersString = generatePrintable(summaryModifiers);
+
+                        final boolean showAverage = AVERAGE_PATTERN.matcher(diceValue).find();
+                        final boolean showMedian = MEDIAN_PATTERN.matcher(diceValue).find();
+
+                        final MutableDoubleList allDices = new DoubleArrayList((int)numOfDice);
 
                         for (long d = 1; d <= numOfDice; d++) {
                             long tr = currRnd.nextLong(1L, numOfFaces + 1);
                             final long origin = tr;
                             if (modifyDices) {
-                                tr += valuesModifier;
+                                for (SumModifier diceModifier : diceModifiers) {
+                                    tr = diceModifier.modify(tr);
+                                }
                             }
                             boolean strike = false;
                             if (!resultFilters.isEmpty()) {
@@ -182,6 +205,7 @@ public class DiceReaction
                             if (!strike) {
                                 success++;
                                 totalSumResult += tr;
+                                allDices.add((double)tr);
                             }
                             dicesOutput.append("[");
                             if (!strike) {
@@ -190,11 +214,10 @@ public class DiceReaction
                                 dicesOutput.append(String.valueOf(tr), MessageDecoration.STRIKEOUT);
                             }
                             if (modifyDices) {
-                                dicesOutput.append(" (").append(origin);
-                                if (valuesModifier >= 0) {
-                                    dicesOutput.append("+");
-                                }
-                                dicesOutput.append(valuesModifier).append(")");
+                                dicesOutput.append(" (")
+                                        .append(origin)
+                                        .append(diceModifiersString)
+                                        .append(")");
                             }
                             dicesOutput.append("]");
                             if (d < numOfDice) {
@@ -202,10 +225,16 @@ public class DiceReaction
                             }
                         }
 
-                        final long summaryModifier = calculateModifiers(diceValue, true);
-                        final boolean modifyTotalSum = summaryModifier != 0L;
                         final long origTotalSum = totalSumResult;
-                        totalSumResult += summaryModifier;
+                        for (SumModifier summaryModifier : summaryModifiers) {
+                            totalSumResult = summaryModifier.modify(totalSumResult);
+                        }
+
+                        final Median medianCalculator = new Median();
+                        final Mean averageCalculator = new Mean();
+                        final double[] sortedDices = allDices.toSortedArray();
+                        final double median = medianCalculator.evaluate(sortedDices);
+                        final double average = averageCalculator.evaluate(sortedDices);
 
                         if (!resultFilters.isEmpty()) {
                             dicesOutput.append(" (")
@@ -227,22 +256,31 @@ public class DiceReaction
                                 .append(String.valueOf(max - 1))
                                 .append(" and got ")
                                 .append(dicesOutput.getStringBuilder().toString())
-                                .append("...")
-                                .append(String.valueOf(totalSumResult), MessageDecoration.BOLD);
-                        if (modifyTotalSum) {
-                            msg.append(" (").append(origTotalSum);
-                            if (summaryModifier >= 0) {
-                                msg.append("+");
+                                .append("...");
+
+                        if (!showAverage && !showMedian) {
+                            msg.append(String.valueOf(totalSumResult), MessageDecoration.BOLD);
+                            if (modifyTotalSum) {
+                                msg.append(" (")
+                                        .append(origTotalSum)
+                                        .append(summaryModifiersString)
+                                        .append(")");
                             }
-                            msg.append(summaryModifier).append(")");
+                        } else if (showAverage) {
+                            msg.append(String.valueOf(average), MessageDecoration.BOLD)
+                                    .append(" (average)");
+                        } else {
+                            msg.append(String.valueOf(median), MessageDecoration.BOLD)
+                                    .append(" (median)");
                         }
+
                         new MessageBuilder()
                                 .setEmbed(new EmbedBuilder()
                                         .setTitle(anotherString)
                                         .setColor(Color.CYAN)
                                         .setDescription(msg.getStringBuilder().toString()))
                                 .send(textChannel);
-                        if (doRofl) {
+                        if (doRofl && !showAverage && !showMedian) {
                             rofling(textChannel, totalSumResult, totalSumResult < max ?
                                     max - 1 : totalSumResult);
                         }
@@ -257,35 +295,44 @@ public class DiceReaction
     }
 
     @NotNull @UnmodifiableView
-    private List<SumModifier> parseModifiers(@NotNull final String diceValue, boolean getSummaryModifiers) {
+    private List<SumModifier> parseModifiers(@NotNull final String diceValue, final boolean getSummaryModifiers) {
 
         final List<SumModifier> modifiers = new ArrayList<>();
         final Pattern selectedPattern = getSummaryModifiers ? SUMMARY_MODIFIER_PATTERN : VALUE_MODIFIER_PATTERN;
-        final Matcher modifierMatcher = selectedPattern.matcher(diceValue);
+        final Matcher modifierMatcher = selectedPattern.matcher(diceValue.replaceAll("[XхХ]", "x"));
 
         while (modifierMatcher.find()) {
             final String rawModifier = modifierMatcher.group();
             if (selectedPattern == SUMMARY_MODIFIER_PATTERN) {
-                if (rawModifier.contains("++") || rawModifier.contains("--")) {
+                if (rawModifier.contains("++") || rawModifier.contains("--") || rawModifier.contains("xx")) {
                     continue;
                 }
             }
-            final boolean addition = rawModifier.startsWith("+");
+            ModifierType modifierType;
+            if (rawModifier.startsWith("+")) {
+                modifierType = ModifierType.ADD;
+            } else if (rawModifier.startsWith("x")) {
+                modifierType = ModifierType.MUL;
+            } else {
+                modifierType = ModifierType.SUB;
+            }
             final long modifierValue = CommonUtils.onlyNumbersToLong(rawModifier);
             if (modifierValue > 0) {
-                modifiers.add(new SumModifier(modifierValue, addition));
+                modifiers.add(new SumModifier(modifierValue, modifierType));
             }
         }
 
         return Collections.unmodifiableList(modifiers);
     }
 
-    private long calculateModifiers(@NotNull final String diceValue, boolean getSummaryModifiers) {
-        long valueModifier = 0L;
-        for (SumModifier modifier : parseModifiers(diceValue, getSummaryModifiers)) {
-            valueModifier = modifier.modify(valueModifier);
+    private String generatePrintable(@Nullable List<SumModifier> modifiers) {
+        if (modifiers == null || modifiers.isEmpty()) {
+            return "";
         }
-        return valueModifier;
+        return modifiers.stream()
+                .map(SumModifier::getPrintable)
+                .reduce((s1, s2) -> s1 + s2)
+                .orElse("");
     }
 
     private void rofling(final TextChannel textChannel, final long result, final long max) {
@@ -356,19 +403,33 @@ public class DiceReaction
     private static class SumModifier {
 
         private final long value;
-        private final boolean isAddition;
+        private final ModifierType modifierType;
+        private final String printable;
 
         @Contract(pure = true)
-        SumModifier(long value, boolean isAddition) {
+        SumModifier(long value, @NotNull ModifierType modifierType) {
             this.value = value;
-            this.isAddition = isAddition;
+            this.modifierType = modifierType;
+            this.printable = switch (modifierType) {
+                case ADD -> "+" + value;
+                case SUB -> "-" + value;
+                case MUL -> "x" + value;
+            };
         }
 
         long modify(final long currentSum) {
             if (value > 0) {
-                return isAddition ? currentSum + value : currentSum - value;
+                return switch (modifierType) {
+                    case ADD -> currentSum + value;
+                    case SUB -> currentSum - value;
+                    case MUL -> currentSum * value;
+                };
             }
             return currentSum;
+        }
+
+        String getPrintable() {
+            return printable;
         }
     }
 
@@ -405,5 +466,9 @@ public class DiceReaction
 
     private enum FilterType {
         EQ, LT, GT, LE, GE, NE, NOP
+    }
+
+    private enum ModifierType {
+        ADD, SUB, MUL
     }
 }
