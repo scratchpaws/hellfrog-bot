@@ -50,6 +50,7 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
     @Contract("_ -> new")
     public static @NotNull MainDBController getInstance(@Nullable InstanceType type) throws IOException, SQLException {
         return new MainDBControllerSQLite(type);
+        //return new MainDBControllerH2(type);
     }
 
     public static void destroyTestDatabase() throws IOException {

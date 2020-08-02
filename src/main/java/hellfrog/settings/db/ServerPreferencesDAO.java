@@ -4,10 +4,18 @@ import org.jetbrains.annotations.NotNull;
 
 public interface ServerPreferencesDAO {
 
+    long NAN_LONG = 0L;
+    String NAN_STRING = "0";
+
     String PREFIX_DEFAULT = ">>";
     boolean JOIN_LEAVE_DISPLAY_DEFAULT = false;
     long JOIN_LEAVE_CHANNEL_ID_DEFAULT = 0L;
     boolean NEW_ACL_MODE_DEFAULT = true;
+
+    String PREFIX_KEY = "bot.prefix";
+    String JOIN_LEAVE_DISPLAY_KEY = "join.leave.key";
+    String JOIN_LEAVE_CHANNEL_ID_KEY = "join.leave.channel";
+    String NEW_ACL_MODE_KEY = "new.acl.mode";
 
     String getPrefix(long serverId);
 

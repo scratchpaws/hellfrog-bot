@@ -38,6 +38,7 @@ public class MainDBControllerH2
 
     private final BotOwnersDAO botOwnersDAO;
     private final CommonPreferencesDAO commonPreferencesDAO;
+    private final ServerPreferencesDAO serverPreferencesDAO;
 
     public MainDBControllerH2(@Nullable InstanceType type) throws IOException, SQLException {
         super(type);
@@ -90,6 +91,7 @@ public class MainDBControllerH2
             final AutoSessionFactory autoSessionFactory = new AutoSessionFactory(sessionFactory);
             botOwnersDAO = new BotOwnersDAOImpl(autoSessionFactory);
             commonPreferencesDAO = new CommonPreferencesDAOImpl(autoSessionFactory);
+            serverPreferencesDAO = new ServerPreferencesDAOImpl(autoSessionFactory);
 
         } catch (Exception err) {
             String errMsg = String.format("Unable to create session factory: %s", err.getMessage());
@@ -169,7 +171,7 @@ public class MainDBControllerH2
 
     @Override
     public ServerPreferencesDAO getServerPreferencesDAO() {
-        return null;
+        return serverPreferencesDAO;
     }
 
     @Override

@@ -6,16 +6,19 @@ import java.time.Instant;
 import java.util.Objects;
 
 @Entity
-@Table(name = "common_preferences")
-public class CommonPreference {
+@Table(name = "server_preferences", uniqueConstraints =
+@UniqueConstraint(name = "uniq_serv_key", columnNames = {"server_id", "key"}))
+public class ServerPreference {
 
+    private long id;
+    private long serverId;
     private String key;
     private String stringValue;
     private long longValue;
     private Timestamp createDate;
     private Timestamp updateDate;
 
-    public CommonPreference() {
+    public ServerPreference() {
     }
 
     @PrePersist
@@ -34,7 +37,27 @@ public class CommonPreference {
     }
 
     @Id
-    @Column(name = "key", unique = true, nullable = false, length = 60)
+    @GeneratedValue(generator = "server_preference_ids", strategy = GenerationType.SEQUENCE)
+    @SequenceGenerator(name = "server_preference_ids", sequenceName = "server_preference_ids")
+    @Column(name = "id", nullable = false, unique = true)
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    @Column(name = "server_id", nullable = false)
+    public long getServerId() {
+        return serverId;
+    }
+
+    public void setServerId(long serverId) {
+        this.serverId = serverId;
+    }
+
+    @Column(name = "key", nullable = false, length = 60)
     public String getKey() {
         return key;
     }
@@ -83,19 +106,21 @@ public class CommonPreference {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        CommonPreference that = (CommonPreference) o;
-        return Objects.equals(key, that.key);
+        ServerPreference that = (ServerPreference) o;
+        return id == that.id;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(key);
+        return Objects.hash(id);
     }
 
     @Override
     public String toString() {
-        return "CommonPreference{" +
-                "key='" + key + '\'' +
+        return "ServerPreference{" +
+                "id=" + id +
+                ", serverId=" + serverId +
+                ", key='" + key + '\'' +
                 ", stringValue='" + stringValue + '\'' +
                 ", longValue=" + longValue +
                 ", createDate=" + createDate +

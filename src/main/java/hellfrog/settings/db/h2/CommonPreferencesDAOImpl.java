@@ -75,10 +75,14 @@ class CommonPreferencesDAOImpl
 
         if (!present || override) {
             CommonPreference newValue = new CommonPreference();
+            if (currentValue != null) {
+                newValue.setCreateDate(currentValue.getCreateDate());
+            } else {
+                newValue.setCreateDate(Timestamp.from(Instant.now()));
+            }
             newValue.setKey(key);
             newValue.setLongValue(longValue);
             newValue.setStringValue(stringValue);
-            newValue.setCreateDate(Timestamp.from(Instant.now()));
             newValue.setUpdateDate(Timestamp.from(Instant.now()));
 
             try (AutoSession session = sessionFactory.openSession()) {

@@ -3,7 +3,6 @@ package hellfrog.settings.db.h2;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.query.Query;
 import org.jetbrains.annotations.NotNull;
@@ -12,6 +11,7 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
@@ -33,11 +33,11 @@ class AutoSession
         return getCriteriaBuilder().createQuery(type);
     }
 
-    public<T> Query<T> createQuery(String queryText, Class<T> type) throws Exception {
+    public<T> Query<T> createQuery(String queryText, Class<T> type) {
         return hibernateSession.createQuery(queryText, type);
     }
 
-    public Query createQuery(String queryText) throws Exception {
+    public Query createQuery(String queryText) {
         return hibernateSession.createQuery(queryText);
     }
 
@@ -64,12 +64,12 @@ class AutoSession
         return result;
     }
 
-    public<T> void save(T object) throws Exception {
+    public<T> void save(T object) {
         hibernateSession.saveOrUpdate(object);
         success();
     }
 
-    public<T> void saveAll(@NotNull Collection<T> objects) throws Exception {
+    public<T> void saveAll(@NotNull Collection<T> objects) {
         for (T item : objects) {
             hibernateSession.saveOrUpdate(item);
         }
@@ -82,27 +82,27 @@ class AutoSession
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         if (rollbackRequired) {
             try {
                 hibernateSession.getTransaction().rollback();
             } catch (Exception err) {
                 String errMsg = String.format("Unable to rollback transaction: %s", err.getMessage());
-                log.error(errMsg, err);
+                throw new IOException(errMsg, err);
             }
         } else if (commitRequired) {
             try {
                 hibernateSession.getTransaction().commit();
             } catch (Exception err) {
                 String errMsg = String.format("Unable to commit transaction: %s", err.getMessage());
-                log.error(errMsg, err);
+                throw new IOException(errMsg, err);
             }
         }
         try {
             hibernateSession.close();
         } catch (Exception err) {
             String errMsg = String.format("Unable to close session: %s", err.getMessage());
-            log.error(errMsg, err);
+            throw new IOException(errMsg, err);
         }
     }
 }

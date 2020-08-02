@@ -32,10 +32,6 @@ class ServerPreferencesDAOImpl
         implements ServerPreferencesDAO {
 
     private static final String TABLE_NAME = "server_preferences";
-    private static final String PREFIX_KEY = "bot.prefix";
-    private static final String JOIN_LEAVE_DISPLAY_KEY = "join.leave.key";
-    private static final String JOIN_LEAVE_CHANNEL_ID_KEY = "join.leave.channel";
-    private static final String NEW_ACL_MODE_KEY = "new.acl.mode";
 
     private final Logger log = LogManager.getLogger("Server preferences");
     private final Connection connection;
