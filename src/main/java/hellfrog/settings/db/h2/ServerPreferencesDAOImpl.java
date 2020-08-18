@@ -1,11 +1,11 @@
 package hellfrog.settings.db.h2;
 
 import hellfrog.settings.db.ServerPreferencesDAO;
+import hellfrog.settings.db.entity.ServerPrefKey;
 import hellfrog.settings.db.entity.ServerPreference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -23,9 +23,10 @@ class ServerPreferencesDAOImpl
     }
 
     private Optional<ServerPreference> upsert(final long serverId,
-                                              @NotNull final String key,
+                                              @NotNull final ServerPrefKey key,
                                               @NotNull final String stringValue,
                                               final long longValue,
+                                              final boolean boolValue,
                                               final boolean override) {
 
         boolean present = false;
@@ -63,6 +64,7 @@ class ServerPreferencesDAOImpl
             newValue.setServerId(serverId);
             newValue.setStringValue(stringValue);
             newValue.setLongValue(longValue);
+            newValue.setBoolValue(boolValue);
             newValue.setUpdateDate(Timestamp.from(Instant.now()));
 
             try (AutoSession session = sessionFactory.openSession()) {
@@ -78,99 +80,93 @@ class ServerPreferencesDAOImpl
     }
 
     private String getStringValue(final long serverId,
-                                  @NotNull final String key,
+                                  @NotNull final ServerPrefKey key,
                                   @NotNull final String defaultValue) {
-        return upsert(serverId, key, defaultValue, NAN_LONG, false)
+        return upsert(serverId, key, defaultValue, NAN_LONG, NAN_BOOL,false)
                 .map(ServerPreference::getStringValue)
                 .orElse(defaultValue);
     }
 
     private String setStringValue(final long serverId,
-                                  @NotNull final String key,
+                                  @NotNull final ServerPrefKey key,
                                   @NotNull final String value,
                                   @NotNull String defaultValue) {
-        return upsert(serverId, key, value, NAN_LONG, true)
+        return upsert(serverId, key, value, NAN_LONG, NAN_BOOL, true)
                 .map(ServerPreference::getStringValue)
                 .orElse(defaultValue);
     }
 
     private long getLongValue(final long serverId,
-                              @NotNull final String key,
+                              @NotNull final ServerPrefKey key,
                               final long defaultValue) {
-        return upsert(serverId, key, NAN_STRING, defaultValue, false)
+        return upsert(serverId, key, NAN_STRING, defaultValue, NAN_BOOL, false)
                 .map(ServerPreference::getLongValue)
                 .orElse(defaultValue);
     }
 
     private long setLongValue(final long serverId,
-                              @NotNull final String key,
+                              @NotNull final ServerPrefKey key,
                               final long value,
                               final long defaultValue) {
-        return upsert(serverId, key, NAN_STRING, value, true)
+        return upsert(serverId, key, NAN_STRING, value, NAN_BOOL, true)
                 .map(ServerPreference::getLongValue)
                 .orElse(defaultValue);
     }
 
-    private Boolean longPreferenceValueToBool(@Nullable ServerPreference value) {
-        return value != null && value.getLongValue() > 0L ? Boolean.TRUE : Boolean.FALSE;
-    }
-
     private boolean getBooleanValue(final long serverId,
-                                    @NotNull final String key,
+                                    @NotNull final ServerPrefKey key,
                                     final boolean defaultValue) {
-        final long convertedDefaultValue = defaultValue ? 1L : 0L;
-        return upsert(serverId, key, NAN_STRING, convertedDefaultValue, false)
-                .map(this::longPreferenceValueToBool)
+        return upsert(serverId, key, NAN_STRING, NAN_LONG, defaultValue, false)
+                .map(ServerPreference::isBoolValue)
                 .orElse(defaultValue);
     }
 
     private boolean setBooleanValue(final long serverId,
-                                    @NotNull final String key,
+                                    @NotNull final ServerPrefKey key,
                                     final boolean value,
                                     final boolean defaultValue) {
-        final long convertedValue = value ? 1L : 0L;
-        return upsert(serverId, key, NAN_STRING, convertedValue, true)
-                .map(this::longPreferenceValueToBool)
+        return upsert(serverId, key, NAN_STRING, NAN_LONG, value, true)
+                .map(ServerPreference::isBoolValue)
                 .orElse(defaultValue);
     }
 
     @Override
     public String getPrefix(long serverId) {
-        return getStringValue(serverId, PREFIX_KEY, PREFIX_DEFAULT);
+        return getStringValue(serverId, ServerPrefKey.BOT_PREFIX, PREFIX_DEFAULT);
     }
 
     @Override
     public String setPrefix(long serverId, @NotNull String newPrefix) {
-        return setStringValue(serverId, PREFIX_KEY, newPrefix, PREFIX_DEFAULT);
+        return setStringValue(serverId, ServerPrefKey.BOT_PREFIX, newPrefix, PREFIX_DEFAULT);
     }
 
     @Override
     public boolean isJoinLeaveDisplay(long serverId) {
-        return getBooleanValue(serverId, JOIN_LEAVE_DISPLAY_KEY, JOIN_LEAVE_DISPLAY_DEFAULT);
+        return getBooleanValue(serverId, ServerPrefKey.DISPLAY_JOIN_LEAVE, JOIN_LEAVE_DISPLAY_DEFAULT);
     }
 
     @Override
     public boolean setJoinLeaveDisplay(long serverId, boolean newState) {
-        return setBooleanValue(serverId, JOIN_LEAVE_DISPLAY_KEY, newState, JOIN_LEAVE_DISPLAY_DEFAULT);
+        return setBooleanValue(serverId, ServerPrefKey.DISPLAY_JOIN_LEAVE, newState, JOIN_LEAVE_DISPLAY_DEFAULT);
     }
 
     @Override
     public long getJoinLeaveChannel(long serverId) {
-        return getLongValue(serverId, JOIN_LEAVE_CHANNEL_ID_KEY, JOIN_LEAVE_CHANNEL_ID_DEFAULT);
+        return getLongValue(serverId, ServerPrefKey.JOIN_LEAVE_CHANNEL, JOIN_LEAVE_CHANNEL_ID_DEFAULT);
     }
 
     @Override
     public long setJoinLeaveChannel(long serverId, long newChannelId) {
-        return setLongValue(serverId, JOIN_LEAVE_CHANNEL_ID_KEY, newChannelId, JOIN_LEAVE_CHANNEL_ID_DEFAULT);
+        return setLongValue(serverId, ServerPrefKey.JOIN_LEAVE_CHANNEL, newChannelId, JOIN_LEAVE_CHANNEL_ID_DEFAULT);
     }
 
     @Override
     public boolean isNewAclMode(long serverId) {
-        return getBooleanValue(serverId, NEW_ACL_MODE_KEY, NEW_ACL_MODE_DEFAULT);
+        return getBooleanValue(serverId, ServerPrefKey.NEW_ACL_MODE, NEW_ACL_MODE_DEFAULT);
     }
 
     @Override
     public boolean setNewAclMode(long serverId, boolean isNewMode) {
-        return setBooleanValue(serverId, NEW_ACL_MODE_KEY, isNewMode, NEW_ACL_MODE_DEFAULT);
+        return setBooleanValue(serverId, ServerPrefKey.NEW_ACL_MODE, isNewMode, NEW_ACL_MODE_DEFAULT);
     }
 }

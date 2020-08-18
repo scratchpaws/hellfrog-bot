@@ -223,7 +223,7 @@ public class TwoPhaseTransfer {
             MessageUtils.sendAttachments(attachments, ch);
             sleepAction();
             //rewritePhaseMessage(msg, membersList, hasAttachment);
-            anonymousMessage(msg, messageContent, hasAttachment);
+            //anonymousMessage(msg, messageContent, hasAttachment);
 
         } catch (Exception err) {
             if (msg != null)
@@ -305,7 +305,7 @@ public class TwoPhaseTransfer {
                                                                   boolean hasAttachments) {
         return new MessageBuilder()
                 .setEmbed(new EmbedBuilder()
-                        .setAuthor(author)
+                        .setAuthor(author.getApi().getYourself())
                         .setDescription(messageContent)
                         .setTimestampToNow()
                         .setFooter(hasAttachments ? INITIAL_FOOTER_WITH_ATTACHER : FOOTER_MESSAGE))

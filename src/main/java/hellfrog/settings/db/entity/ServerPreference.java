@@ -1,5 +1,7 @@
 package hellfrog.settings.db.entity;
 
+import hellfrog.settings.db.h2.BooleanToLongConverter;
+
 import javax.persistence.*;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -12,9 +14,10 @@ public class ServerPreference {
 
     private long id;
     private long serverId;
-    private String key;
+    private ServerPrefKey key;
     private String stringValue;
     private long longValue;
+    private boolean boolValue;
     private Timestamp createDate;
     private Timestamp updateDate;
 
@@ -58,11 +61,12 @@ public class ServerPreference {
     }
 
     @Column(name = "key", nullable = false, length = 60)
-    public String getKey() {
+    @Enumerated(EnumType.STRING)
+    public ServerPrefKey getKey() {
         return key;
     }
 
-    public void setKey(String key) {
+    public void setKey(ServerPrefKey key) {
         this.key = key;
     }
 
@@ -82,6 +86,16 @@ public class ServerPreference {
 
     public void setLongValue(long longValue) {
         this.longValue = longValue;
+    }
+
+    @Column(name = "bool_value", nullable = false)
+    @Convert(converter = BooleanToLongConverter.class)
+    public boolean isBoolValue() {
+        return boolValue;
+    }
+
+    public void setBoolValue(boolean boolValue) {
+        this.boolValue = boolValue;
     }
 
     @Column(name = "create_date", nullable = false)

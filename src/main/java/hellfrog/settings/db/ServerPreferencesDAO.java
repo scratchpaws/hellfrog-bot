@@ -6,6 +6,7 @@ public interface ServerPreferencesDAO {
 
     long NAN_LONG = 0L;
     String NAN_STRING = "0";
+    boolean NAN_BOOL = false;
 
     String PREFIX_DEFAULT = ">>";
     boolean JOIN_LEAVE_DISPLAY_DEFAULT = false;
