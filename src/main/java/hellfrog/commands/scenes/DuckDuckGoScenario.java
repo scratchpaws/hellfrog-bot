@@ -52,6 +52,7 @@ public class DuckDuckGoScenario
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(1L));
         bucket = Bucket4j.builder().addLimit(bandwidth).build();
         //super.enableStrictByChannels();
+        super.addStrictByChannelOnServer(516840591565389875L); // todo: rewrite
     }
 
     @Override

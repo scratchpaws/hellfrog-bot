@@ -24,7 +24,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 public abstract class ACLCommand {
@@ -38,6 +40,7 @@ public abstract class ACLCommand {
     private boolean updateLastUsage = true;
     private boolean expertCommand = false;
     protected final Logger log = LogManager.getLogger(this.getClass().getSimpleName());
+    private final List<Long> strictByChannelServers = new CopyOnWriteArrayList<>();
 
     protected ACLCommand(@NotNull String prefix, @NotNull String description) {
         if (CommonUtils.isTrStringEmpty(prefix))
@@ -51,6 +54,10 @@ public abstract class ACLCommand {
 
     protected final void enableStrictByChannels() {
         this.strictByChannels = true;
+    }
+
+    protected final void addStrictByChannelOnServer(final long serverId) {
+        this.strictByChannelServers.add(serverId);
     }
 
     protected final void enableOnlyServerCommandStrict() {
@@ -90,14 +97,18 @@ public abstract class ACLCommand {
         return !expertCommand;
     }
 
+    private boolean isStrictOnServer(@NotNull final Server server) {
+        return strictByChannels || strictByChannelServers.stream().anyMatch(es -> es == server.getId());
+    }
+
     public boolean canExecuteServerCommand(MessageCreateEvent event, Server server,
                                            long... anotherTargetChannel) {
-        return AccessControlCheck.canExecuteOnServer(getPrefix(), event, server, strictByChannels, anotherTargetChannel);
+        return AccessControlCheck.canExecuteOnServer(getPrefix(), event, server, isStrictOnServer(server), anotherTargetChannel);
     }
 
     public boolean canExecuteServerCommand(SingleReactionEvent event, Server server,
                                            long... anotherTargetChannel) {
-        return AccessControlCheck.canExecuteOnServer(getPrefix(), event, server, strictByChannels, anotherTargetChannel);
+        return AccessControlCheck.canExecuteOnServer(getPrefix(), event, server, isStrictOnServer(server), anotherTargetChannel);
     }
 
     protected boolean canExecuteGlobalCommand(@NotNull MessageCreateEvent event) {
@@ -167,7 +178,7 @@ public abstract class ACLCommand {
                                              int type) {
         event.getServer().ifPresentOrElse(server ->
                         event.getServerTextChannel().ifPresentOrElse(serverTextChannel -> {
-                            boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, user, server, serverTextChannel, strictByChannels);
+                            boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, user, server, serverTextChannel, isStrictOnServer(server));
                             boolean canWriteToChannel = serverTextChannel.canYouWrite();
                             if (hasRights && canWriteToChannel) {
                                 showEmbedMessage(textMessage, serverTextChannel, user, type);
@@ -191,7 +202,7 @@ public abstract class ACLCommand {
         if (mayBeUser.isPresent() && mayBeServer.isPresent() && mayBeTextChannel.isPresent()) {
             Server server = mayBeServer.get();
             ServerTextChannel channel = mayBeTextChannel.get();
-            boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, event, server, strictByChannels);
+            boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, event, server, isStrictOnServer(server));
             boolean canWriteToChannel = channel.canYouWrite();
             return hasRights && canWriteToChannel;
         } else {

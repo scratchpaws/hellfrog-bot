@@ -18,7 +18,6 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
-import org.apache.logging.log4j.message.MessageCollectionMessage;
 import org.javacord.api.entity.channel.PrivateChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.Message;
@@ -49,6 +48,7 @@ public class GptScenario
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(3L));
         bucket = Bucket4j.builder().addLimit(bandwidth).build();
         //super.enableStrictByChannels();
+        super.addStrictByChannelOnServer(516840591565389875L); // todo: rewrite
     }
 
     @Override
