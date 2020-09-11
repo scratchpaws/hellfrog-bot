@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 public class VoteController
         implements Runnable {
 
-    private ScheduledFuture<?> scheduledFuture;
+    private final ScheduledFuture<?> scheduledFuture;
 
     public VoteController() {
         ScheduledExecutorService voiceService = Executors.newSingleThreadScheduledExecutor();

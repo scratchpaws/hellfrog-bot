@@ -15,8 +15,8 @@ public class Loader {
     private static final Logger log = LogManager.getLogger("Core");
 
     public static void main(String... args) {
-        SettingsController settingsController = SettingsController.getInstance();
-        EventsListener eventsListener = new EventsListener();
+        final SettingsController settingsController = SettingsController.getInstance();
+        final EventsListener eventsListener = new EventsListener();
         BotCommand.all(); // заранее инициируем поиск и инстантинацию классов команд
         MsgCreateReaction.all();
         Scenario.all();
@@ -38,6 +38,8 @@ public class Loader {
                     api.updateActivity(ActivityType.LISTENING, "<prefix> help");
                     SettingsController.getInstance().setDiscordApi(api);
                     api.addServerJoinListener(eventsListener);
+                    api.addServerLeaveListener(eventsListener);
+                    api.addRoleChangePermissionsListener(eventsListener);
                     eventsListener.onReady();
                 })
                 .exceptionally(Loader::onException);

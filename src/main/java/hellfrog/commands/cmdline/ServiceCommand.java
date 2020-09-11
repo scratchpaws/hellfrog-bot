@@ -273,6 +273,7 @@ public class ServiceCommand
 
         settingsController.getHttpClientsPool().stop();
         settingsController.getVoteController().stop();
+        settingsController.getInvitesController().stop();
         settingsController.getAutoSaveSettingsTask().stop();
         settingsController.getSessionsCheckTask().stop();
         settingsController.saveCommonPreferences();

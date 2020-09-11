@@ -110,6 +110,11 @@ public class ServerSideResolver
             if (role.isPresent())
                 return role;
         }
+        // 3. Ищем @everyone
+        if (rawValue.strip().toLowerCase().equals("everyone")
+                || rawValue.strip().toLowerCase().equals(EVERYONE_TAG)) {
+            return Optional.of(server.getEveryoneRole());
+        }
         // 3. И наконец ищем по имени роли
         return CommonUtils.getFirstOrEmpty(server.getRolesByNameIgnoreCase(rawValue));
     }

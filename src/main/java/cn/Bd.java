@@ -17,6 +17,7 @@ import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.server.invite.InviteBuilder;
 import org.javacord.api.entity.user.User;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedOutputStream;
@@ -61,7 +62,9 @@ public class Bd {
         return sb.toString();
     }
 
+    @Contract(" -> new")
     @MethodInfo("Get servers list that this bot instance connected")
+    @NotNull
     public static List<Server> gcs() {
         DiscordApi discordApi = SettingsController.getInstance().getDiscordApi();
         if (discordApi == null) return new ArrayList<>();
@@ -80,6 +83,7 @@ public class Bd {
     }
 
     @MethodInfo("Select server for other methods. Input args: long id - server id")
+    @NotNull
     public static String sser(long id) {
         DiscordApi discordApi = SettingsController.getInstance().getDiscordApi();
         if (discordApi == null) return "Discord API not available";
@@ -93,6 +97,7 @@ public class Bd {
     }
 
     @MethodInfo("Set text channel for other methods. Input args: long id - textchat id")
+    @NotNull
     public static String scht(long id) {
         DiscordApi discordApi = SettingsController.getInstance().getDiscordApi();
         if (discordApi == null) return "Discord API not available";
@@ -106,6 +111,7 @@ public class Bd {
     }
 
     @MethodInfo("Set user for other methods. Input args: long id - user id")
+    @NotNull
     public static String sus(long id) {
         DiscordApi discordApi = SettingsController.getInstance().getDiscordApi();
         if (discordApi == null) return "Discord API not available";
@@ -154,7 +160,9 @@ public class Bd {
         return "OK";
     }
 
+    @Contract(" -> new")
     @MethodInfo("Get all members of server. Required set server wia sser().")
+    @NotNull
     public static List<User> gu() {
         DiscordApi discordApi = SettingsController.getInstance().getDiscordApi();
         if (discordApi == null) return new ArrayList<>();
@@ -165,6 +173,7 @@ public class Bd {
 
     @MethodInfo("Grab all custom emoji from selected server and send to selected user. " +
             "Required set server wia sser() and user wia sus().")
+    @NotNull
     public static String grem() {
         DiscordApi discordApi = SettingsController.getInstance().getDiscordApi();
         if (discordApi == null) return "Discord API not awailable";
@@ -241,6 +250,7 @@ public class Bd {
 
     @MethodInfo("Send temporary invite to selected user for selected server. " +
             "Required set server wia sser() and user wia sus().")
+    @NotNull
     public static String invite() {
         if (selectedServer == null || selectedUser == null) {
             return "User or server not selected";
@@ -272,6 +282,7 @@ public class Bd {
     }
 
     @MethodInfo("Delete this bot message by url.")
+    @NotNull
     public static String rm(String url) {
         DiscordApi api = SettingsController.getInstance().getDiscordApi();
         if (api == null) return "API is null";
@@ -294,6 +305,7 @@ public class Bd {
     }
 
     @MethodInfo("Get statistics of selected server by sser() and send to user by sus()")
+    @NotNull
     public static String stat() {
         if (selectedServer == null)
             return "No server selected by sser() method";

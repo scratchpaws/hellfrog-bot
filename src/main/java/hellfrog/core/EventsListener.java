@@ -24,7 +24,9 @@ import org.javacord.api.event.message.reaction.ReactionAddEvent;
 import org.javacord.api.event.message.reaction.ReactionRemoveAllEvent;
 import org.javacord.api.event.message.reaction.ReactionRemoveEvent;
 import org.javacord.api.event.server.ServerJoinEvent;
+import org.javacord.api.event.server.ServerLeaveEvent;
 import org.javacord.api.event.server.member.*;
+import org.javacord.api.event.server.role.RoleChangePermissionsEvent;
 import org.javacord.api.listener.message.MessageCreateListener;
 import org.javacord.api.listener.message.MessageDeleteListener;
 import org.javacord.api.listener.message.MessageEditListener;
@@ -32,25 +34,28 @@ import org.javacord.api.listener.message.reaction.ReactionAddListener;
 import org.javacord.api.listener.message.reaction.ReactionRemoveAllListener;
 import org.javacord.api.listener.message.reaction.ReactionRemoveListener;
 import org.javacord.api.listener.server.ServerJoinListener;
+import org.javacord.api.listener.server.ServerLeaveListener;
 import org.javacord.api.listener.server.member.ServerMemberBanListener;
 import org.javacord.api.listener.server.member.ServerMemberJoinListener;
 import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
 import org.javacord.api.listener.server.member.ServerMemberUnbanListener;
+import org.javacord.api.listener.server.role.RoleChangePermissionsListener;
 import org.javacord.core.entity.permission.PermissionsImpl;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.time.Instant;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public class EventsListener
         implements MessageCreateListener, MessageEditListener, MessageDeleteListener,
         ReactionAddListener, ReactionRemoveListener, ReactionRemoveAllListener,
-        ServerJoinListener, ServerMemberJoinListener, ServerMemberLeaveListener,
-        ServerMemberBanListener, ServerMemberUnbanListener, CommonConstants {
+        ServerJoinListener, ServerLeaveListener, ServerMemberJoinListener, ServerMemberLeaveListener,
+        ServerMemberBanListener, ServerMemberUnbanListener, CommonConstants,
+        RoleChangePermissionsListener {
 
     private static final String VERSION_STRING = "2020-06-02";
 
@@ -229,7 +234,7 @@ public class EventsListener
         return false;
     }
 
-    private void showFirstLoginHelp(ServerTextChannel channel) {
+    private void showFirstLoginHelp(@NotNull ServerTextChannel channel) {
         MessageBuilder msgBuilder = new MessageBuilder();
         String botPrefix = SettingsController.getInstance()
                 .getServerPreferences(channel.getServer().getId())
@@ -283,10 +288,41 @@ public class EventsListener
     }
 
     @Override
-    public void onServerJoin(ServerJoinEvent event) {
-        Server server = event.getServer();
+    public void onServerJoin(@NotNull ServerJoinEvent event) {
+        final Server server = event.getServer();
         server.getSystemChannel()
                 .ifPresent(this::showFirstLoginHelp);
+        final ServerPreferences serverPreference = SettingsController.getInstance().getServerPreferences(server.getId());
+        final InvitesController invitesController = SettingsController.getInstance().getInvitesController();
+        if (serverPreference.isJoinLeaveDisplay() && serverPreference.getJoinLeaveChannel() > 0L) {
+            server.getTextChannelById(serverPreference.getJoinLeaveChannel()).ifPresent(jlChannel ->
+                    invitesController.addInvitesToCache(server));
+        }
+    }
+
+    @Override
+    public void onServerLeave(@NotNull ServerLeaveEvent event) {
+        SettingsController.getInstance()
+                .getInvitesController()
+                .dropInvitesFromCache(event.getServer());
+    }
+
+    @Override
+    public void onRoleChangePermissions(@NotNull RoleChangePermissionsEvent event) {
+        final boolean isBotRoleChanged = event.getRole()
+                .getUsers()
+                .stream()
+                .anyMatch(User::isYourself);
+        if (isBotRoleChanged) {
+            final InvitesController invitesController = SettingsController.getInstance().getInvitesController();
+            final boolean canBotViewInvites = event.getServer().canYouManage();
+            final boolean invitesPresentInStore = invitesController.hasServerInvites(event.getServer());
+            if (canBotViewInvites && !invitesPresentInStore) {
+                invitesController.addInvitesToCache(event.getServer());
+            } else if (!canBotViewInvites && invitesPresentInStore) {
+                invitesController.dropInvitesFromCache(event.getServer());
+            }
+        }
     }
 
     @Override
@@ -331,6 +367,9 @@ public class EventsListener
             log.info(readyMsg);
             BroadCast.sendServiceMessage(readyMsg);
         }, () -> log.fatal("Unable to start - api is null!"));
+        mayBeApi.ifPresent(discordApi -> {
+            settingsController.getInvitesController().updateInvitesList();
+        });
     }
 
     @Override
@@ -420,21 +459,21 @@ public class EventsListener
         if (user.getId() == 246149070702247936L) {
             return;
         }
-        long serverId = event.getServer().getId();
-        ServerPreferences preferences = SettingsController.getInstance()
-                .getServerPreferences(serverId);
+        final long serverId = event.getServer().getId();
+        final ServerPreferences preferences = SettingsController.getInstance().getServerPreferences(serverId);
+        final InvitesController invitesController = SettingsController.getInstance().getInvitesController();
         if (preferences.isJoinLeaveDisplay() && preferences.getJoinLeaveChannel() > 0) {
-            Optional<ServerTextChannel> mayBeChannel = event.getServer()
+            final Optional<ServerTextChannel> mayBeChannel = event.getServer()
                     .getTextChannelById(preferences.getJoinLeaveChannel());
             mayBeChannel.ifPresent(c -> {
-                Instant currentStamp = Instant.now();
-                String stampAsString = CommonUtils.getCurrentGmtTimeAsString();
-                UserCachedData userCachedData = new UserCachedData(user, event.getServer());
+                final Instant currentStamp = Instant.now();
+                final String stampAsString = CommonUtils.getCurrentGmtTimeAsString();
+                final UserCachedData userCachedData = new UserCachedData(user, event.getServer());
 
-                String userName = userCachedData.getDisplayUserName()
+                final String userName = userCachedData.getDisplayUserName()
                         + " (" + user.getDiscriminatedName() + ")";
                 final int newlineBreak = 20;
-                EmbedBuilder embedBuilder = new EmbedBuilder()
+                final EmbedBuilder embedBuilder = new EmbedBuilder()
                         .setColor(Color.BLUE)
                         .setTimestamp(currentStamp)
                         .addField("User",
@@ -444,6 +483,11 @@ public class EventsListener
                         .addField("Action", code.toString(), true)
                         .addField("Server",
                                 CommonUtils.addLinebreaks(event.getServer().getName(), newlineBreak), true);
+                if (code.equals(MemberEventCode.JOIN)) {
+                    invitesController.tryIdentifyInviter(event.getServer()).ifPresent(inviter ->
+                            embedBuilder.addField("May be invited by", inviter, true)
+                    );
+                }
                 if (userCachedData.isHasAvatar()) {
                     embedBuilder.setThumbnail(userCachedData.getAvatarBytes(), userCachedData.getAvatarExtension());
                 }
@@ -459,19 +503,12 @@ public class EventsListener
 
         @Override
         public String toString() {
-            switch (this) {
-                case JOIN:
-                    return "Joined";
-                case LEAVE:
-                    return "Just left";
-                case BAN:
-                    return "Banned";
-                case UNBAN:
-                    return "Unbanned";
-
-                default:
-                    return "";
-            }
+            return switch (this) {
+                case JOIN -> "Joined";
+                case LEAVE -> "Just left";
+                case BAN -> "Banned";
+                case UNBAN -> "Unbanned";
+            };
         }
     }
 

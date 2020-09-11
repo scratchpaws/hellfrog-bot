@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.HttpClientsPool;
 import hellfrog.core.AutoSaveSettingsTask;
+import hellfrog.core.InvitesController;
 import hellfrog.core.SessionsCheckTask;
 import hellfrog.core.VoteController;
 import hellfrog.settings.db.InstanceType;
@@ -45,6 +46,7 @@ public class SettingsController {
     private final ReentrantLock serverStatCreateLock = new ReentrantLock();
     private final ReentrantLock serverStatSaveLock = new ReentrantLock();
     private final VoteController voteController;
+    private final InvitesController invitesController;
     private final HttpClientsPool httpClientsPool;
     private final AutoSaveSettingsTask autoSaveSettingsTask;
     private final SessionsCheckTask sessionsCheckTask;
@@ -67,6 +69,7 @@ public class SettingsController {
         loadServersSettings();
         httpClientsPool = new HttpClientsPool();
         voteController = new VoteController();
+        invitesController = new InvitesController();
         autoSaveSettingsTask = new AutoSaveSettingsTask();
         sessionsCheckTask = new SessionsCheckTask();
 
@@ -365,6 +368,10 @@ public class SettingsController {
 
     public VoteController getVoteController() {
         return voteController;
+    }
+
+    public InvitesController getInvitesController() {
+        return invitesController;
     }
 
     public AutoSaveSettingsTask getAutoSaveSettingsTask() {
