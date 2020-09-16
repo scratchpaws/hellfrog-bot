@@ -84,8 +84,11 @@ public class GotovScucoScenario
                 if (entity == null) {
                     responseText = "";
                 } else {
-                    responseText = EntityUtils.toString(entity);
-                    EntityUtils.consume(entity);
+                    try {
+                        responseText = EntityUtils.toString(entity);
+                    } finally {
+                        EntityUtils.consume(entity);
+                    }
                 }
                 int statusCode = httpResponse.getStatusLine().getStatusCode();
                 if (statusCode != HttpStatus.SC_OK) {
