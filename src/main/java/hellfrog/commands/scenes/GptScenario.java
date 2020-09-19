@@ -5,9 +5,7 @@ import hellfrog.commands.scenes.gptentity.GptRequest;
 import hellfrog.commands.scenes.gptentity.GptResponse;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
-import hellfrog.common.MessageUtils;
 import hellfrog.common.SimpleHttpClient;
-import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
@@ -67,20 +65,19 @@ public class GptScenario
     }
 
     private void requestExternalText(@NotNull final MessageCreateEvent event) {
+
+        final String messageWoCommandPrefix = super.getMessageContentWithoutPrefix(event);
+        if (CommonUtils.isTrStringEmpty(messageWoCommandPrefix)) {
+            showErrorMessage("Text required", event);
+            return;
+        }
+
         try {
             bucket.asScheduler().consume(1);
         } catch (InterruptedException breakSignal) {
             return;
         }
-        String eventMessage = event.getMessageContent();
-        String messageWoBotPrefix = MessageUtils.getEventMessageWithoutBotPrefix(eventMessage,
-                event.getServer());
-        messageWoBotPrefix = ServerSideResolver.getReadableContent(messageWoBotPrefix, event.getServer());
-        final String messageWoCommandPrefix =
-                CommonUtils.cutLeftString(messageWoBotPrefix, PREFIX).trim();
-        if (CommonUtils.isTrStringEmpty(messageWoCommandPrefix)) {
-            return;
-        }
+
         ObjectMapper objectMapper = new ObjectMapper();
         GptRequest gptRequest = new GptRequest();
         gptRequest.setPrompt(messageWoCommandPrefix);

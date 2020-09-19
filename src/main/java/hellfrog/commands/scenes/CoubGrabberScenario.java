@@ -2,9 +2,7 @@ package hellfrog.commands.scenes;
 
 import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
-import hellfrog.common.MessageUtils;
 import hellfrog.common.SimpleHttpClient;
-import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
@@ -74,12 +72,7 @@ public class CoubGrabberScenario
 
     private void grabCoubVideo(@NotNull final MessageCreateEvent event) {
 
-        final String eventMessage = event.getMessageContent();
-        String messageWoBotPrefix = MessageUtils.getEventMessageWithoutBotPrefix(eventMessage,
-                event.getServer());
-        messageWoBotPrefix = ServerSideResolver.getReadableContent(messageWoBotPrefix, event.getServer());
-        final String messageWoCommandPrefix =
-                CommonUtils.cutLeftString(messageWoBotPrefix, PREFIX).trim();
+        final String messageWoCommandPrefix = super.getMessageContentWithoutPrefix(event);
         if (CommonUtils.isTrStringEmpty(messageWoCommandPrefix)) {
             showErrorMessage("Coub video required", event);
             return;
@@ -139,7 +132,7 @@ public class CoubGrabberScenario
                 showErrorMessage(errMsg, event);
                 return;
             }
-            final Document parsedDom = Jsoup.parse(responseText, messageWoBotPrefix);
+            final Document parsedDom = Jsoup.parse(responseText, messageWoCommandPrefix);
             final Element coubPageCoubJson = parsedDom.getElementById("coubPageCoubJson");
             if (coubPageCoubJson == null) {
                 String errMsg = String.format("Unable to find videos urls from \"%s\"", messageWoCommandPrefix);
@@ -184,7 +177,7 @@ public class CoubGrabberScenario
                         showErrorMessage(videoDlMessage, event);
                         return;
                     }
-                    if (videoFile == null) {
+                    if (videoFile == null || videoFile.length == 0) {
                         String errMsg = String.format("Coub.com received empty video from url \"%s\"", messageWoCommandPrefix);
                         showErrorMessage(errMsg, event);
                         return;

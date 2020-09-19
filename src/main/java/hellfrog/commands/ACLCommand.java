@@ -2,6 +2,7 @@ package hellfrog.commands;
 
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
+import hellfrog.common.MessageUtils;
 import hellfrog.core.AccessControlCheck;
 import hellfrog.core.RateLimiter;
 import hellfrog.core.ServerSideResolver;
@@ -273,5 +274,13 @@ public abstract class ACLCommand {
         } else {
             return false;
         }
+    }
+
+    @NotNull
+    protected String getMessageContentWithoutPrefix(@NotNull final MessageCreateEvent event) {
+        final String eventMessage = event.getMessageContent();
+        String messageWoBotPrefix = MessageUtils.getEventMessageWithoutBotPrefix(eventMessage, event.getServer());
+        messageWoBotPrefix = ServerSideResolver.getReadableContent(messageWoBotPrefix, event.getServer());
+        return CommonUtils.cutLeftString(messageWoBotPrefix, prefix).trim();
     }
 }
