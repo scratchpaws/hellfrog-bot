@@ -277,10 +277,17 @@ public abstract class ACLCommand {
     }
 
     @NotNull
-    protected String getMessageContentWithoutPrefix(@NotNull final MessageCreateEvent event) {
+    protected String getReadableMessageContentWithoutPrefix(@NotNull final MessageCreateEvent event) {
         final String eventMessage = event.getMessageContent();
         String messageWoBotPrefix = MessageUtils.getEventMessageWithoutBotPrefix(eventMessage, event.getServer());
         messageWoBotPrefix = ServerSideResolver.getReadableContent(messageWoBotPrefix, event.getServer());
+        return CommonUtils.cutLeftString(messageWoBotPrefix, prefix).trim();
+    }
+
+    @NotNull
+    protected String getMessageContentWithoutPrefix(@NotNull final MessageCreateEvent event) {
+        final String eventMessage = event.getMessageContent();
+        String messageWoBotPrefix = MessageUtils.getEventMessageWithoutBotPrefix(eventMessage, event.getServer());
         return CommonUtils.cutLeftString(messageWoBotPrefix, prefix).trim();
     }
 }

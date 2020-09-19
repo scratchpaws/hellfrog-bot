@@ -76,6 +76,9 @@ public class InvitesController
             try {
                 final Collection<RichInvite> invites = server.getInvites()
                         .get(CommonConstants.OP_WAITING_TIMEOUT, CommonConstants.OP_TIME_UNIT);
+                if (invites == null || invites.isEmpty()) {
+                    return Collections.emptyList();
+                }
                 return InviteInfo.fromServerInvites(invites);
             } catch (Exception err) {
                 log.error("Unable to fetch invites for server {}: {}", server, err.getMessage());

@@ -4,6 +4,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.nibor.autolink.LinkExtractor;
+import org.nibor.autolink.LinkSpan;
+import org.nibor.autolink.LinkType;
 
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
@@ -296,5 +299,20 @@ public class CommonUtils {
             pos += 1 + thatStr.length();
         }
         return result.toString();
+    }
+
+    @NotNull
+    public static List<String> detectAllUrls(@Nullable final CharSequence str) {
+        if (str == null || isTrStringEmpty(str)) {
+            return Collections.emptyList();
+        }
+        final List<String> result = new ArrayList<>();
+        for (LinkSpan span : LinkExtractor.builder()
+                .linkTypes(EnumSet.of(LinkType.WWW, LinkType.URL))
+                .build()
+                .extractLinks(str)) {
+            result.add(str.subSequence(span.getBeginIndex(), span.getEndIndex()).toString());
+        }
+        return Collections.unmodifiableList(result);
     }
 }

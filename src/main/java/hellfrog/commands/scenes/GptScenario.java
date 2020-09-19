@@ -66,7 +66,7 @@ public class GptScenario
 
     private void requestExternalText(@NotNull final MessageCreateEvent event) {
 
-        final String messageWoCommandPrefix = super.getMessageContentWithoutPrefix(event);
+        final String messageWoCommandPrefix = super.getReadableMessageContentWithoutPrefix(event);
         if (CommonUtils.isTrStringEmpty(messageWoCommandPrefix)) {
             showErrorMessage("Text required", event);
             return;

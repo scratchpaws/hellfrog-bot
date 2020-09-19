@@ -1,8 +1,6 @@
 package hellfrog.commands.scenes;
 
-import hellfrog.common.CommonConstants;
-import hellfrog.common.CommonUtils;
-import hellfrog.common.SimpleHttpClient;
+import hellfrog.common.*;
 import hellfrog.settings.SettingsController;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
@@ -19,19 +17,21 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.nibor.autolink.LinkExtractor;
-import org.nibor.autolink.LinkSpan;
-import org.nibor.autolink.LinkType;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
-import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 
 public class CoubGrabberScenario
         extends OneShotScenario {
@@ -41,6 +41,8 @@ public class CoubGrabberScenario
     private final Bucket bucket;
     private static final String COUB_HOSTNAME = "coub.com";
     private static final String VIDEO_FOR_SHARING = "cw_video_for_sharing";
+    private final Pattern MP4_VIDEO = Pattern.compile("mp4_.*_size.*\\.mp4", Pattern.CASE_INSENSITIVE);
+    private final Pattern MP4_AUDIO = Pattern.compile("m4a_.*\\.m4a", Pattern.CASE_INSENSITIVE);
 
     public CoubGrabberScenario() {
         super(PREFIX, DESCRIPTION);
@@ -72,8 +74,8 @@ public class CoubGrabberScenario
 
     private void grabCoubVideo(@NotNull final MessageCreateEvent event) {
 
-        final String messageWoCommandPrefix = super.getMessageContentWithoutPrefix(event);
-        if (CommonUtils.isTrStringEmpty(messageWoCommandPrefix)) {
+        final String coubUrl = super.getMessageContentWithoutPrefix(event);
+        if (CommonUtils.isTrStringEmpty(coubUrl)) {
             showErrorMessage("Coub video required", event);
             return;
         }
@@ -84,122 +86,217 @@ public class CoubGrabberScenario
             return;
         }
 
-        URI uri;
-        try {
-            uri = URI.create(messageWoCommandPrefix);
-        } catch (IllegalArgumentException uriParseErr) {
-            String errorMessage = String.format("Unable to parse URL \"%s\": %s", messageWoCommandPrefix, uriParseErr.getMessage());
-            showErrorMessage(errorMessage, event);
-            return;
-        }
-
-        if (!uri.getHost().equalsIgnoreCase(COUB_HOSTNAME)) {
-            String errorMessage = String.format("URL \"%s\" is not from coub.com", messageWoCommandPrefix);
-            showErrorMessage(errorMessage, event);
-            return;
-        }
-
         final SimpleHttpClient client = SettingsController.getInstance()
                 .getHttpClientsPool()
                 .borrowClient();
         try {
-            final HttpGet request = new HttpGet(uri);
-            String responseText;
-            try (CloseableHttpResponse httpResponse = client.execute(request)) {
-                final int statusCode = httpResponse.getStatusLine().getStatusCode();
-                if (statusCode != HttpStatus.SC_OK) {
-                    String statusCodeErr = String.format("Unable to fetch video from \"%s\": %d", messageWoCommandPrefix, statusCode);
-                    showErrorMessage(statusCodeErr, event);
-                    return;
-                }
-                final HttpEntity httpEntity = httpResponse.getEntity();
-                if (httpEntity == null) {
-                    responseText = "";
-                } else {
-                    try {
-                        responseText = EntityUtils.toString(httpEntity);
-                    } finally {
-                        EntityUtils.consume(httpEntity);
-                    }
-                }
-            } catch (IOException clientErr) {
-                String errMsg = String.format("Unable to fetch video from \"%s\": %s", messageWoCommandPrefix, clientErr.getMessage());
-                showErrorMessage(errMsg, event);
+            List<String> jsonUrls;
+            try {
+                jsonUrls = CommonUtils.detectAllUrls(parseCoubPage(client, coubUrl));
+            } catch (RuntimeException err) {
+                showErrorMessage(err.getMessage(), event);
                 return;
             }
-            if (CommonUtils.isTrStringEmpty(responseText)) {
-                String errMsg = String.format("Coub.com received empty page from \"%s\"", messageWoCommandPrefix);
-                showErrorMessage(errMsg, event);
-                return;
-            }
-            final Document parsedDom = Jsoup.parse(responseText, messageWoCommandPrefix);
-            final Element coubPageCoubJson = parsedDom.getElementById("coubPageCoubJson");
-            if (coubPageCoubJson == null) {
-                String errMsg = String.format("Unable to find videos urls from \"%s\"", messageWoCommandPrefix);
-                showErrorMessage(errMsg, event);
-                return;
-            }
-            final String rawJson = coubPageCoubJson.outerHtml();
             boolean found = false;
-            for (LinkSpan span : LinkExtractor.builder()
-                    .linkTypes(EnumSet.of(LinkType.WWW, LinkType.URL))
-                    .build()
-                    .extractLinks(rawJson)) {
-                final String videoUrl = rawJson.substring(span.getBeginIndex(), span.getEndIndex());
+            String mp4Video = null;
+            String mp4Audio = null;
+            for (String videoUrl : jsonUrls) {
                 if (videoUrl.contains(VIDEO_FOR_SHARING)) {
                     found = true;
-                    URI videoURI;
+                    Path videoForSharePath = null;
                     try {
-                        videoURI = new URI(videoUrl);
-                    } catch (URISyntaxException err) {
-                        String uriErrMessage = String.format("Unable to parse URI video from \"%s\"", messageWoCommandPrefix);
-                        showErrorMessage(uriErrMessage, event);
-                        return;
-                    }
-                    final HttpGet videoRequest = new HttpGet(videoURI);
-                    byte[] videoFile;
-                    try (CloseableHttpResponse httpResponse = client.execute(videoRequest)) {
-                        final int statusCode = httpResponse.getStatusLine().getStatusCode();
-                        if (statusCode != HttpStatus.SC_OK) {
-                            String statusCodeErr = String.format("Unable to grab video from \"%s\": %d", messageWoCommandPrefix, statusCode);
-                            showErrorMessage(statusCodeErr, event);
+                        videoForSharePath = downloadCoubPart(client, videoUrl, coubUrl);
+                        byte[] videoFile = Files.readAllBytes(videoForSharePath);
+                        if (videoFile.length > CommonConstants.MAX_FILE_SIZE) {
+                            String errMsg = String.format("Video from \"%s\" too large", coubUrl);
+                            showErrorMessage(errMsg, event);
                             return;
                         }
-                        final HttpEntity httpEntity = httpResponse.getEntity();
-                        try {
-                            videoFile = EntityUtils.toByteArray(httpEntity);
-                        } finally {
-                            EntityUtils.consume(httpEntity);
-                        }
-                    } catch (IOException videoDlErr) {
-                        String videoDlMessage = String.format("Unable to download video from page \"%s\": %s",
-                                messageWoCommandPrefix, videoDlErr.getMessage());
-                        showErrorMessage(videoDlMessage, event);
+                        new MessageBuilder()
+                                .addAttachment(videoFile, "video.mp4")
+                                .send(event.getChannel());
+                    } catch (IOException err) {
+                        String attachErrMsg = String.format("Unable to attach video from \"%s\", I/O error", coubUrl);
+                        log.error(attachErrMsg, err);
+                        showErrorMessage(attachErrMsg, event);
                         return;
-                    }
-                    if (videoFile == null || videoFile.length == 0) {
-                        String errMsg = String.format("Coub.com received empty video from url \"%s\"", messageWoCommandPrefix);
-                        showErrorMessage(errMsg, event);
+                    } catch (RuntimeException err) {
+                        showErrorMessage(err.getMessage(), event);
                         return;
+                    } finally {
+                        removeTempFile(videoForSharePath);
                     }
-                    if (videoFile.length > CommonConstants.MAX_FILE_SIZE) {
-                        String errMsg = String.format("Video from \"%s\" too large", messageWoCommandPrefix);
-                        showErrorMessage(errMsg, event);
-                        return;
-                    }
-                    new MessageBuilder()
-                            .addAttachment(videoFile, "video.mp4")
-                            .send(event.getChannel());
+                } else if (mp4Video == null && MP4_VIDEO.matcher(videoUrl).find()) {
+                    mp4Video = videoUrl;
+                } else if (mp4Audio == null && MP4_AUDIO.matcher(videoUrl).find()) {
+                    mp4Audio = videoUrl;
                 }
             }
             if (!found) {
-                String errMsg = String.format("Video \"%s\" does not contain links for sharing", messageWoCommandPrefix);
-                showErrorMessage(errMsg, event);
+                if (mp4Video != null && mp4Audio != null) {
+                    try {
+                        byte[] mergedVideo = mergeSeparatedSources(client, mp4Video, mp4Audio, coubUrl);
+                        if (mergedVideo.length > CommonConstants.MAX_FILE_SIZE) {
+                            String errMsg = String.format("Video from \"%s\" too large", coubUrl);
+                            showErrorMessage(errMsg, event);
+                            return;
+                        }
+                        new MessageBuilder()
+                                .addAttachment(mergedVideo, "video.mp4")
+                                .send(event.getChannel());
+                    } catch (RuntimeException err) {
+                        showErrorMessage(err.getMessage(), event);
+                    }
+                } else {
+                    String errMsg = String.format("Video \"%s\" does not contain links for sharing", coubUrl);
+                    showErrorMessage(errMsg, event);
+                }
             }
         } finally {
             SettingsController.getInstance()
                     .getHttpClientsPool()
                     .returnClient(client);
+        }
+    }
+
+    private String parseCoubPage(@NotNull final SimpleHttpClient client,
+                                 @NotNull final String coubUrl) throws RuntimeException {
+        URI uri;
+        try {
+            uri = URI.create(coubUrl);
+        } catch (IllegalArgumentException uriParseErr) {
+            String errorMessage = String.format("Incorrect URL \"%s\": %s", coubUrl, uriParseErr.getMessage());
+            throw new RuntimeException(errorMessage);
+        }
+
+        if (!uri.getHost().equalsIgnoreCase(COUB_HOSTNAME)) {
+            String errorMessage = String.format("URL \"%s\" is not from coub.com", coubUrl);
+            throw new RuntimeException(errorMessage);
+        }
+
+        final HttpGet request = new HttpGet(uri);
+        String responseText;
+        try (CloseableHttpResponse httpResponse = client.execute(request)) {
+            final int statusCode = httpResponse.getStatusLine().getStatusCode();
+            if (statusCode != HttpStatus.SC_OK) {
+                String statusCodeErr = String.format("Unable to download page from \"%s\": HTTP %d", coubUrl, statusCode);
+                throw new RuntimeException(statusCodeErr);
+            }
+            final HttpEntity httpEntity = httpResponse.getEntity();
+            if (httpEntity == null) {
+                responseText = "";
+            } else {
+                try {
+                    responseText = EntityUtils.toString(httpEntity);
+                } finally {
+                    EntityUtils.consume(httpEntity);
+                }
+            }
+        } catch (IOException clientErr) {
+            String errMsg = String.format("Unable to download page from \"%s\": %s", coubUrl, clientErr.getMessage());
+            log.error(errMsg, clientErr);
+            throw new RuntimeException(errMsg);
+        }
+        if (CommonUtils.isTrStringEmpty(responseText)) {
+            String errMsg = String.format("Coub.com received empty page from \"%s\"", coubUrl);
+            throw new RuntimeException(errMsg);
+        }
+        final Document parsedDom = Jsoup.parse(responseText, coubUrl);
+        final Element coubPageCoubJson = parsedDom.getElementById("coubPageCoubJson");
+        if (coubPageCoubJson == null) {
+            String errMsg = String.format("Unable to find videos urls from page \"%s\"", coubUrl);
+            throw new RuntimeException(errMsg);
+        }
+        return coubPageCoubJson.outerHtml();
+    }
+
+    private byte[] mergeSeparatedSources(@NotNull final SimpleHttpClient client,
+                                         @NotNull final String mp4Video,
+                                         @NotNull final String mp4Audio,
+                                         @NotNull final String coubUrl) throws RuntimeException {
+        Path mp4VideoPath = null;
+        Path mp4AudioPath = null;
+        Path resultPath = null;
+        try {
+            mp4VideoPath = downloadCoubPart(client, mp4Video, coubUrl);
+            mp4AudioPath = downloadCoubPart(client, mp4Audio, coubUrl);
+            final FFMpegDuration videoDuration = FFMpegUtils.getMediaDuration(mp4VideoPath);
+            final FFMpegDuration audioDuration = FFMpegUtils.getMediaDuration(mp4AudioPath);
+            final FFMpegDuration targetDuration = videoDuration.getTotalMillis() < audioDuration.getTotalMillis()
+                    ? videoDuration : audioDuration;
+            resultPath = FFMpegUtils.mergeVideo(mp4VideoPath, mp4AudioPath, targetDuration);
+            return Files.readAllBytes(resultPath);
+        } catch (IOException err) {
+            String errMsg = String.format("Unable to convert video from page \"%s\"", coubUrl);
+            log.error(errMsg, err);
+            throw new RuntimeException(errMsg);
+        } finally {
+            removeTempFile(mp4AudioPath);
+            removeTempFile(mp4VideoPath);
+            removeTempFile(resultPath);
+        }
+    }
+
+    private Path downloadCoubPart(@NotNull final SimpleHttpClient client,
+                                  @NotNull final String partUrl,
+                                  @NotNull final String coubUrl) throws RuntimeException {
+        URI uri;
+        Path result;
+        try {
+            uri = new URI(partUrl);
+        } catch (URISyntaxException err) {
+            String uriErrMessage = String.format("Unable to parse URI media from \"%s\"", coubUrl);
+            log.error(uriErrMessage, err);
+            throw new RuntimeException(uriErrMessage);
+        }
+        final HttpGet mediaRequest = new HttpGet(uri);
+        try (CloseableHttpResponse httpResponse = client.execute(mediaRequest)) {
+            final int statusCode = httpResponse.getStatusLine().getStatusCode();
+            if (statusCode != HttpStatus.SC_OK) {
+                String statusCodeErr = String.format("Unable to grab media from \"%s\": %d", coubUrl, statusCode);
+                throw new RuntimeException(statusCodeErr);
+            }
+            final HttpEntity httpEntity = httpResponse.getEntity();
+            try {
+                try {
+                    result = CodeSourceUtils.getCodeSourceParent().resolve(Path.of(uri.getPath()).getFileName());
+                    try (BufferedOutputStream bufOut = new BufferedOutputStream(Files.newOutputStream(result))) {
+                        httpEntity.writeTo(bufOut);
+                    }
+                } catch (IOException fileSaveErr) {
+                    String saveErrMsg = String.format("Unable to save media from \"%s\"", coubUrl);
+                    log.error(saveErrMsg, fileSaveErr);
+                    throw new RuntimeException(saveErrMsg);
+                }
+            } finally {
+                EntityUtils.consume(httpEntity);
+            }
+        } catch (IOException err) {
+            String errMsg = String.format("Unable to save media part from \"%s\"", coubUrl);
+            log.error(errMsg, err);
+            throw new RuntimeException(errMsg);
+        }
+        try {
+            if (Files.size(result) == 0L) {
+                String zeroSizeErr = String.format("Coub.com received empty media part from url \"%s\"", coubUrl);
+                throw new RuntimeException(zeroSizeErr);
+            }
+        } catch (IOException err) {
+            String errMsg = String.format("Unable to fetch media part size from url \"%s\"", coubUrl);
+            log.error(errMsg, err);
+            throw new RuntimeException(errMsg);
+        }
+        return result;
+    }
+
+    private void removeTempFile(@Nullable final Path path) {
+        if (path != null) {
+            try {
+                Files.deleteIfExists(path);
+            } catch (IOException err) {
+                String errMsg = String.format("Unable to delete temporary file \"%s\": %s", path, err.getMessage());
+                log.error(errMsg, err);
+            }
         }
     }
 }
