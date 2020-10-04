@@ -278,10 +278,11 @@ class SchemaVersionCheckerSQLite {
                                 long authorId = nameValue.getKey();
                                 String description = nameValue.getValue();
                                 if (CommonUtils.isTrStringNotEmpty(description)) {
-                                    WtfEntry wtfEntry = WtfEntry.newBuilder()
-                                            .description(description)
-                                            .authorId(authorId)
-                                            .build();
+                                    WtfEntry wtfEntry = new WtfEntry();
+                                    wtfEntry.setServerId(serverId);
+                                    wtfEntry.setAuthorId(authorId);
+                                    wtfEntry.setDescription(description);
+                                    wtfEntry.setTargetId(userId);
                                     if (jsonWtfMap.getLastName().get() == authorId) {
                                         lastEntry = wtfEntry;
                                     }

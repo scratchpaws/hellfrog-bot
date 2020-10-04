@@ -60,6 +60,8 @@ class WtfAssignDAOImpl
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {
                     WtfEntry entry = extractEntry(resultSet);
+                    entry.setTargetId(userId);
+                    entry.setServerId(serverId);
                     if (log.isDebugEnabled()) {
                         log.debug(entry);
                     }
@@ -102,21 +104,21 @@ class WtfAssignDAOImpl
         }
         long createDate = resultSet.getLong(4);
         long updateDate = resultSet.getLong(5);
-        Instant date = Instant.ofEpochMilli(Math.max(createDate, updateDate));
-        return WtfEntry.newBuilder()
-                .authorId(authorId)
-                .description(description)
-                .uri(uri)
-                .date(date)
-                .build();
+        WtfEntry wtfEntry = new WtfEntry();
+        wtfEntry.setAuthorId(authorId);
+        wtfEntry.setDescription(description);
+        wtfEntry.setImageUri(uri != null ? uri.toString() : null);
+        wtfEntry.setCreateDate(Timestamp.from(Instant.ofEpochMilli(createDate)));
+        wtfEntry.setUpdateDate(Timestamp.from(Instant.ofEpochMilli(updateDate)));
+        return wtfEntry;
     }
 
     @Override
     public AddUpdateState addOrUpdate(long serverId, long userId, @NotNull WtfEntry wtfEntry) {
         String description = CommonUtils.isTrStringNotEmpty(wtfEntry.getDescription())
                 ? wtfEntry.getDescription() : null;
-        String url = wtfEntry.getUri() != null && CommonUtils.isTrStringNotEmpty(wtfEntry.getUri().toString())
-                ? wtfEntry.getUri().toString() : null;
+        String url = CommonUtils.isTrStringNotEmpty(wtfEntry.getImageUri())
+                ? wtfEntry.getImageUri() : null;
         Instant currentDate = Instant.now();
         long currentDateMillis = currentDate.toEpochMilli();
         long authorId = wtfEntry.getAuthorId();
@@ -136,7 +138,7 @@ class WtfAssignDAOImpl
             if (url == null) {
                 statement.setNull(2, Types.VARCHAR);
             } else {
-                statement.setString(2, wtfEntry.getUri().toString());
+                statement.setString(2, url);
             }
             statement.setLong(3, currentDateMillis);
             statement.setLong(4, serverId);
@@ -156,8 +158,16 @@ class WtfAssignDAOImpl
             return AddUpdateState.ERROR;
         }
         if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}\n" +
-                            "Param 5: {}\nParam 6: {}\nParam 7: {}",
+            log.debug("""
+                            Query:
+                            {}}
+                            Param 1: {}
+                            Param 2: {}
+                            Param 3: {}
+                            Param 4: {}
+                            Param 5: {}
+                            Param 6: {}
+                            Param 7: {}""",
                     insertEntryQuery, serverId, authorId, userId, description, url, currentDateMillis, currentDateMillis);
         }
         try (PreparedStatement statement = connection.prepareStatement(insertEntryQuery)) {

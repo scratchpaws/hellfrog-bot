@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,14 +80,16 @@ public class WtfAssignDAOTest {
 
     private boolean checkEquals(@Nullable WtfEntry first, @Nullable WtfEntry second) {
         if (first == null || second == null) return false;
+        boolean equalsServers = first.getServerId() == second.getServerId();
+        boolean equalsAuthors = first.getAuthorId() == second.getAuthorId();
+        boolean equalsTargets = first.getTargetId() == second.getTargetId();
         boolean equalsDescription = first.getDescription() == null && second.getDescription() == null
                 || (first.getDescription() != null && second.getDescription() != null
                 && first.getDescription().equals(second.getDescription()));
-        boolean equalsURI = first.getUri() == null && second.getUri() == null
-                || (first.getUri() != null && second.getUri() != null
-                && first.getUri().equals(second.getUri()));
-        boolean equalsAuthors = first.getAuthorId() == second.getAuthorId();
-        return equalsDescription && equalsURI && equalsAuthors;
+        boolean equalsURI = first.getImageUri() == null && second.getImageUri() == null
+                || (first.getImageUri() != null && second.getImageUri() != null
+                && first.getImageUri().equals(second.getImageUri()));
+        return equalsDescription && equalsURI && equalsAuthors && equalsTargets && equalsServers;
     }
 
     private boolean checkPresent(@NotNull WtfEntry first, @NotNull List<WtfEntry> list) {
@@ -109,22 +112,23 @@ public class WtfAssignDAOTest {
         if (tlr.nextBoolean() || description == null) {
             uri = TestUtils.randomURI();
         }
-        return WtfEntry.newBuilder()
-                .description(description)
-                .uri(uri)
-                .authorId(author)
-                .date(Instant.now())
-                .build();
+        WtfEntry wtfEntry = new WtfEntry();
+        wtfEntry.setDescription(description);
+        wtfEntry.setAuthorId(author);
+        Timestamp now = Timestamp.from(Instant.now());
+        wtfEntry.setCreateDate(now);
+        wtfEntry.setUpdateDate(now);
+        wtfEntry.setImageUri(uri != null ? uri.toString() : null);
+        return wtfEntry;
     }
 
     @NotNull
     static WtfEntry upgradeEntry(@NotNull WtfEntry entry) {
         WtfEntry update = buildEntry(entry.getAuthorId());
-        return entry.toBuilder()
-                .description(update.getDescription())
-                .uri(update.getUri())
-                .date(update.getDate())
-                .build();
+        update.setCreateDate(entry.getCreateDate());
+        update.setTargetId(entry.getTargetId());
+        update.setServerId(entry.getServerId());
+        return update;
     }
 
     static class WtfMap {
@@ -140,13 +144,16 @@ public class WtfAssignDAOTest {
 
     @NotNull
     @UnmodifiableView
-    private static List<WtfMap> generateWtfMaps(@NotNull List<Long> members,
+    private static List<WtfMap> generateWtfMaps(final long serverId,
+                                                @NotNull List<Long> members,
                                                 @NotNull List<Long> authors) {
         List<WtfMap> result = new ArrayList<>();
         for (long author : authors) {
             List<Long> targets = TestUtils.randomSublist(members, MIN_MEMBERS_COUNT, members.size());
             for (long member : targets) {
                 WtfMap wtfMap = new WtfMap(member, buildEntry(author));
+                wtfMap.wtfEntry.setServerId(serverId);
+                wtfMap.wtfEntry.setTargetId(member);
                 result.add(wtfMap);
             }
         }
@@ -170,7 +177,7 @@ public class WtfAssignDAOTest {
         final long serverId = TestUtils.randomDiscordEntityId();
         final List<Long> members = TestUtils.randomDiscordEntitiesIds(MIN_MEMBERS_COUNT, MAX_MEMBERS_COUNT);
         final List<Long> authors = TestUtils.randomSublist(members, 1, MAX_AUTHORS);
-        final List<WtfMap> firstMap = generateWtfMaps(members, authors);
+        final List<WtfMap> firstMap = generateWtfMaps(serverId, members, authors);
         final List<WtfMap> firstUpgrade = generateUpdate(firstMap);
         final List<WtfMap> secondUpgrade = generateUpdate(firstMap);
         final List<WtfMap> deletion = TestUtils.randomSublist(firstMap, firstMap.size() > 0 ? 1 : 0, firstMap.size());
