@@ -5,19 +5,20 @@ import hellfrog.common.ResourcesLoader;
 import hellfrog.settings.db.*;
 import hellfrog.settings.db.entity.Vote;
 import hellfrog.settings.db.entity.VotePoint;
+import hellfrog.settings.db.entity.VoteRoleFilter;
 import hellfrog.settings.db.entity.WtfEntry;
 import hellfrog.settings.oldjson.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 class SchemaVersionCheckerSQLite {
 
@@ -213,28 +214,41 @@ class SchemaVersionCheckerSQLite {
                         for (JSONActiveVote legacyVote : legacyVotes) {
                             sqlLog.info("Vote {}: {}", legacyVote.getId(), legacyVote.getReadableVoteText());
 
-                            Vote vote = new Vote()
-                                    .setServerId(serverId)
-                                    .setTextChatId(legacyVote.getTextChatId())
-                                    .setFinishTime(legacyVote.getEndDate() > 0L
-                                            ? Instant.ofEpochSecond(legacyVote.getEndDate())
-                                            : null)
-                                    .setVoteText(legacyVote.getReadableVoteText())
-                                    .setHasTimer(legacyVote.isHasTimer())
-                                    .setExceptional(legacyVote.isExceptionalVote())
-                                    .setHasDefault(legacyVote.isWithDefaultPoint())
-                                    .setWinThreshold(legacyVote.getWinThreshold())
-                                    .setRolesFilter(legacyVote.getRolesFilter());
+                            Vote vote = new Vote();
+                            vote.setServerId(serverId);
+                            vote.setTextChatId(legacyVote.getTextChatId());
+                            vote.setFinishTime(legacyVote.getEndDate() > 0L
+                                    ? Timestamp.from(Instant.ofEpochSecond(legacyVote.getEndDate()))
+                                    : null);
+                            vote.setVoteText(legacyVote.getReadableVoteText());
+                            vote.setHasTimer(legacyVote.isHasTimer());
+                            vote.setExceptional(legacyVote.isExceptionalVote());
+                            vote.setHasDefault(legacyVote.isWithDefaultPoint());
+                            vote.setWinThreshold(legacyVote.getWinThreshold());
 
-                            List<VotePoint> votePoints = vote.getVotePoints();
+                            Set<VoteRoleFilter> roleFilters = legacyVote.getRolesFilter().stream()
+                                    .map(old -> {
+                                        VoteRoleFilter voteRoleFilter = new VoteRoleFilter();
+                                        voteRoleFilter.setCreateDate(vote.getCreateDate());
+                                        voteRoleFilter.setMessageId(vote.getMessageId());
+                                        voteRoleFilter.setRoleId(old);
+                                        voteRoleFilter.setUpdateDate(vote.getUpdateDate());
+                                        voteRoleFilter.setVote(vote);
+                                        return voteRoleFilter;
+                                    }).collect(Collectors.toSet());
+                            vote.setRolesFilter(roleFilters);
+
+                            Set<VotePoint> votePoints = new HashSet<>();
                             for (JSONVotePoint legacyVotePoint : legacyVote.getVotePoints()) {
-                                VotePoint votePoint = new VotePoint()
-                                        .setPointText(legacyVotePoint.getPointText())
-                                        .setUnicodeEmoji(legacyVotePoint.getEmoji())
-                                        .setCustomEmojiId(legacyVotePoint.getCustomEmoji() != null
-                                                ? legacyVotePoint.getCustomEmoji() : 0L);
+                                VotePoint votePoint = new VotePoint();
+                                votePoint.setVote(vote);
+                                votePoint.setPointText(legacyVotePoint.getPointText());
+                                votePoint.setUnicodeEmoji(legacyVotePoint.getEmoji());
+                                votePoint.setCustomEmojiId(legacyVotePoint.getCustomEmoji() != null
+                                        ? legacyVotePoint.getCustomEmoji() : 0L);
                                 votePoints.add(votePoint);
                             }
+                            vote.setVotePoints(votePoints);
 
                             sqlLog.info("Original vote record: {}", legacyVote.toString());
                             try {

@@ -3,17 +3,17 @@ package hellfrog.settings.db;
 import hellfrog.TestUtils;
 import hellfrog.settings.db.entity.Vote;
 import hellfrog.settings.db.entity.VotePoint;
+import hellfrog.settings.db.entity.VoteRoleFilter;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 public class VotesDAOTest {
 
@@ -23,24 +23,24 @@ public class VotesDAOTest {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         List<Vote> testVotesList = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            Vote testVote = new Vote()
-                    .setServerId(TestUtils.randomDiscordEntityId())
-                    .setTextChatId(TestUtils.randomDiscordEntityId())
-                    .setWinThreshold(tlr.nextLong(0L, 10L))
-                    .setHasDefault(tlr.nextBoolean())
-                    .setExceptional(tlr.nextBoolean())
-                    .setVoteText(TestUtils.randomStringName(1000));
+            Vote testVote = new Vote();
+            testVote.setServerId(TestUtils.randomDiscordEntityId());
+            testVote.setTextChatId(TestUtils.randomDiscordEntityId());
+            testVote.setWinThreshold(tlr.nextLong(0L, 10L));
+            testVote.setHasDefault(tlr.nextBoolean());
+            testVote.setExceptional(tlr.nextBoolean());
+            testVote.setVoteText(TestUtils.randomStringName(1000));
             if (tlr.nextBoolean()) {
-                testVote.setHasTimer(true)
-                        .setFinishTime(Instant.now().plus(tlr.nextLong(1L, 10L),
-                                ChronoUnit.MINUTES));
+                testVote.setHasTimer(true);
+                testVote.setFinishTime(Timestamp.from(Instant.now().plus(tlr.nextLong(1L, 10L),
+                        ChronoUnit.MINUTES)));
             }
 
-            List<VotePoint> votePoints = testVote.getVotePoints();
+            Set<VotePoint> votePoints = new HashSet<>();
             int pointsCount = tlr.nextInt(1, 11);
             for (int j = 0; j < pointsCount; j++) {
-                VotePoint votePoint = new VotePoint()
-                        .setPointText(TestUtils.randomStringName(20));
+                VotePoint votePoint = new VotePoint();
+                votePoint.setPointText(TestUtils.randomStringName(20));
                 if (tlr.nextBoolean()) {
                     votePoint.setUnicodeEmoji(TestUtils.randomStringName(2));
                 } else {
@@ -48,13 +48,22 @@ public class VotesDAOTest {
                 }
                 votePoints.add(votePoint);
             }
+            testVote.setVotePoints(votePoints);
+
+            int filtersCount = tlr.nextInt(0, 4);
+            if (filtersCount > 0) {
+                Set<VoteRoleFilter> roleFilters = TestUtils.randomDiscordEntitiesIds(0, filtersCount).stream()
+                        .map(roleId -> {
+                            VoteRoleFilter voteRoleFilter = new VoteRoleFilter();
+                            voteRoleFilter.setRoleId(roleId);
+                            return voteRoleFilter;
+                        }).collect(Collectors.toSet());
+                testVote.setRolesFilter(roleFilters);
+            } else {
+                testVote.setRolesFilter(Collections.emptySet());
+            }
 
             testVotesList.add(testVote);
-
-            List<Long> rolesFilter = testVote.getRolesFilter();
-            int filtersCount = tlr.nextInt(0, 4);
-            if (filtersCount > 0)
-                rolesFilter.addAll(TestUtils.randomDiscordEntitiesIds(0, filtersCount));
         }
 
         MainDBController.destroyTestDatabase();
@@ -94,8 +103,8 @@ public class VotesDAOTest {
             for (Vote testVote : testVotesList) {
                 Vote vote = votesDAO.getVoteById(testVote.getId());
                 Assertions.assertNotNull(vote);
-                if (vote.isHasTimer() && vote.getFinishTime().isPresent()) {
-                    Instant past = vote.getFinishTime().get().minus(1L, ChronoUnit.SECONDS);
+                if (vote.isHasTimer() && vote.getFinishTime() != null) {
+                    Instant past = vote.getFinishTime().toInstant().minus(1L, ChronoUnit.SECONDS);
                     List<Vote> expired = votesDAO.getAllExpired(testVote.getServerId(), past);
                     Assertions.assertFalse(expired.isEmpty());
                     // check what expired vote exist into getAllExpired() method result
@@ -115,7 +124,10 @@ public class VotesDAOTest {
                 if (!testVote.getRolesFilter().isEmpty()) {
                     List<Long> allowedRoles = votesDAO.getAllowedRoles(testVote.getMessageId());
                     Assertions.assertFalse(allowedRoles.isEmpty());
-                    for (long roleId : testVote.getRolesFilter()) {
+                    for (long roleId : testVote.getRolesFilter()
+                            .stream()
+                            .map(VoteRoleFilter::getRoleId)
+                            .collect(Collectors.toUnmodifiableList())) {
                         Assertions.assertTrue(allowedRoles.contains(roleId));
                     }
                 }
@@ -139,8 +151,8 @@ public class VotesDAOTest {
         if (first == second) {
             return;
         }
-        long finishEpochSeconds = first.getFinishTime().map(Instant::getEpochSecond).orElse(-1L);
-        long otherFinishEpochSeconds = second.getFinishTime().map(Instant::getEpochSecond).orElse(-1L);
+        long finishEpochSeconds = first.getFinishTime() != null ? first.getFinishTime().toInstant().getEpochSecond() : -1L;
+        long otherFinishEpochSeconds = second.getFinishTime() != null ? second.getFinishTime().toInstant().getEpochSecond() : -1L;
         Assertions.assertEquals(finishEpochSeconds, otherFinishEpochSeconds);
         Assertions.assertEquals(first.getId(), second.getId());
         Assertions.assertEquals(first.getServerId(), second.getServerId());
@@ -153,8 +165,12 @@ public class VotesDAOTest {
         Assertions.assertEquals(finishEpochSeconds, otherFinishEpochSeconds);
         Assertions.assertEquals(first.getVotePoints().size(), second.getVotePoints().size());
         Assertions.assertEquals(first.getVoteText(), second.getVoteText());
-        List<Long> copyOfRolesFilterFirst = new ArrayList<>(first.getRolesFilter());
-        List<Long> copyOfRilesFilterSecond = new ArrayList<>(second.getRolesFilter());
+        List<Long> copyOfRolesFilterFirst = first.getRolesFilter() != null ? first.getRolesFilter().stream()
+                .map(VoteRoleFilter::getRoleId)
+                .collect(Collectors.toList()) : new ArrayList<>();
+        List<Long> copyOfRilesFilterSecond = second.getRolesFilter() != null ? second.getRolesFilter().stream()
+                .map(VoteRoleFilter::getRoleId)
+                .collect(Collectors.toList()) : new ArrayList<>();
         Collections.sort(copyOfRolesFilterFirst);
         Collections.sort(copyOfRilesFilterSecond);
         Assertions.assertEquals(copyOfRolesFilterFirst, copyOfRilesFilterSecond);
@@ -177,10 +193,10 @@ public class VotesDAOTest {
         if (first == second) {
             return true;
         }
-        return Objects.equals(first.getPointText().orElse(null),
-                second.getPointText().orElse(null))
-                && Objects.equals(first.getUnicodeEmoji().orElse(null),
-                second.getUnicodeEmoji().orElse(null))
+        return Objects.equals(first.getPointText(),
+                second.getPointText())
+                && Objects.equals(first.getUnicodeEmoji(),
+                second.getUnicodeEmoji())
                 && first.getCustomEmojiId() == second.getCustomEmojiId();
     }
 }

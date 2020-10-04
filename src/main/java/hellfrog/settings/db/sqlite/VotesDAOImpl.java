@@ -6,6 +6,7 @@ import hellfrog.settings.db.VoteCreateException;
 import hellfrog.settings.db.VotesDAO;
 import hellfrog.settings.db.entity.Vote;
 import hellfrog.settings.db.entity.VotePoint;
+import hellfrog.settings.db.entity.VoteRoleFilter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -14,9 +15,7 @@ import org.jetbrains.annotations.UnmodifiableView;
 
 import java.sql.*;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * DAO for working with voting in the database.
@@ -197,18 +196,29 @@ class VotesDAOImpl
         long serverId = vote.getServerId();
         long textChatId = vote.getTextChatId();
         long messageId = 0L;
-        long finishTime = vote.getFinishTime().map(Instant::getEpochSecond).orElse(0L);
-        String voteText = vote.getVoteText().orElse(" ");
+        long finishTime = vote.getFinishTime() != null ? vote.getFinishTime().toInstant().getEpochSecond() : 0L;
+        String voteText = vote.getVoteText() != null ? vote.getVoteText() : " ";
         long hasTimer = vote.isHasTimer() ? 1L : 0L;
         long exceptionalVote = vote.isExceptional() ? 1L : 0L;
         long hasDefault = vote.isHasDefault() ? 1L : 0L;
         long winThreshold = vote.getWinThreshold();
-        List<Long> rolesFilter = vote.getRolesFilter() == null ? Collections.emptyList() : vote.getRolesFilter();
+        Set<VoteRoleFilter> rolesFilter = vote.getRolesFilter() == null ? Collections.emptySet() : vote.getRolesFilter();
         long currentDateTime = Instant.now().getEpochSecond();
         if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}\n" +
-                            "Param 5: {}\nParam 6: {}\nParam 7: {}\nParam 8: {}\nParam 9: {}\n" +
-                            "Param 10: {}\nParam 11: {}", insertVoteQuery, serverId,
+            log.debug("""
+                            Query:
+                            {}
+                            Param 1: {}
+                            Param 2: {}
+                            Param 3: {}
+                            Param 4: {}
+                            Param 5: {}
+                            Param 6: {}
+                            Param 7: {}
+                            Param 8: {}
+                            Param 9: {}
+                            Param 10: {}
+                            Param 11: {}""", insertVoteQuery, serverId,
                     textChatId, messageId, finishTime, voteText, hasTimer, exceptionalVote, hasDefault,
                     winThreshold, currentDateTime, currentDateTime);
         }
@@ -258,13 +268,20 @@ class VotesDAOImpl
             throw new VoteCreateException("database error");
         }
         for (VotePoint votePoint : vote.getVotePoints()) {
-            String pointText = votePoint.getPointText().orElse(" ");
-            String emojiText = votePoint.getUnicodeEmoji().orElse(" ");
+            String pointText = votePoint.getPointText() != null ? votePoint.getPointText() : " ";
+            String emojiText = votePoint.getUnicodeEmoji() != null ? votePoint.getUnicodeEmoji() : " ";
             long customEmojiId = votePoint.getCustomEmojiId();
             currentDateTime = Instant.now().getEpochSecond();
             if (log.isDebugEnabled()) {
-                log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}" +
-                                "\nParam 5: {}\nParam 6: {}", insertVotePointQuery, voteId, pointText,
+                log.debug("""
+                                Query:
+                                {}
+                                Param 1: {}
+                                Param 2: {}
+                                Param 3: {}
+                                Param 4: {}
+                                Param 5: {}
+                                Param 6: {}""", insertVotePointQuery, voteId, pointText,
                         emojiText, customEmojiId, currentDateTime, currentDateTime);
             }
             try (PreparedStatement statement = connection.prepareStatement(insertVotePointQuery)) {
@@ -284,16 +301,23 @@ class VotesDAOImpl
                 throw new VoteCreateException("database error", err);
             }
         }
-        for (long roleId : rolesFilter) {
+        for (VoteRoleFilter voteRoleFilter : rolesFilter) {
             currentDateTime = Instant.now().getEpochSecond();
             try (PreparedStatement statement = connection.prepareStatement(insertVoteRolesQuery)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}\nParam 4: {}\nParam 5: {}",
-                            insertVoteRolesQuery, voteId, messageId, roleId, currentDateTime, currentDateTime);
+                    log.debug("""
+                                    Query:
+                                    {}
+                                    Param 1: {}
+                                    Param 2: {}
+                                    Param 3: {}
+                                    Param 4: {}
+                                    Param 5: {}""",
+                            insertVoteRolesQuery, voteId, messageId, voteRoleFilter.getRoleId(), currentDateTime, currentDateTime);
                 }
                 statement.setLong(1, voteId);
                 statement.setLong(2, messageId);
-                statement.setLong(3, roleId);
+                statement.setLong(3, voteRoleFilter.getRoleId());
                 statement.setLong(4, currentDateTime);
                 statement.setLong(5, currentDateTime);
                 int count = statement.executeUpdate();
@@ -346,7 +370,12 @@ class VotesDAOImpl
         }
         long currentDateTime = Instant.now().getEpochSecond();
         if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}", activateVoteQuery,
+            log.debug("""
+                            Query:
+                            {}
+                            Param 1: {}
+                            Param 2: {}
+                            Param 3: {}""", activateVoteQuery,
                     vote.getMessageId(), currentDateTime, vote.getId());
         }
         try (PreparedStatement statement = connection.prepareStatement(activateVoteQuery)) {
@@ -369,7 +398,12 @@ class VotesDAOImpl
             throw new VoteCreateException("database error");
         }
         if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}\nParam 1: {}\nParam 2: {}\nParam 3: {}",
+            log.debug("""
+                            Query:
+                            {}
+                            Param 1: {}
+                            Param 2: {}
+                            Param 3: {}""",
                     setVoteRolesMessageIdsQuery, vote.getMessageId(), currentDateTime, vote.getId());
         }
         try (PreparedStatement statement = connection.prepareStatement(setVoteRolesMessageIdsQuery)) {
@@ -432,44 +466,48 @@ class VotesDAOImpl
             long voteId = resultSet.getLong(Vote.Columns.ID.selectColumn);
             if (currentVote == null || voteId != currentVote.getId()) {
                 currentVote = new Vote();
-                currentVote.setId(voteId)
-                        .setServerId(resultSet.getLong(Vote.Columns.SERVER_ID.selectColumn))
-                        .setTextChatId(resultSet.getLong(Vote.Columns.TEXT_CHAT_ID.selectColumn))
-                        .setMessageId(resultSet.getLong(Vote.Columns.MESSAGE_ID.selectColumn))
-                        .setFinishTime(resultSet.getLong(Vote.Columns.FINISH_DATE.selectColumn) > 0
-                                ? Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.FINISH_DATE.selectColumn))
-                                : null)
-                        .setVoteText(CommonUtils.isTrStringNotEmpty(resultSet.getString(Vote.Columns.VOTE_TEXT.selectColumn))
-                                ? resultSet.getString(Vote.Columns.VOTE_TEXT.selectColumn)
-                                : null)
-                        .setHasTimer(resultSet.getLong(Vote.Columns.HAS_TIMER.selectColumn) > 0)
-                        .setExceptional(resultSet.getLong(Vote.Columns.IS_EXCEPTIONAL.selectColumn) > 0)
-                        .setHasDefault(resultSet.getLong(Vote.Columns.HAS_DEFAULT.selectColumn) > 0)
-                        .setWinThreshold(resultSet.getLong(Vote.Columns.WIN_THRESHOLD.selectColumn))
-                        .setCreateDate(resultSet.getLong(Vote.Columns.CREATE_DATE.selectColumn) > 0
-                                ? Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.CREATE_DATE.selectColumn))
-                                : null)
-                        .setUpdateDate(resultSet.getLong(Vote.Columns.UPDATE_DATE.selectColumn) > 0
-                                ? Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.UPDATE_DATE.selectColumn))
-                                : null);
+                currentVote.setId(voteId);
+                currentVote.setServerId(resultSet.getLong(Vote.Columns.SERVER_ID.selectColumn));
+                currentVote.setTextChatId(resultSet.getLong(Vote.Columns.TEXT_CHAT_ID.selectColumn));
+                currentVote.setMessageId(resultSet.getLong(Vote.Columns.MESSAGE_ID.selectColumn));
+                currentVote.setFinishTime(resultSet.getLong(Vote.Columns.FINISH_DATE.selectColumn) > 0
+                        ? Timestamp.from(Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.FINISH_DATE.selectColumn)))
+                        : null);
+                currentVote.setVoteText(CommonUtils.isTrStringNotEmpty(resultSet.getString(Vote.Columns.VOTE_TEXT.selectColumn))
+                        ? resultSet.getString(Vote.Columns.VOTE_TEXT.selectColumn)
+                        : " ");
+                currentVote.setHasTimer(resultSet.getLong(Vote.Columns.HAS_TIMER.selectColumn) > 0);
+                currentVote.setExceptional(resultSet.getLong(Vote.Columns.IS_EXCEPTIONAL.selectColumn) > 0);
+                currentVote.setHasDefault(resultSet.getLong(Vote.Columns.HAS_DEFAULT.selectColumn) > 0);
+                currentVote.setWinThreshold(resultSet.getLong(Vote.Columns.WIN_THRESHOLD.selectColumn));
+                currentVote.setCreateDate(resultSet.getLong(Vote.Columns.CREATE_DATE.selectColumn) > 0
+                        ? Timestamp.from(Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.CREATE_DATE.selectColumn)))
+                        : null);
+                currentVote.setUpdateDate(resultSet.getLong(Vote.Columns.UPDATE_DATE.selectColumn) > 0
+                        ? Timestamp.from(Instant.ofEpochSecond(resultSet.getLong(Vote.Columns.UPDATE_DATE.selectColumn)))
+                        : null);
                 result.add(currentVote);
             }
             if (resultSet.getString(VotePoint.Columns.ID.selectColumn) == null) {
                 continue;
             }
-            VotePoint votePoint = new VotePoint()
-                    .setId(resultSet.getLong(VotePoint.Columns.ID.selectColumn));
-            votePoint.setPointText(resultSet.getString(VotePoint.Columns.POINT_TEXT.selectColumn))
-                    .setUnicodeEmoji(CommonUtils.isTrStringNotEmpty(resultSet.getString(VotePoint.Columns.UNICODE_EMOJI.selectColumn))
-                            ? resultSet.getString(VotePoint.Columns.UNICODE_EMOJI.selectColumn)
-                            : null)
-                    .setCustomEmojiId(resultSet.getLong(VotePoint.Columns.CUSTOM_EMOJI_ID.selectColumn))
-                    .setCreateDate(resultSet.getLong(VotePoint.Columns.CREATE_DATE.selectColumn) > 0
-                            ? Instant.ofEpochSecond(resultSet.getLong(VotePoint.Columns.CREATE_DATE.selectColumn))
-                            : null)
-                    .setUpdateDate(resultSet.getLong(VotePoint.Columns.UPDATE_DATE.selectColumn) > 0
-                            ? Instant.ofEpochSecond(resultSet.getLong(VotePoint.Columns.UPDATE_DATE.selectColumn))
-                            : null);
+            VotePoint votePoint = new VotePoint();
+            votePoint.setVote(currentVote);
+            votePoint.setId(resultSet.getLong(VotePoint.Columns.ID.selectColumn));
+            votePoint.setPointText(resultSet.getString(VotePoint.Columns.POINT_TEXT.selectColumn));
+            votePoint.setUnicodeEmoji(CommonUtils.isTrStringNotEmpty(resultSet.getString(VotePoint.Columns.UNICODE_EMOJI.selectColumn))
+                    ? resultSet.getString(VotePoint.Columns.UNICODE_EMOJI.selectColumn)
+                    : null);
+            votePoint.setCustomEmojiId(resultSet.getLong(VotePoint.Columns.CUSTOM_EMOJI_ID.selectColumn));
+            votePoint.setCreateDate(resultSet.getLong(VotePoint.Columns.CREATE_DATE.selectColumn) > 0
+                    ? Timestamp.from(Instant.ofEpochSecond(resultSet.getLong(VotePoint.Columns.CREATE_DATE.selectColumn)))
+                    : null);
+            votePoint.setUpdateDate(resultSet.getLong(VotePoint.Columns.UPDATE_DATE.selectColumn) > 0
+                    ? Timestamp.from(Instant.ofEpochSecond(resultSet.getLong(VotePoint.Columns.UPDATE_DATE.selectColumn)))
+                    : null);
+            if (currentVote.getVotePoints() == null) {
+                currentVote.setVotePoints(new HashSet<>());
+            }
             currentVote.getVotePoints().add(votePoint);
         }
         for (Vote vote : result) {
@@ -479,11 +517,16 @@ class VotesDAOImpl
                     log.debug("Query:\n{}\nParam 1: {}", getVoteRolesByVoteIdQuery, voteId);
                 }
                 statement.setLong(1, voteId);
-                List<Long> allowedRoles = new ArrayList<>();
+                Set<VoteRoleFilter> allowedRoles = new HashSet<>();
                 try (ResultSet rs = statement.executeQuery()) {
                     while (rs.next()) {
+                        VoteRoleFilter voteRoleFilter = new VoteRoleFilter();
+                        voteRoleFilter.setVote(vote);
                         long roleId = rs.getLong(1);
-                        allowedRoles.add(roleId);
+                        voteRoleFilter.setRoleId(roleId);
+                        voteRoleFilter.setMessageId(vote.getMessageId());
+                        voteRoleFilter.setCreateDate(vote.getCreateDate());
+                        allowedRoles.add(voteRoleFilter);
                     }
                 }
                 vote.setRolesFilter(allowedRoles);

@@ -97,6 +97,10 @@ public class CoubGrabberScenario
                 showErrorMessage(err.getMessage(), event);
                 return;
             }
+            final String description = String.format("<%s> (from %s)", coubUrl,
+                    event.getMessageAuthor().asUser().map(user ->
+                            event.getServer().map(user::getDisplayName).orElse(user.getName()))
+                            .orElse("<unknown>"));
             boolean found = false;
             String mp4Video = null;
             String mp4Audio = null;
@@ -113,6 +117,7 @@ public class CoubGrabberScenario
                             return;
                         }
                         new MessageBuilder()
+                                .append(description)
                                 .addAttachment(videoFile, "video.mp4")
                                 .send(event.getChannel());
                     } catch (IOException err) {
@@ -142,6 +147,7 @@ public class CoubGrabberScenario
                             return;
                         }
                         new MessageBuilder()
+                                .append(description)
                                 .addAttachment(mergedVideo, "video.mp4")
                                 .send(event.getChannel());
                     } catch (RuntimeException err) {

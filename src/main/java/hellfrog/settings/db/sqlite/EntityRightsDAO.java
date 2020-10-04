@@ -3,6 +3,7 @@ package hellfrog.settings.db.sqlite;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.FromTextFile;
 import hellfrog.common.ResourcesLoader;
+import hellfrog.settings.db.RightsDAO;
 import hellfrog.settings.db.RoleRightsDAO;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,7 +31,7 @@ import java.util.List;
  * </p>
  */
 public abstract class EntityRightsDAO
-        implements RoleRightsDAO {
+        implements RightsDAO {
 
     private final Logger log;
     private final Connection connection;
