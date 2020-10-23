@@ -49,7 +49,10 @@ public class ReactReaction {
         Optional<CustomEmoji> mayBeCustomEmoji = received.asCustomEmoji();
         if (mayBeCustomEmoji.isEmpty()) return;
 
-        User user = event.getUser();
+        Optional<User> mayBeUser = event.getUser();
+        if (mayBeUser.isEmpty())
+            return;
+        User user = mayBeUser.get();
         if (user.isYourself() || user.isBot())
             return;
 
