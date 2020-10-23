@@ -29,12 +29,27 @@ public class Loader {
 
         final SettingsController settingsController = SettingsController.getInstance();
         final EventsListener eventsListener = new EventsListener();
-        BotCommand.all(); // заранее инициируем поиск и инстантинацию классов команд
-        MsgCreateReaction.all();
-        Scenario.all();
+        for (BotCommand cmd : BotCommand.all()) { // заранее инициируем поиск и инстантинацию классов команд
+            if (log.isDebugEnabled()) {
+                log.debug(cmd.getClass());
+            }
+        }
+        for (MsgCreateReaction react : MsgCreateReaction.all()) {
+            if (log.isDebugEnabled()) {
+                log.debug(react.getClass());
+            }
+        }
+        for (Scenario scene : Scenario.all()) {
+            if (log.isDebugEnabled()) {
+                log.debug(scene.getClass());
+            }
+        }
 
         new DiscordApiBuilder()
                 .setToken(settingsController.getApiKey())
+                .setAllIntents()
+                .setWaitForUsersOnStartup(true)
+                .setWaitForServersOnStartup(true)
                 .login()
                 .thenAccept(api -> {
                     api.addMessageCreateListener(eventsListener);
