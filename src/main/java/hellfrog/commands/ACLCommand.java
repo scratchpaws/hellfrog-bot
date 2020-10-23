@@ -169,8 +169,7 @@ public abstract class ACLCommand {
     private void resolveMessageEmbedByRights(@NotNull String textMessage,
                                              @NotNull SingleReactionEvent event,
                                              int type) {
-        User user = event.getUser();
-        resolveMessageEmbedByRights(textMessage, event, user, type);
+        event.getUser().ifPresent(user -> resolveMessageEmbedByRights(textMessage, event, user, type));
     }
 
     private void resolveMessageEmbedByRights(@NotNull String textMessage,
@@ -219,16 +218,11 @@ public abstract class ACLCommand {
         if (isTargetLimited) {
             return;
         }
-        Color messageColor = Color.BLACK;
-        switch (type) {
-            case ERROR_MESSAGE:
-                messageColor = Color.RED;
-                break;
-
-            case INFO_MESSAGE:
-                messageColor = Color.CYAN;
-                break;
-        }
+        Color messageColor = switch (type) {
+            case ERROR_MESSAGE -> Color.RED;
+            case INFO_MESSAGE -> Color.CYAN;
+            default -> Color.BLACK;
+        };
         User yourself = SettingsController.getInstance().getDiscordApi().getYourself();
         try {
             new MessageBuilder()

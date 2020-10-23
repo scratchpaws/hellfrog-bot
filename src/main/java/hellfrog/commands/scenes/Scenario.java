@@ -353,32 +353,36 @@ public abstract class Scenario
         super.updateLastUsage();
         boolean isAddReaction = event instanceof ReactionAddEvent;
         boolean isBotOwner = canExecuteGlobalCommand(event);
-        User user = event.getUser();
+        Optional<User> mayBeUser = event.getUser();
         boolean doRollback = true;
+        if (mayBeUser.isPresent()) {
 
-        Optional<ServerTextChannel> mayBeServerChannel = event.getServerTextChannel();
-        if (mayBeServerChannel.isPresent()) {
-            ServerTextChannel serverTextChannel = mayBeServerChannel.get();
-            Server server = serverTextChannel.getServer();
-            if (!canExecuteServerCommand(event, server)) {
-                dropPreviousStateEmoji(sessionState);
-                showAccessDeniedServerMessage(event);
-                if (isAddReaction) {
-                    ((ReactionAddEvent) event).removeReaction();
-                }
-                doRollback = false;
-            } else {
-                if (serverReactionStep(isAddReaction, event, server, serverTextChannel,
-                        user, sessionState, isBotOwner)) {
+            User user = mayBeUser.get();
+
+            Optional<ServerTextChannel> mayBeServerChannel = event.getServerTextChannel();
+            if (mayBeServerChannel.isPresent()) {
+                ServerTextChannel serverTextChannel = mayBeServerChannel.get();
+                Server server = serverTextChannel.getServer();
+                if (!canExecuteServerCommand(event, server)) {
+                    dropPreviousStateEmoji(sessionState);
+                    showAccessDeniedServerMessage(event);
+                    if (isAddReaction) {
+                        ((ReactionAddEvent) event).removeReaction();
+                    }
                     doRollback = false;
+                } else {
+                    if (serverReactionStep(isAddReaction, event, server, serverTextChannel,
+                            user, sessionState, isBotOwner)) {
+                        doRollback = false;
+                    }
                 }
             }
-        }
-        Optional<PrivateChannel> mayBePrivateChannel = event.getPrivateChannel();
-        if (mayBePrivateChannel.isPresent()) {
-            PrivateChannel privateChannel = mayBePrivateChannel.get();
-            if (privateReactionStep(isAddReaction, event, privateChannel, user, sessionState, isBotOwner)) {
-                doRollback = false;
+            Optional<PrivateChannel> mayBePrivateChannel = event.getPrivateChannel();
+            if (mayBePrivateChannel.isPresent()) {
+                PrivateChannel privateChannel = mayBePrivateChannel.get();
+                if (privateReactionStep(isAddReaction, event, privateChannel, user, sessionState, isBotOwner)) {
+                    doRollback = false;
+                }
             }
         }
 
@@ -621,7 +625,7 @@ public abstract class Scenario
      * @return соответствие
      */
     protected static boolean equalsUnicodeReaction(@NotNull SingleReactionEvent event,
-                                            @NotNull String unicodeEmoji) {
+                                                   @NotNull String unicodeEmoji) {
         return event.getEmoji().asUnicodeEmoji()
                 .map(unicodeEmoji::equals)
                 .orElse(false);
@@ -637,7 +641,7 @@ public abstract class Scenario
      */
     protected boolean equalsUnicodeReactions(@NotNull SingleReactionEvent event,
                                              @NotNull String firstEmoji, @NotNull String secondEmoji) {
-        return this.equalsUnicodeReaction(event, firstEmoji)
-                || this.equalsUnicodeReaction(event, secondEmoji);
+        return equalsUnicodeReaction(event, firstEmoji)
+                || equalsUnicodeReaction(event, secondEmoji);
     }
 }
