@@ -4,7 +4,6 @@ import hellfrog.common.CommonUtils;
 import hellfrog.core.ServerSideResolver;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
-import org.javacord.api.entity.Permissionable;
 import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
@@ -22,7 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class DumpCommand
-    extends BotCommand {
+        extends BotCommand {
 
     private static final String PREF = "dmp";
     private static final String DESCRIPTIONS = "Dump server info and data";
@@ -43,15 +42,15 @@ public class DumpCommand
 
     @Override
     protected void executeCreateMessageEventServer(Server server, CommandLine cmdline, ArrayList<String> cmdlineArgs, TextChannel channel, MessageCreateEvent event, ArrayList<String> anotherLines) {
-        executeAction(cmdline, cmdlineArgs, channel, event, anotherLines);
+        executeAction(cmdline, channel, event);
     }
 
     @Override
     protected void executeCreateMessageEventDirect(CommandLine cmdline, ArrayList<String> cmdlineArgs, TextChannel channel, MessageCreateEvent event, ArrayList<String> anotherLines) {
-        executeAction(cmdline, cmdlineArgs, channel, event, anotherLines);
+        executeAction(cmdline, channel, event);
     }
 
-    private void executeAction(CommandLine cmdline, ArrayList<String> cmdlineArgs, TextChannel channel, MessageCreateEvent event, ArrayList<String> anotherLines) {
+    private void executeAction(CommandLine cmdline, TextChannel channel, MessageCreateEvent event) {
 
         boolean serverInfo = cmdline.hasOption('i');
         String serverInfoIdValue = cmdline.getOptionValue('i', "");
@@ -93,9 +92,8 @@ public class DumpCommand
         sw.append("Dump of server: ").append(serverName).append('\n');
         sw.append("From date: ").append(currentDateTime).append('\n');
         sw.append('\n');
-        server.getSystemChannel().ifPresent(defaultChannel -> {
-            sw.append("Default channel: ").append(defaultChannel.getName()).append('\n');
-        });
+        server.getSystemChannel().ifPresent(defaultChannel ->
+                sw.append("Default channel: ").append(defaultChannel.getName()).append('\n'));
         String notificationLevel = server.getDefaultMessageNotificationLevel()
                 .name()
                 .toLowerCase()
@@ -182,40 +180,44 @@ public class DumpCommand
                 sw.append("  type: voice channel\n");
                 int bitrate = serverVoiceChannel.getBitrate();
                 sw.append("  bitrate: ").append(bitrate).append('\n');
-                serverVoiceChannel.getUserLimit().ifPresent(limit -> {
-                    sw.append("  users limit: ").append(limit).append('\n');
-                });
+                serverVoiceChannel.getUserLimit().ifPresent(limit ->
+                        sw.append("  users limit: ").append(limit).append('\n'));
             });
-            Map<Permissionable, Permissions> overridesPerms = serverChannel.getOverwrittenPermissions();
-            if (!overridesPerms.isEmpty()) {
+            Map<Long, Permissions> overridesRolePerms = serverChannel.getOverwrittenRolePermissions();
+            Map<Long, Permissions> overridesUserPerms = serverChannel.getOverwrittenUserPermissions();
+            if (!overridesRolePerms.isEmpty() || !overridesUserPerms.isEmpty()) {
                 sw.append("  permissions:\n");
-                for (Map.Entry<Permissionable, Permissions> entry : overridesPerms.entrySet()) {
-                    Permissionable who = entry.getKey();
-                    Permissions rights = entry.getValue();
-                    Optional<String> allowed = ServerSideResolver.getAllowedGrants(rights);
-                    Optional<String> denied = ServerSideResolver.getDeniedGrants(rights);
-                    if (who instanceof Role) {
-                        Role targetRole = (Role)who;
-                        sw.append("    target role:\n");
-                        sw.append("      name: ").append(targetRole.getName()).append('\n');
-                    } else if (who instanceof User) {
-                        User targetUser = (User)who;
-                        sw.append("    target user:\n");
-                        sw.append("      name: ").append(targetUser.getName()).append('\n');
-                        sw.append("      discriminated name: ").append(targetUser.getDiscriminatedName()).append('\n');
-                        targetUser.getNickname(server).ifPresent(nickname ->
-                                sw.append("      nickname: ").append(nickname).append('\n'));
-                    }
-                    allowed.ifPresent(list ->
-                            sw.append("      allowed: ").append(list).append('\n'));
-                    denied.ifPresent(list ->
-                            sw.append("      denied: ").append(list).append('\n'));
-                }
+                overridesRolePerms.forEach((roleId, rights) ->
+                        server.getRoleById(roleId).ifPresent(role -> {
+                            Optional<String> allowed = ServerSideResolver.getAllowedGrants(rights);
+                            Optional<String> denied = ServerSideResolver.getDeniedGrants(rights);
+                            sw.append("    target role:\n");
+                            sw.append("      name: ").append(role.getName()).append('\n');
+                            allowed.ifPresent(list ->
+                                    sw.append("      allowed: ").append(list).append('\n'));
+                            denied.ifPresent(list ->
+                                    sw.append("      denied: ").append(list).append('\n'));
+                        }));
+                overridesUserPerms.forEach((userId, rights) ->
+                        server.getMemberById(userId).ifPresent(user -> {
+                            Optional<String> allowed = ServerSideResolver.getAllowedGrants(rights);
+                            Optional<String> denied = ServerSideResolver.getDeniedGrants(rights);
+                            sw.append("    target user:\n");
+                            sw.append("      name: ").append(user.getName()).append('\n');
+                            sw.append("      discriminated name: ").append(user.getDiscriminatedName()).append('\n');
+                            user.getNickname(server).ifPresent(nickname ->
+                                    sw.append("      nickname: ").append(nickname).append('\n'));
+                            allowed.ifPresent(list ->
+                                    sw.append("      allowed: ").append(list).append('\n'));
+                            denied.ifPresent(list ->
+                                    sw.append("      denied: ").append(list).append('\n'));
+                        })
+                );
             }
         }
         sw.append('\n');
         sw.append("--- Members list: ---\n");
-        User owner = server.getOwner();
+        Optional<User> mayBeOwner = server.getOwner();
         for (User member : server.getMembers()) {
             String displayName = member.getDisplayName(server);
             String id = member.getIdAsString();
@@ -223,8 +225,11 @@ public class DumpCommand
             sw.append(displayName).append('\n')
                     .append("  full name: ").append(discriminatedName).append('\n')
                     .append("  id: ").append(id).append('\n');
-            if (owner.equals(member))
-                sw.append("  This user is a server owner\n");
+            mayBeOwner.ifPresent(owner -> {
+                if (owner.equals(member)) {
+                    sw.append("  This user is a server owner\n");
+                }
+            });
             server.getRoles(member)
                     .stream()
                     .map(Role::getName)
