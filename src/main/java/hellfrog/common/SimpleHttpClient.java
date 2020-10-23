@@ -40,7 +40,6 @@ public class SimpleHttpClient
 
     private final HttpClientContext httpClientContext;
     private final CloseableHttpClient closeableHttpClient;
-    private final Logger log = LogManager.getLogger(SimpleHttpClient.class.getSimpleName());
 
     public SimpleHttpClient() {
         httpClientContext = HttpClientContext.create();
@@ -67,6 +66,7 @@ public class SimpleHttpClient
                     .build();
         } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException err) {
             String errMsg = String.format("Unable to set SSL certificate ignoration context: %s", err.getMessage());
+            Logger log = LogManager.getLogger(SimpleHttpClient.class.getSimpleName());
             log.fatal(errMsg, err);
             httpClient = HttpClients.custom()
                     .setDefaultHeaders(buildDefaultHeaders())
@@ -82,10 +82,6 @@ public class SimpleHttpClient
 
     public List<URI> getRedirectLocations() {
         return httpClientContext.getRedirectLocations();
-    }
-
-    public HttpHost getTargetHost() {
-        return httpClientContext.getTargetHost();
     }
 
     public URI getLatestURI(@NotNull URI requestURI) throws URISyntaxException {
@@ -109,11 +105,9 @@ public class SimpleHttpClient
     private Collection<Header> buildDefaultHeaders() {
         List<Header> headers = new ArrayList<>();
         headers.add(new BasicHeader("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-                        "AppleWebKit/537.36 (KHTML, like Gecko) " +
-                        "Chrome/79.0.3945.117 Safari/537.36"));
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36"));
         headers.add(new BasicHeader("DNT","1"));
-        headers.add(new BasicHeader("Accept-Language","ru-RU,ru;q=0.9"));
+        headers.add(new BasicHeader("Accept-Language","ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,lb;q=0.6,fr;q=0.5,zh-CN;q=0.4,zh;q=0.3,de;q=0.2"));
         return headers;
     }
 }
