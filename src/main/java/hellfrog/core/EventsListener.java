@@ -14,6 +14,7 @@ import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -40,7 +41,6 @@ import org.javacord.api.listener.server.member.ServerMemberJoinListener;
 import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
 import org.javacord.api.listener.server.member.ServerMemberUnbanListener;
 import org.javacord.api.listener.server.role.RoleChangePermissionsListener;
-import org.javacord.core.entity.permission.PermissionsImpl;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -265,7 +265,7 @@ public class EventsListener
         reactReaction.parseReaction(event, true);
         asVoteReaction.parseAction(event);
         communityControlReaction.parseReaction(event);
-        if (!event.getUser().isBot()) {
+        if (event.getUser().isPresent() && !event.getUser().get().isBot()) {
             for (SessionState sessionState : SessionState.all()) {
                 if (sessionState.isAccept(event)) {
                     if (sessionState.isRemoveReaction()) {
@@ -329,7 +329,7 @@ public class EventsListener
     public void onReactionRemove(ReactionRemoveEvent event) {
         reactReaction.parseReaction(event, false);
         communityControlReaction.parseReaction(event);
-        if (!event.getUser().isBot()) {
+        if (event.getUser().isPresent() && !event.getUser().get().isBot()) {
             for (SessionState sessionState : SessionState.all()) {
                 if (sessionState.isAccept(event)) {
                     SessionState.all().remove(sessionState);
@@ -361,7 +361,7 @@ public class EventsListener
                 textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes());
                 textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes());
             });
-            botInviteUrl = discordApi.createBotInvite(new PermissionsImpl(335932481));
+            botInviteUrl = discordApi.createBotInvite(Permissions.fromBitmask(335932481));
             String invite = "Invite url: " + botInviteUrl;
             String readyMsg = "Bot started. " + invite;
             log.info(readyMsg);
