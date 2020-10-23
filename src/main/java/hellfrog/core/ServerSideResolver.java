@@ -354,7 +354,7 @@ public class ServerSideResolver
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
                 String userName = mayBeServer.map(user::getDisplayName).orElseGet(user::getName);
-                messageContent = userMention.replaceFirst("@" + userName);
+                messageContent = userMention.replaceFirst(Matcher.quoteReplacement("@" + userName));
                 userMention.reset(messageContent);
             }
         }
@@ -366,7 +366,7 @@ public class ServerSideResolver
                             .getRoleById(roleId)
                             .map(Role::getName))
                     .orElse("deleted-role");
-            messageContent = roleMention.replaceFirst("@" + roleName);
+            messageContent = roleMention.replaceFirst(Matcher.quoteReplacement("@" + roleName));
             roleMention.reset(messageContent);
         }
         Matcher channelMention = DiscordRegexPattern.CHANNEL_MENTION.matcher(messageContent);
@@ -390,7 +390,7 @@ public class ServerSideResolver
             messageContent = customEmoji.replaceFirst(":" + name + ":");
             customEmoji.reset(messageContent);
         }
-        return quoteEveryoneTags(ESCAPED_CHARACTER.matcher(messageContent).replaceAll("${char}"));
+        return quoteEveryoneTags(Message.ESCAPED_CHARACTER.matcher(messageContent).replaceAll("${char}"));
     }
 
     @NotNull
