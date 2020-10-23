@@ -91,9 +91,11 @@ public class AccessControlCheck {
     public static boolean canExecuteOnServer(@NotNull String commandPrefix, @NotNull SingleReactionEvent event,
                                              @NotNull Server server,
                                              boolean strictByChannels, long... anotherTargetChannels) {
-        return canExecuteOnServer(commandPrefix, event.getUser(), server,
-                event.getChannel(), strictByChannels,
-                anotherTargetChannels);
+        return event.getUser().map(user ->
+                canExecuteOnServer(commandPrefix, user, server,
+                        event.getChannel(), strictByChannels,
+                        anotherTargetChannels)
+        ).orElse(false);
     }
 
     public static boolean canExecuteGlobalCommand(@NotNull MessageCreateEvent event) {
@@ -103,7 +105,7 @@ public class AccessControlCheck {
     }
 
     public static boolean canExecuteGlobalCommand(@NotNull SingleReactionEvent event) {
-        long userId = event.getUser().getId();
+        long userId = event.getUserId();
         long botOwner = event.getApi().getOwnerId();
         return SettingsController.getInstance().isGlobalBotOwner(userId) || userId == botOwner;
     }
