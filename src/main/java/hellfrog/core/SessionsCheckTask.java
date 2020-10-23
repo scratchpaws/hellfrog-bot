@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 public class SessionsCheckTask
         implements Runnable {
 
-    private ScheduledFuture<?> scheduled;
+    private final ScheduledFuture<?> scheduled;
 
     public SessionsCheckTask() {
         scheduled = Executors.newSingleThreadScheduledExecutor()
@@ -34,22 +34,21 @@ public class SessionsCheckTask
 
     public static void terminateSessionState(@NotNull SessionState sessionState) {
         SessionState.all().remove(sessionState);
-        Optional.ofNullable(SettingsController.getInstance().getDiscordApi()).ifPresent(api -> {
-            api.getUserById(sessionState.getUserId()).thenAccept(user ->
-                    api.getTextChannelById(sessionState.getTextChannelId()).ifPresent(textChannel -> {
-                        User yourSelf = api.getYourself();
-                        new MessageBuilder()
-                                .setEmbed(new EmbedBuilder()
-                                        .setTimestampToNow()
-                                        .setAuthor(yourSelf)
-                                        .setColor(Color.RED)
-                                        .setDescription(user.getMentionTag() + ", your response time is up"))
-                                .send(textChannel);
-                        textChannel.getMessageById(sessionState.getMessageId())
-                                .thenAccept(Message::removeAllReactions);
-                    })
-            );
-        });
+        Optional.ofNullable(SettingsController.getInstance().getDiscordApi()).ifPresent(api ->
+                api.getUserById(sessionState.getUserId()).thenAccept(user ->
+                        api.getTextChannelById(sessionState.getTextChannelId()).ifPresent(textChannel -> {
+                            User yourSelf = api.getYourself();
+                            new MessageBuilder()
+                                    .setEmbed(new EmbedBuilder()
+                                            .setTimestampToNow()
+                                            .setAuthor(yourSelf)
+                                            .setColor(Color.RED)
+                                            .setDescription(user.getMentionTag() + ", your response time is up"))
+                                    .send(textChannel);
+                            textChannel.getMessageById(sessionState.getMessageId())
+                                    .thenAccept(Message::removeAllReactions);
+                        })
+                ));
     }
 
     public void stop() {

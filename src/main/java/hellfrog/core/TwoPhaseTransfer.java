@@ -120,7 +120,7 @@ public class TwoPhaseTransfer {
     /**
      * Менеджер управления настроек
      */
-    private SettingsController settingsController = SettingsController.getInstance();
+    private final SettingsController settingsController = SettingsController.getInstance();
 
     /**
      * Пересчитывание либо первоначальное считывание файла с фразами.

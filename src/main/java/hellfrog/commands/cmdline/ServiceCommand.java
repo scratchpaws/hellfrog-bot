@@ -38,17 +38,19 @@ public class ServiceCommand
     private static final String DESCRIPTIONS = "Common bot service commands";
     private final GroovyShell groovyShell = new GroovyShell();
     private static final String SHELL_IMPORTS =
-            "import hellfrog.settings.SettingsController \n" +
-                    "import hellfrog.common.BroadCast \n" +
-                    "import hellfrog.common.CommonUtils \n" +
-                    "import hellfrog.common.MessageUtils \n" +
-                    "import hellfrog.core.ServerSideResolver \n" +
-                    "import org.javacord.api.entity.message.MessageBuilder \n" +
-                    "import org.javacord.api.DiscordApi\n" +
-                    "import org.javacord.api.entity.server.Server\n" +
-                    "import org.javacord.api.entity.emoji.*\n" +
-                    "import org.javacord.api.entity.channel.*\n" +
-                    "def api = SettingsController.getInstance().getDiscordApi() \n";
+            """
+                    import hellfrog.settings.SettingsController\s
+                    import hellfrog.common.BroadCast\s
+                    import hellfrog.common.CommonUtils\s
+                    import hellfrog.common.MessageUtils\s
+                    import hellfrog.core.ServerSideResolver\s
+                    import org.javacord.api.entity.message.MessageBuilder\s
+                    import org.javacord.api.DiscordApi
+                    import org.javacord.api.entity.server.Server
+                    import org.javacord.api.entity.emoji.*
+                    import org.javacord.api.entity.channel.*
+                    def api = SettingsController.getInstance().getDiscordApi()\s
+                    """;
 
     private final Option stopBot = Option.builder("s")
             .longOpt("stop")

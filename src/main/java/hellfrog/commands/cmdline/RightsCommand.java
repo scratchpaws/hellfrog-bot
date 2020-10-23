@@ -141,18 +141,13 @@ public class RightsCommand
                     return;
                 }
                 switch (aclSwitchModeValue) {
-                    case "old":
-                        serverPreferences.setNewAclMode(false);
-                        break;
-
-                    case "new":
-                        serverPreferences.setNewAclMode(true);
-                        break;
-
-                    default:
+                    case "old" -> serverPreferences.setNewAclMode(false);
+                    case "new" -> serverPreferences.setNewAclMode(true);
+                    default -> {
                         showErrorMessage("Unknown mode. Must be \"old\" or \"new\" or " +
                                 "empty for display current mode", event);
                         return;
+                    }
                 }
 
                 settingsController.saveServerSideParameters(server.getId());
@@ -266,13 +261,13 @@ public class RightsCommand
                     .collect(Collectors.toList());
 
             List<User> usersChanged = new ArrayList<>(parsedUsers.getFound().size());
-            List<User> usersNoChanged = new ArrayList<>(usersChanged.size());
+            List<User> usersNoChanged = new ArrayList<>();
 
             List<Role> rolesChanged = new ArrayList<>(parsedRoles.getFound().size());
-            List<Role> rolesNoChanged = new ArrayList<>(rolesChanged.size());
+            List<Role> rolesNoChanged = new ArrayList<>();
 
             List<ServerChannel> channelsChanged = new ArrayList<>(parsedChannels.getFound().size());
-            List<ServerChannel> channelsNoChanged = new ArrayList<>(channelsChanged.size());
+            List<ServerChannel> channelsNoChanged = new ArrayList<>();
 
             for (User user : parsedUsers.getFound()) {
                 commandRightsList.stream().map((commandRights) -> allowMode ?

@@ -20,7 +20,7 @@ public class SavedAttachment
     private final String fileName;
     private Path tempFile;
 
-    private ReentrantLock writeLock = new ReentrantLock();
+    private final ReentrantLock writeLock = new ReentrantLock();
 
     public SavedAttachment(@NotNull MessageAttachment attachment) throws IOException {
         this.fileName = attachment.getFileName();

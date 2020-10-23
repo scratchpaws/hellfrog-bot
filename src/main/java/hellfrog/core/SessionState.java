@@ -65,7 +65,7 @@ public class SessionState {
     }
 
     public boolean isAccept(@NotNull SingleReactionEvent event) {
-        boolean validUser = event.getUser().getId() == userId;
+        boolean validUser = event.getUser().isPresent() && event.getUserId() == userId;
         boolean validTextChat = event.getChannel().getId() == textChannelId;
         boolean validMessage = messageId <= 0L || event.getMessageId() == messageId;
         return validUser && validTextChat && validMessage && inTimeout();
@@ -166,7 +166,7 @@ public class SessionState {
         private long messageId = 0L;
         private boolean removeReaction = true;
         private Scenario scenario = null;
-        private ConcurrentHashMap<String, Object> objectsMap;
+        private final ConcurrentHashMap<String, Object> objectsMap;
 
         @Contract(pure = true)
         private Builder() {

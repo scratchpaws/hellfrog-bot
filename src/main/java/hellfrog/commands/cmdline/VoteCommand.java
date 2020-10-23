@@ -468,7 +468,7 @@ public class VoteCommand
                         .append(voteDefault.buildVoteString(foundCustomEmoji))
                         .appendNewLine();
             }
-            if (hasWinThreshold && winThreshold > 0) {
+            if (hasWinThreshold) {
                 resultMessage.append("Selectable voting point will ")
                         .append("WIN", MessageDecoration.BOLD)
                         .append(" if it dial ")

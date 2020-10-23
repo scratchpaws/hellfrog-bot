@@ -24,7 +24,6 @@ public class EffectiveRightsCommand
 
     private static final String PREFIX = "eff";
     private static final String DESCRIPTION = "Get effective rights for users";
-    private static final String FOOTER = "";
 
     public EffectiveRightsCommand() {
         super(PREFIX, DESCRIPTION);

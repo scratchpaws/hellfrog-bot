@@ -36,29 +36,18 @@ public class RightsScenario
 
     private static final String TITLE = "Command permissions editor";
     private static final String SELECT_COMMAND_LIST_TEXT =
-            "This command configures access rights to commands on this server.\n" +
-                    "**Enter the name** of the bot command or reaction from the specified list:\n";
+            """
+                    This command configures access rights to commands on this server.
+                    **Enter the name** of the bot command or reaction from the specified list:
+                    """;
     private static final String HELP_TEXT =
-            "The bot uses a command access model, which requires explicit " +
-                    "permission to access any commands and reactions for users who " +
-                    "do not have administrator rights and who do not own the server.\n" +
-                    "Access is granted on a whitelist basis, i.e. " +
-                    "forbidden everything that is clearly not allowed.\n" +
-                    "There is no blacklist. If it is necessary to prohibit the user or role " +
-                    "from executing any command or reaction, then it is necessary to " +
-                    "remove the previously set permissive access.\n" +
-                    "Some commands require explicit permission to execute in any " +
-                    "specified text channels or channel categories. " +
-                    "For bot commands that require explicit permission to work in a " +
-                    "channel or category, there are two modes of access system " +
-                    "operation (aka \"ACL mode\"): old and new.\n" +
-                    "The old mode requires both explicit permission to execute in the " +
-                    "text channel or category, and explicit permission for the user or role.\n" +
-                    "The new mode requires only explicit permission to execute in a text " +
-                    "channel or category. But at the same time, if desired, you can also " +
-                    "set explicit permission for the user or role. " +
-                    "The mode can be set only for all bot commands on " +
-                    "the server as a whole.";
+            """
+                    The bot uses a command access model, which requires explicit permission to access any commands and reactions for users who do not have administrator rights and who do not own the server.
+                    Access is granted on a whitelist basis, i.e. forbidden everything that is clearly not allowed.
+                    There is no blacklist. If it is necessary to prohibit the user or role from executing any command or reaction, then it is necessary to remove the previously set permissive access.
+                    Some commands require explicit permission to execute in any specified text channels or channel categories. For bot commands that require explicit permission to work in a channel or category, there are two modes of access system operation (aka "ACL mode"): old and new.
+                    The old mode requires both explicit permission to execute in the text channel or category, and explicit permission for the user or role.
+                    The new mode requires only explicit permission to execute in a text channel or category. But at the same time, if desired, you can also set explicit permission for the user or role. The mode can be set only for all bot commands on the server as a whole.""";
 
     private static final String EMOJI_CLOSE = EmojiParser.parseToUnicode(":x:");
     private static final String EMOJI_QUESTION = EmojiParser.parseToUnicode(":question:");
@@ -1122,23 +1111,12 @@ public class RightsScenario
         if (!canDeleteThisType) {
             descriptionText.append("Unfortunately, but the list of ");
             switch (rightType) {
-                case TYPE_USER:
-                    descriptionText.append("users who are allowed to run this command is empty.");
-                    break;
-
-                case TYPE_ROLE:
-                    descriptionText.append("roles that are allowed to run this command is empty.");
-                    break;
-
-                case TYPE_TEXT_CHAT:
-                    descriptionText.append("text channels in which the execution of this command " +
-                            "is allowed is empty.");
-                    break;
-
-                case TYPE_CATEGORY:
-                    descriptionText.append("categories in the text channels of which " +
-                            "the execution of this command is allowed is empty.");
-                    break;
+                case TYPE_USER -> descriptionText.append("users who are allowed to run this command is empty.");
+                case TYPE_ROLE -> descriptionText.append("roles that are allowed to run this command is empty.");
+                case TYPE_TEXT_CHAT -> descriptionText.append("text channels in which the execution of this command " +
+                        "is allowed is empty.");
+                case TYPE_CATEGORY -> descriptionText.append("categories in the text channels of which " +
+                        "the execution of this command is allowed is empty.");
             }
             embedBuilder.setDescription(descriptionText.toString());
             return super.displayMessage(embedBuilder, serverTextChannel).map(message ->
@@ -1171,25 +1149,18 @@ public class RightsScenario
         String wordReplace = isAdditionRights ? grant : revoke;
 
         switch (rightType) {
-
-            case TYPE_USER:
-                descriptionText.append("Enter the user to whom you want to ").append(wordReplace)
-                        .append(" access to the specified command. ")
-                        .append("You can specify (listed in priority order when performing ")
-                        .append("a user search with a bot): user ID, its mention, discriminating name ")
-                        .append("(i.e. global\\_username#user\\_tag), global username ")
-                        .append("(i.e. without #user\\_tag), nickname on this server.");
-                break;
-
-            case TYPE_ROLE:
-                descriptionText.append("Enter the role that you want to ").append(wordReplace)
-                        .append(" access to the specified command. ")
-                        .append("You can specify (listed in order of priority when ")
-                        .append("performing a search for a role by a bot): role ID, its mention, ")
-                        .append("role name.");
-                break;
-
-            case TYPE_TEXT_CHAT:
+            case TYPE_USER -> descriptionText.append("Enter the user to whom you want to ").append(wordReplace)
+                    .append(" access to the specified command. ")
+                    .append("You can specify (listed in priority order when performing ")
+                    .append("a user search with a bot): user ID, its mention, discriminating name ")
+                    .append("(i.e. global\\_username#user\\_tag), global username ")
+                    .append("(i.e. without #user\\_tag), nickname on this server.");
+            case TYPE_ROLE -> descriptionText.append("Enter the role that you want to ").append(wordReplace)
+                    .append(" access to the specified command. ")
+                    .append("You can specify (listed in order of priority when ")
+                    .append("performing a search for a role by a bot): role ID, its mention, ")
+                    .append("role name.");
+            case TYPE_TEXT_CHAT -> {
                 descriptionText.append("Enter the text channel that you want to ").append(wordReplace)
                         .append(" the execution of the specified command. ");
                 if (!isAdditionRights) {
@@ -1200,9 +1171,8 @@ public class RightsScenario
                 descriptionText.append("You can specify (listed in order of priority when ")
                         .append("performing a channel search with a bot): channel ID, its mention, ")
                         .append("channel name.");
-                break;
-
-            case TYPE_CATEGORY:
+            }
+            case TYPE_CATEGORY -> {
                 descriptionText.append("Enter the channel category in which you want to ").append(wordReplace)
                         .append(" the execution of the specified command. ");
                 if (isAdditionRights) {
@@ -1217,7 +1187,7 @@ public class RightsScenario
                 }
                 descriptionText.append("You can specify (listed in order of priority when performing a channel ")
                         .append("search with a bot): category ID, category name.");
-                break;
+            }
         }
 
         descriptionText.append("\nEntering a value is not case sensitive. ")
@@ -1257,13 +1227,13 @@ public class RightsScenario
         Scenario.all().stream()
                 .filter(ACLCommand::isNotExpertCommand)
                 .forEach(scenario ->
-                descriptionText.append('`').append(scenario.getPrefix()).append('`')
-                        .append(" - ").append(scenario.getCommandDescription()).append('\n'));
+                        descriptionText.append('`').append(scenario.getPrefix()).append('`')
+                                .append(" - ").append(scenario.getCommandDescription()).append('\n'));
         BotCommand.all().stream()
                 .filter(ACLCommand::isNotExpertCommand)
                 .forEach(botCommand ->
-                descriptionText.append('`').append(botCommand.getPrefix()).append('`')
-                        .append(" - ").append(botCommand.getCommandDescription()).append('\n'));
+                        descriptionText.append('`').append(botCommand.getPrefix()).append('`')
+                                .append(" - ").append(botCommand.getCommandDescription()).append('\n'));
         descriptionText.append("__Bot reactions:__\n");
         MsgCreateReaction.all().stream()
                 .filter(MsgCreateReaction::isAccessControl)

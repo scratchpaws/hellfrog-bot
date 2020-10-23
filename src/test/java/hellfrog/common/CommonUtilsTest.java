@@ -97,9 +97,9 @@ public class CommonUtilsTest {
     public void latestDateTimeTest() {
         final String dateTimeFormatter = "%tF %<tT.%<tL";
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-        System.err.println(String.format(dateTimeFormatter, calendar));
+        System.err.printf((dateTimeFormatter) + "%n", calendar);
         Instant instant = Instant.now();
-        System.err.println(String.format(dateTimeFormatter, CommonUtils.instantToCalendar(instant)));
+        System.err.printf((dateTimeFormatter) + "%n", CommonUtils.instantToCalendar(instant));
 
         long result = CommonUtils.getLatestDate(instant, calendar.getTimeInMillis());
         long instantAsCalendarToLong = CommonUtils.instantToCalendar(instant).getTimeInMillis();

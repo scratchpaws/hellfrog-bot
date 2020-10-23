@@ -34,18 +34,14 @@ public class PrefixScenario
             List.of(EMOJI_ONE_SELECT_SERVER, EMOJI_TWO_SELECT_GLOBAL, EMOJI_CLOSE);
     private static final List<String> ONLY_CLOSE_EMOJI = List.of(EMOJI_CLOSE);
 
-    private static final String WELCOME_MESSAGE = "The bot prefix defines the character set"
-            + " that should precede all other bot commands.\n"
-            + "For example, if a `>>` is set as the prefix, then the command `help` is called as follows:\n"
-            + "`>> help`\n"
-            + "The prefix is divided into global and server. "
-            + "Global works in private messages and can only be changed "
-            + "by the owner of the bot. Server-side runs in text chats of "
-            + "the current server and can be changed either by a user with "
-            + "administrator rights, or by a user who is explicitly allowed to execute this command.\n"
-            + "The mention of the bot can also be a prefix.\n"
-            + "Using the following reactions, specify the action "
-            + "you want to perform on the bot prefix.\n";
+    private static final String WELCOME_MESSAGE = """
+            The bot prefix defines the character set that should precede all other bot commands.
+            For example, if a `>>` is set as the prefix, then the command `help` is called as follows:
+            `>> help`
+            The prefix is divided into global and server. Global works in private messages and can only be changed by the owner of the bot. Server-side runs in text chats of the current server and can be changed either by a user with administrator rights, or by a user who is explicitly allowed to execute this command.
+            The mention of the bot can also be a prefix.
+            Using the following reactions, specify the action you want to perform on the bot prefix.
+            """;
 
     private static final long SERVER_ONLY_PREFIX_CHANGE_INIT = 0L;
     private static final long GLOBAL_ONLY_PREFIX_CHANGE_INIT = 1L;
