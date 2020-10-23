@@ -38,7 +38,7 @@ public class GptScenario
 
     private static final String PREFIX = "gpt";
     private static final String DESCRIPTION = "Randomly appends the specified text";
-    private static final URI GPT_URI = URI.create("https://models.dobro.ai/gpt2/medium/");
+    private static final URI GPT_URI = URI.create("https://pelevin.gpt.dobro.ai/generate/");
     private final Bucket bucket;
 
     public GptScenario() {
@@ -173,8 +173,8 @@ public class GptScenario
     private HttpPost generatePost(@NotNull String postData) {
         HttpPost post = new HttpPost(GPT_URI);
         post.addHeader("Origin", "https://porfirevich.ru");
-        post.addHeader("Referer", "https://porfirevich.ru/");
-        post.addHeader("Host", "models.dobro.ai");
+        //post.addHeader("Referer", "https://porfirevich.ru/");
+        post.addHeader("Host", "pelevin.gpt.dobro.ai");
         post.addHeader("Content-Type", "text/plain;charset=UTF-8");
         post.setEntity(new StringEntity(postData, StandardCharsets.UTF_8));
         return post;
