@@ -6,6 +6,7 @@ import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.emoji.Emoji;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.reaction.ReactionAddEvent;
 
 import java.util.Optional;
@@ -18,7 +19,10 @@ import java.util.concurrent.TimeUnit;
 public class VoteReactFilter {
 
     public void parseAction(ReactionAddEvent event) {
-        if (event.getUser().isYourself()) return;
+        Optional<User> mayBeUser = event.getUser();
+        if (mayBeUser.isEmpty()) return;
+        final User user = mayBeUser.get();
+        if (user.isYourself()) return;
         Optional<Server> mayBeSrv = event.getServer();
         if (mayBeSrv.isEmpty()) return;
 
@@ -50,7 +54,7 @@ public class VoteReactFilter {
                     }
 
                     if (v.getRolesFilter() != null && !v.getRolesFilter().isEmpty()) {
-                        boolean nonVoteRole = srv.getRoles(event.getUser())
+                        boolean nonVoteRole = srv.getRoles(user)
                                 .stream()
                                 .noneMatch(r -> v.getRolesFilter()
                                         .contains(r.getId()));
@@ -84,7 +88,7 @@ public class VoteReactFilter {
                                     try {
                                         return r.getUsers()
                                                 .join()
-                                                .contains(event.getUser());
+                                                .contains(user);
                                     } catch (CompletionException ignore) {
                                         // что-то пошло не так, discord
                                         // не отдал юзеров реакции
