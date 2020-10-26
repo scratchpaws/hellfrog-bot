@@ -57,7 +57,7 @@ public class EventsListener
         ServerMemberBanListener, ServerMemberUnbanListener, CommonConstants,
         RoleChangePermissionsListener {
 
-    private static final String VERSION_STRING = "2020-09-19";
+    private static final String VERSION_STRING = "2020-10-26";
 
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
