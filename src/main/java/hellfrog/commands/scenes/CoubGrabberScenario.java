@@ -43,6 +43,7 @@ public class CoubGrabberScenario
     private static final String VIDEO_FOR_SHARING = "cw_video_for_sharing";
     private final Pattern MP4_VIDEO = Pattern.compile("mp4_.*_size.*\\.mp4", Pattern.CASE_INSENSITIVE);
     private final Pattern MP4_AUDIO = Pattern.compile("m4a_.*\\.m4a", Pattern.CASE_INSENSITIVE);
+    private final Pattern MP3_AUDIO = Pattern.compile(".*\\.mp3$", Pattern.CASE_INSENSITIVE);
 
     public CoubGrabberScenario() {
         super(PREFIX, DESCRIPTION);
@@ -104,6 +105,7 @@ public class CoubGrabberScenario
             boolean found = false;
             String mp4Video = null;
             String mp4Audio = null;
+            String mp3Audio = null;
             for (String videoUrl : jsonUrls) {
                 if (videoUrl.contains(VIDEO_FOR_SHARING)) {
                     found = true;
@@ -135,12 +137,14 @@ public class CoubGrabberScenario
                     mp4Video = videoUrl;
                 } else if (mp4Audio == null && MP4_AUDIO.matcher(videoUrl).find()) {
                     mp4Audio = videoUrl;
+                } else if (mp3Audio == null && MP3_AUDIO.matcher(videoUrl).find()) {
+                    mp3Audio = videoUrl;
                 }
             }
             if (!found) {
-                if (mp4Video != null && mp4Audio != null) {
+                if (mp4Video != null && (mp4Audio != null || mp3Audio != null)) {
                     try {
-                        byte[] mergedVideo = mergeSeparatedSources(client, mp4Video, mp4Audio, coubUrl);
+                        byte[] mergedVideo = mergeSeparatedSources(client, mp4Video, mp4Audio, mp3Audio, coubUrl);
                         if (mergedVideo.length > CommonConstants.MAX_FILE_SIZE) {
                             String errMsg = String.format("Video from \"%s\" too large", coubUrl);
                             showErrorMessage(errMsg, event);
@@ -218,14 +222,25 @@ public class CoubGrabberScenario
 
     private byte[] mergeSeparatedSources(@NotNull final SimpleHttpClient client,
                                          @NotNull final String mp4Video,
-                                         @NotNull final String mp4Audio,
+                                         @Nullable final String mp4Audio,
+                                         @Nullable final String mp3Audio,
                                          @NotNull final String coubUrl) throws RuntimeException {
+        if (mp4Audio == null && mp3Audio == null) {
+            String errMsg = String.format("Unable to find coub audio from page \"%s\"", coubUrl);
+            throw new RuntimeException(errMsg);
+        }
         Path mp4VideoPath = null;
         Path mp4AudioPath = null;
+        Path mp3AudioPath = null;
         Path resultPath = null;
         try {
             mp4VideoPath = downloadCoubPart(client, mp4Video, coubUrl);
-            mp4AudioPath = downloadCoubPart(client, mp4Audio, coubUrl);
+            if (mp4Audio == null) {
+                mp3AudioPath = downloadCoubPart(client, mp3Audio, coubUrl);
+                mp4AudioPath = FFMpegUtils.convertToM4A(mp3AudioPath);
+            } else {
+                mp4AudioPath = downloadCoubPart(client, mp4Audio, coubUrl);
+            }
             final FFMpegDuration videoDuration = FFMpegUtils.getMediaDuration(mp4VideoPath);
             final FFMpegDuration audioDuration = FFMpegUtils.getMediaDuration(mp4AudioPath);
             final FFMpegDuration targetDuration = videoDuration.getTotalMillis() < audioDuration.getTotalMillis()
@@ -239,6 +254,7 @@ public class CoubGrabberScenario
         } finally {
             removeTempFile(mp4AudioPath);
             removeTempFile(mp4VideoPath);
+            removeTempFile(mp3AudioPath);
             removeTempFile(resultPath);
         }
     }

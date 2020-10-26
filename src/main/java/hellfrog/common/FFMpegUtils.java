@@ -3,6 +3,7 @@ package hellfrog.common;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -109,6 +110,63 @@ public final class FFMpegUtils {
         if (Files.size(resultFile) == 0L) {
             String errMsg = String.format("cannot merge video and audio \"%s\" \"%s\": output file has zero size",
                     inputVideo, inputAudio);
+            log.error(errMsg);
+            log.error(procOutput);
+            throw new IOException(errMsg);
+        }
+
+        return resultFile;
+    }
+
+    public static Path convertToM4A(@NotNull final Path inputAudio) throws IOException {
+        if (Files.notExists(inputAudio) || !Files.isRegularFile(inputAudio)) {
+            throw new IOException("file not found: " + inputAudio);
+        }
+
+        final Path resultFile = Files.createTempFile(CodeSourceUtils.getCodeSourceParent(), "comnverted_", ".m4a");
+
+        String procOutput = "<no proc output>";
+        final List<String> cmdline = List.of("ffmpeg", "-hide_banner", "-y",
+                "-i", inputAudio.toString(),
+                resultFile.toString());
+
+        try {
+            final Process process = new ProcessBuilder()
+                    .command(cmdline)
+                    .start();
+            final ProcessOutputBuffer stdout = new ProcessOutputBuffer(process.getInputStream());
+            final ProcessOutputBuffer stderr = new ProcessOutputBuffer(process.getErrorStream());
+            final int waitCount = 6;
+            int count = 0;
+            while (!process.waitFor(CommonConstants.OP_WAITING_TIMEOUT, CommonConstants.OP_TIME_UNIT)) {
+                count++;
+                if (count == waitCount) {
+                    throw new IOException("ffmpeg waiting timeout");
+                }
+            }
+
+            procOutput = stdout.getOutput() + stderr.getOutput();
+            if (process.exitValue() != 0) {
+                String errMsg = String.format("cannot convert audio file from \"%s\" to \"%s\": ffmpeg returned: %d",
+                        inputAudio, resultFile, process.exitValue());
+                throw new IOException(errMsg);
+            }
+        } catch (IOException err) {
+            String errMsg = String.format("cannot execute ffmpeg for run \"%s\": %s",
+                    cmdline.toString(), err.getMessage());
+            log.error(errMsg, err);
+            log.error(procOutput);
+            throw new IOException(errMsg, err);
+        } catch (InterruptedException err) {
+            String errMsg = String.format("to long ffmpeg execution of \"%s\"", cmdline.toString());
+            log.error(errMsg, err);
+            log.error(procOutput);
+            throw new IOException(errMsg, err);
+        }
+
+        if (Files.size(resultFile) == 0L) {
+            String errMsg = String.format("cannot convert audio file from \"%s\" to \"%s\": output file has zero size",
+                    inputAudio, resultFile);
             log.error(errMsg);
             log.error(procOutput);
             throw new IOException(errMsg);
