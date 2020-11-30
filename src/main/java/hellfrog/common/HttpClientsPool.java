@@ -9,7 +9,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class HttpClientsPool
-    implements Runnable {
+        implements Runnable {
 
     private final ConcurrentLinkedQueue<SimpleHttpClient> pool = new ConcurrentLinkedQueue<>();
     private final ScheduledExecutorService executorService;
