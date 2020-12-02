@@ -48,6 +48,7 @@ public class GotovScucoScenario
         bucket = Bucket4j.builder().addLimit(bandwidth).build();
         //super.enableStrictByChannels();
         super.addStrictByChannelOnServer(516840591565389875L); // todo: rewrite
+        super.addStrictByChannelOnServer(465689649873158145L);
     }
 
     @Override
