@@ -75,7 +75,7 @@ public class CoubGrabberScenario
 
     private void grabCoubVideo(@NotNull final MessageCreateEvent event) {
 
-        final String coubUrl = super.getMessageContentWithoutPrefix(event);
+        final String coubUrl = super.getMessageContentWithoutPrefix(event).replace("embed", "view");
         if (CommonUtils.isTrStringEmpty(coubUrl)) {
             showErrorMessage("Coub video required", event);
             return;
