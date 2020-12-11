@@ -37,14 +37,14 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.13.3</version>
+            <version>2.14.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>2.13.3</version>
+            <version>2.14.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
@@ -66,7 +66,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.11.3</version>
+            <version>2.12.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.vdurmont/emoji-java -->
@@ -101,28 +101,28 @@
         <dependency>
             <groupId>org.eclipse.collections</groupId>
             <artifactId>eclipse-collections</artifactId>
-            <version>10.4.0</version>
+            <version>11.0.0.M1</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.eclipse.collections/eclipse-collections-api -->
         <dependency>
             <groupId>org.eclipse.collections</groupId>
             <artifactId>eclipse-collections-api</artifactId>
-            <version>10.4.0</version>
+            <version>11.0.0.M1</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.codehaus.groovy/groovy -->
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy</artifactId>
-            <version>3.0.6</version>
+            <version>3.0.7</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/io.github.classgraph/classgraph -->
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.90</version>
+            <version>4.8.94</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.nibor.autolink/autolink -->
@@ -136,7 +136,7 @@
         <dependency>
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
-            <version>3.32.3.2</version>
+            <version>3.34.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
@@ -178,7 +178,7 @@
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
-            <version>5.4.22.Final</version>
+            <version>5.4.25.Final</version>
         </dependency>
     </dependencies>
 
