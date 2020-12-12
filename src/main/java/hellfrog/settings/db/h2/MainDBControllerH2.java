@@ -39,6 +39,10 @@ public class MainDBControllerH2
     private final BotOwnersDAO botOwnersDAO;
     private final CommonPreferencesDAO commonPreferencesDAO;
     private final ServerPreferencesDAO serverPreferencesDAO;
+    private final UserRightsDAO userRightsDAO;
+    private final RoleRightsDAO roleRightsDAO;
+    private final TextChannelRightsDAO textChannelRightsDAO;
+    private final ChannelCategoryRightsDAO categoryRightsDAO;
 
     public MainDBControllerH2(@Nullable InstanceType type) throws IOException, SQLException {
         super(type);
@@ -92,6 +96,10 @@ public class MainDBControllerH2
             botOwnersDAO = new BotOwnersDAOImpl(autoSessionFactory);
             commonPreferencesDAO = new CommonPreferencesDAOImpl(autoSessionFactory);
             serverPreferencesDAO = new ServerPreferencesDAOImpl(autoSessionFactory);
+            userRightsDAO = new UserRightsDAOImpl(autoSessionFactory);
+            roleRightsDAO = new RoleRightsDAOImpl(autoSessionFactory);
+            textChannelRightsDAO = new TextChannelRightsDAOImpl(autoSessionFactory);
+            categoryRightsDAO = new ChannelCategoryRightsDAOImpl(autoSessionFactory);
 
         } catch (Exception err) {
             String errMsg = String.format("Unable to create session factory: %s", err.getMessage());
@@ -176,22 +184,22 @@ public class MainDBControllerH2
 
     @Override
     public UserRightsDAO getUserRightsDAO() {
-        return null;
+        return userRightsDAO;
     }
 
     @Override
     public RoleRightsDAO getRoleRightsDAO() {
-        return null;
+        return roleRightsDAO;
     }
 
     @Override
     public TextChannelRightsDAO getTextChannelRightsDAO() {
-        return null;
+        return textChannelRightsDAO;
     }
 
     @Override
     public ChannelCategoryRightsDAO getChannelCategoryRightsDAO() {
-        return null;
+        return categoryRightsDAO;
     }
 
     @Override

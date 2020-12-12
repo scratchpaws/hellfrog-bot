@@ -8,6 +8,7 @@ import org.hibernate.query.Query;
 import org.jetbrains.annotations.NotNull;
 
 import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaDelete;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.Closeable;
@@ -49,6 +50,14 @@ class AutoSession
         return hibernateSession.createQuery(criteriaQuery);
     }
 
+    public Query<?> createQuery(CriteriaDelete<?> criteriaDelete) {
+        return hibernateSession.createQuery(criteriaDelete);
+    }
+
+    public<T> void remove(T object) {
+        hibernateSession.remove(object);
+    }
+
     @SuppressWarnings("unchecked")
     public NativeQuery createNativeQuery(String queryScript) {
         return hibernateSession.createNativeQuery(queryScript);
@@ -65,11 +74,13 @@ class AutoSession
     }
 
     public<T> void save(T object) {
+        resetSuccess();
         hibernateSession.saveOrUpdate(object);
         success();
     }
 
     public<T> void saveAll(@NotNull Collection<T> objects) {
+        resetSuccess();
         for (T item : objects) {
             hibernateSession.saveOrUpdate(item);
         }
@@ -79,6 +90,11 @@ class AutoSession
     public void success() {
         this.commitRequired = true;
         this.rollbackRequired = false;
+    }
+
+    public void resetSuccess() {
+        this.commitRequired = false;
+        this.rollbackRequired = true;
     }
 
     @Override

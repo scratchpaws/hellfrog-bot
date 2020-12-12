@@ -72,6 +72,18 @@
         <Logger name="Entity rights (category_rights)" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
+        <Logger name="User rights" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Role rights" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Channel rights" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Category rights" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
         <Logger name="Votes" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>

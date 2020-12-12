@@ -1,30 +1,29 @@
 package hellfrog.settings.db.h2;
 
+import hellfrog.common.TriFunction;
 import hellfrog.settings.db.UserRightsDAO;
+import hellfrog.settings.db.entity.UserRight;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
+import java.sql.Timestamp;
+import java.time.Instant;
 
-public class UserRightsDAOImpl
+class UserRightsDAOImpl
+        extends EntityRightsDAOImpl<UserRight>
         implements UserRightsDAO {
 
-    @Override
-    public List<Long> getAllAllowed(long serverId, @NotNull String commandPrefix) {
-        return null;
-    }
+    private static final String LOGGER_NAME = "User rights";
+    private static final TriFunction<Long, String, Long, UserRight> USERS_BUILDER =
+            (serverId, commandPrefix, userId) -> {
+                UserRight userRight = new UserRight();
+                userRight.setServerId(serverId);
+                userRight.setCommandPrefix(commandPrefix);
+                userRight.setUserId(userId);
+                userRight.setCreateDate(Timestamp.from(Instant.now()));
+                return userRight;
+            };
 
-    @Override
-    public boolean isAllowed(long serverId, long who, @NotNull String commandPrefix) {
-        return false;
-    }
-
-    @Override
-    public boolean allow(long serverId, long who, @NotNull String commandPrefix) {
-        return false;
-    }
-
-    @Override
-    public boolean deny(long serverId, long who, @NotNull String commandPrefix) {
-        return false;
+    UserRightsDAOImpl(@NotNull final AutoSessionFactory sessionFactory) {
+        super(sessionFactory, LOGGER_NAME, UserRight.class, USERS_BUILDER, "userId");
     }
 }
