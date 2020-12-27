@@ -93,6 +93,12 @@
         <Logger name="DB session" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
+        <Logger name="com.optimaize" level="debug" additivity="false">
+            <AppenderRef ref="plainLogger"/>
+        </Logger>
+        <Logger name="org.languagetool" level="debug" additivity="false">
+            <AppenderRef ref="plainLogger"/>
+        </Logger>
         <Root level="debug">
             <AppenderRef ref="plainLogger"/>
         </Root>
