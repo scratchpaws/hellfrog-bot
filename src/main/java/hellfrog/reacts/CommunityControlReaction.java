@@ -116,7 +116,7 @@ public class CommunityControlReaction {
                         .addField("Assigned role",
                                 CommonUtils.addLinebreaks(role.getName(), newlineBreak), true);
                 if (userCachedData.isHasAvatar()) {
-                    embedBuilder.setThumbnail(userCachedData.getAvatarBytes(), userCachedData.getAvatarExtension());
+                    userCachedData.setThumbnail(embedBuilder);
                 }
                 new MessageBuilder()
                         .setEmbed(embedBuilder)

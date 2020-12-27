@@ -18,6 +18,8 @@ import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
+import org.javacord.api.event.channel.server.invite.ServerChannelInviteCreateEvent;
+import org.javacord.api.event.channel.server.invite.ServerChannelInviteDeleteEvent;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.MessageDeleteEvent;
 import org.javacord.api.event.message.MessageEditEvent;
@@ -28,6 +30,8 @@ import org.javacord.api.event.server.ServerJoinEvent;
 import org.javacord.api.event.server.ServerLeaveEvent;
 import org.javacord.api.event.server.member.*;
 import org.javacord.api.event.server.role.RoleChangePermissionsEvent;
+import org.javacord.api.listener.channel.server.invite.ServerChannelInviteCreateListener;
+import org.javacord.api.listener.channel.server.invite.ServerChannelInviteDeleteListener;
 import org.javacord.api.listener.message.MessageCreateListener;
 import org.javacord.api.listener.message.MessageDeleteListener;
 import org.javacord.api.listener.message.MessageEditListener;
@@ -55,7 +59,7 @@ public class EventsListener
         ReactionAddListener, ReactionRemoveListener, ReactionRemoveAllListener,
         ServerJoinListener, ServerLeaveListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener, CommonConstants,
-        RoleChangePermissionsListener {
+        RoleChangePermissionsListener, ServerChannelInviteCreateListener, ServerChannelInviteDeleteListener {
 
     private static final String VERSION_STRING = "2020-10-26";
 
@@ -427,7 +431,7 @@ public class EventsListener
                             .addField("Assigned role",
                                     CommonUtils.addLinebreaks(role.getName(), newlineBreak), true);
                     if (userCachedData.isHasAvatar()) {
-                        embedBuilder.setThumbnail(userCachedData.getAvatarBytes(), userCachedData.getAvatarExtension());
+                        userCachedData.setThumbnail(embedBuilder);
                     }
                     new MessageBuilder()
                             .setEmbed(embedBuilder)
@@ -450,6 +454,20 @@ public class EventsListener
     @Override
     public void onServerMemberUnban(ServerMemberUnbanEvent event) {
         serverMemberStateDisplay(event, MemberEventCode.UNBAN);
+    }
+
+    @Override
+    public void onServerChannelInviteCreate(ServerChannelInviteCreateEvent event) {
+        SettingsController.getInstance()
+                .getInvitesController()
+                .addInvitesToCache(event.getServer());
+    }
+
+    @Override
+    public void onServerChannelInviteDelete(ServerChannelInviteDeleteEvent event) {
+        SettingsController.getInstance()
+                .getInvitesController()
+                .addInvitesToCache(event.getServer());
     }
 
     private void serverMemberStateDisplay(@NotNull ServerMemberEvent event, MemberEventCode code) {
@@ -487,7 +505,7 @@ public class EventsListener
                     );
                 }
                 if (userCachedData.isHasAvatar()) {
-                    embedBuilder.setThumbnail(userCachedData.getAvatarBytes(), userCachedData.getAvatarExtension());
+                    userCachedData.setThumbnail(embedBuilder);
                 }
                 new MessageBuilder()
                         .setEmbed(embedBuilder)

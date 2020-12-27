@@ -113,7 +113,7 @@ public class QuoteReaction
             embedBuilder.setAuthor(authorString,
                     null, userCachedData.getAvatarBytes(),
                     userCachedData.getAvatarExtension());
-            embedBuilder.setThumbnail(userCachedData.getAvatarBytes(), userCachedData.getAvatarExtension());
+            userCachedData.setThumbnail(embedBuilder);
         });
         String footer = determinateFooter(inMemoryAttaches, extractedUrls, sourceMessage.getEmbeds());
         embedBuilder.setFooter(footer);
