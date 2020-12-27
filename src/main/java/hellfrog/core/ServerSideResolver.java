@@ -8,7 +8,6 @@ import org.javacord.api.entity.channel.ChannelCategory;
 import org.javacord.api.entity.channel.PrivateChannel;
 import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
-import org.javacord.api.entity.emoji.CustomEmoji;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.permission.PermissionType;
@@ -17,7 +16,6 @@ import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
-import org.javacord.api.util.DiscordRegexPattern;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -28,8 +26,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static org.javacord.api.entity.message.Message.ESCAPED_CHARACTER;
 
 public class ServerSideResolver
         implements CommonConstants {
@@ -336,6 +332,7 @@ public class ServerSideResolver
 
     /**
      * Method, works same as {@link Message#getReadableContent()} (contain same code).
+     * But also quote everyone and here tags
      *
      * @param messageContent message text
      * @param mayBeServer    optional server object
@@ -343,54 +340,13 @@ public class ServerSideResolver
      */
     public static String getReadableContent(@Nullable String messageContent,
                                             Optional<Server> mayBeServer) {
+
         DiscordApi api = SettingsController.getInstance().getDiscordApi();
         if (CommonUtils.isTrStringEmpty(messageContent)) {
             return "";
+        } else {
+            return quoteEveryoneTags(api.makeMentionsReadable(messageContent, mayBeServer.orElse(null)));
         }
-        Matcher userMention = DiscordRegexPattern.USER_MENTION.matcher(messageContent);
-        while (userMention.find()) {
-            String userId = userMention.group("id");
-            Optional<User> userOptional = api.getCachedUserById(userId);
-            if (userOptional.isPresent()) {
-                User user = userOptional.get();
-                String userName = mayBeServer.map(user::getDisplayName).orElseGet(user::getName);
-                messageContent = userMention.replaceFirst(Matcher.quoteReplacement("@" + userName));
-                userMention.reset(messageContent);
-            }
-        }
-        Matcher roleMention = DiscordRegexPattern.ROLE_MENTION.matcher(messageContent);
-        while (roleMention.find()) {
-            String roleId = roleMention.group("id");
-            String roleName = mayBeServer
-                    .flatMap(server -> server
-                            .getRoleById(roleId)
-                            .map(Role::getName))
-                    .orElse("deleted-role");
-            messageContent = roleMention.replaceFirst(Matcher.quoteReplacement("@" + roleName));
-            roleMention.reset(messageContent);
-        }
-        Matcher channelMention = DiscordRegexPattern.CHANNEL_MENTION.matcher(messageContent);
-        while (channelMention.find()) {
-            String channelId = channelMention.group("id");
-            String channelName = mayBeServer
-                    .flatMap(server -> server
-                            .getTextChannelById(channelId)
-                            .map(ServerChannel::getName))
-                    .orElse("deleted-channel");
-            messageContent = channelMention.replaceFirst("#" + channelName);
-            channelMention.reset(messageContent);
-        }
-        Matcher customEmoji = DiscordRegexPattern.CUSTOM_EMOJI.matcher(messageContent);
-        while (customEmoji.find()) {
-            String emojiId = customEmoji.group("id");
-            String name = api
-                    .getCustomEmojiById(emojiId)
-                    .map(CustomEmoji::getName)
-                    .orElseGet(() -> customEmoji.group("name"));
-            messageContent = customEmoji.replaceFirst(":" + name + ":");
-            customEmoji.reset(messageContent);
-        }
-        return quoteEveryoneTags(Message.ESCAPED_CHARACTER.matcher(messageContent).replaceAll("${char}"));
     }
 
     @NotNull
@@ -465,7 +421,7 @@ public class ServerSideResolver
                 + mayBeTextChannel.map(channel -> ", text channel: " + channel.getName() + " (id: " + channel.getId() + ")")
                 .orElse("")
                 + mayBePrivate.map(channel -> " (private message)").orElse("");
-        return ESCAPED_CHARACTER.matcher(messageContent).replaceAll("${char}");
+        return getReadableContent(messageContent, event.getServer());
     }
 
     public static class ParseResult<T> {
