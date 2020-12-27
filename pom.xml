@@ -22,7 +22,7 @@
         <dependency>
             <groupId>org.javacord</groupId>
             <artifactId>javacord-core</artifactId>
-            <version>3.1.1</version>
+            <version>3.1.2</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -30,7 +30,7 @@
         <dependency>
             <groupId>org.javacord</groupId>
             <artifactId>javacord-api</artifactId>
-            <version>3.1.1</version>
+            <version>3.1.2</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
@@ -122,7 +122,7 @@
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.94</version>
+            <version>4.8.98</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.nibor.autolink/autolink -->
@@ -157,7 +157,7 @@
         <dependency>
             <groupId>com.github.vladimir-bukhtoyarov</groupId>
             <artifactId>bucket4j-core</artifactId>
-            <version>4.10.0</version>
+            <version>6.0.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
