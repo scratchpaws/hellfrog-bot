@@ -105,8 +105,8 @@ public class SimpleHttpClient
     private Collection<Header> buildDefaultHeaders() {
         List<Header> headers = new ArrayList<>();
         headers.add(new BasicHeader("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36"));
-        headers.add(new BasicHeader("DNT","1"));
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36"));
+        headers.add(new BasicHeader("DNT", "1"));
         headers.add(new BasicHeader("Accept-Language","ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,lb;q=0.6,fr;q=0.5,zh-CN;q=0.4,zh;q=0.3,de;q=0.2"));
         return headers;
     }
