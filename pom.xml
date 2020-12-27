@@ -178,8 +178,37 @@
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
-            <version>5.4.25.Final</version>
+            <version>5.4.27.Final</version>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.languagetool/language-en -->
+        <dependency>
+            <groupId>org.languagetool</groupId>
+            <artifactId>language-en</artifactId>
+            <version>5.1</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.languagetool/language-ru -->
+        <dependency>
+            <groupId>org.languagetool</groupId>
+            <artifactId>language-ru</artifactId>
+            <version>5.1</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.languagetool/language-uk -->
+        <dependency>
+            <groupId>org.languagetool</groupId>
+            <artifactId>language-uk</artifactId>
+            <version>5.1</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12 -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.30</version>
+        </dependency>
+
     </dependencies>
 
     <build>
