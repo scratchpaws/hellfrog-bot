@@ -5,7 +5,6 @@ import hellfrog.commands.scenes.ddgentity.DDGWebResult;
 import hellfrog.commands.scenes.ddgentity.DDGWebResults;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
-import hellfrog.common.MessageUtils;
 import hellfrog.common.SimpleHttpClient;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
@@ -51,9 +50,8 @@ public class DuckDuckGoScenario
         super(PREFIX, DESCRIPTION);
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(1L));
         bucket = Bucket4j.builder().addLimit(bandwidth).build();
-        //super.enableStrictByChannels();
-        super.addStrictByChannelOnServer(516840591565389875L); // todo: rewrite
-        super.addStrictByChannelOnServer(465689649873158145L);
+        super.enableStrictByChannels();
+        super.skipStrictByChannelWithAclBUg();
     }
 
     @Override
@@ -85,12 +83,8 @@ public class DuckDuckGoScenario
             return;
         }
 
-        String eventMessage = event.getMessageContent();
-        String messageWoBotPrefix = MessageUtils.getEventMessageWithoutBotPrefix(eventMessage,
-                event.getServer());
-        messageWoBotPrefix = ServerSideResolver.getReadableContent(messageWoBotPrefix, event.getServer());
         final String messageWoCommandPrefix =
-                CommonUtils.cutLeftString(messageWoBotPrefix, PREFIX).trim();
+                super.getReadableMessageContentWithoutPrefix(event);
         if (CommonUtils.isTrStringEmpty(messageWoCommandPrefix)) {
             return;
         }
@@ -119,12 +113,12 @@ public class DuckDuckGoScenario
                 return;
             }
 
-            int firstScriptLocation = responseText.indexOf("nrj('");
+            int firstScriptLocation = responseText.indexOf("/t.js?q=");
             if (firstScriptLocation < 0) {
                 showErrorMessage("No search results found", event);
                 return;
             }
-            int secondScriptLocation = responseText.indexOf("nrj('", firstScriptLocation + 1);
+            int secondScriptLocation = responseText.indexOf("/d.js?q=", firstScriptLocation + 1);
             if (secondScriptLocation < 0) {
                 showErrorMessage("No search results found", event);
                 return;
@@ -134,9 +128,9 @@ public class DuckDuckGoScenario
             String secondScriptQuery;
 
             try {
-                firstScriptQuery = responseText.substring(firstScriptLocation + "nrj('".length(),
+                firstScriptQuery = responseText.substring(firstScriptLocation,
                         responseText.indexOf("');", firstScriptLocation));
-                secondScriptQuery = responseText.substring(secondScriptLocation + "nrj('".length(),
+                secondScriptQuery = responseText.substring(secondScriptLocation,
                         responseText.indexOf("');", secondScriptLocation));
             } catch (IndexOutOfBoundsException err) {
                 showErrorMessage("Unable to parse search result", event);
