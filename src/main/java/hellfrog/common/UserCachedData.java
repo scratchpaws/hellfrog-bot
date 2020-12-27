@@ -1,12 +1,10 @@
 package hellfrog.common;
 
-import org.javacord.api.entity.Icon;
+import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.concurrent.TimeUnit;
 
 public class UserCachedData
         implements CommonConstants {
@@ -15,8 +13,7 @@ public class UserCachedData
     private final String displayUserName;
     private final String serverNickName;
     private final String discriminatorName;
-    private final byte[] avatarBytes;
-    private final String avatarExtension;
+    private final DiscordImage avatar;
     private final boolean hasAvatar;
 
     public UserCachedData(@NotNull User user, @Nullable Server server) {
@@ -28,26 +25,14 @@ public class UserCachedData
             this.serverNickName = "";
         }
         boolean hasAvatarData = false;
-        byte[] avatarBytes = new byte[0];
-        String avatarName;
-        String avatarExt = "";
+        DiscordImage downloadedAvatar = DiscordImage.ofEmpty();
         try {
-            Icon avatar = user.getAvatar();
-            avatarName = avatar.getUrl().getFile();
-            String[] nameEl = avatarName.split("\\.");
-            if (nameEl.length > 0) {
-                avatarExt = nameEl[nameEl.length - 1];
-                avatarBytes = avatar.asByteArray().get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
-                if (avatarBytes.length > 0) {
-                    hasAvatarData = true;
-                }
-            }
+            downloadedAvatar = UserUtils.getAvatar(user);
+            hasAvatarData = true;
         } catch (Exception ignore) {
         }
-
+        this.avatar = downloadedAvatar;
         this.hasAvatar = hasAvatarData;
-        this.avatarBytes = avatarBytes;
-        this.avatarExtension = avatarExt;
         this.discriminatorName = user.getDiscriminatedName();
         this.userNickName = user.getName();
     }
@@ -69,14 +54,18 @@ public class UserCachedData
     }
 
     public byte[] getAvatarBytes() {
-        return avatarBytes;
+        return avatar.getImageData();
     }
 
     public String getAvatarExtension() {
-        return avatarExtension;
+        return avatar.getExtension();
     }
 
     public boolean isHasAvatar() {
         return hasAvatar;
+    }
+
+    public void setThumbnail(@NotNull final EmbedBuilder embedBuilder) {
+        avatar.setThumbnail(embedBuilder);
     }
 }
