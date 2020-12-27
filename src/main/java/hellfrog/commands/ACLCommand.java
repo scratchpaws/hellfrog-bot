@@ -41,7 +41,19 @@ public abstract class ACLCommand {
     private boolean updateLastUsage = true;
     private boolean expertCommand = false;
     protected final Logger log = LogManager.getLogger(this.getClass().getSimpleName());
-    private final List<Long> strictByChannelServers = new CopyOnWriteArrayList<>();
+    public static final List<Long> CURRENT_SERVER_WITH_ACL_BUG = List.of(
+            780560871100252171L,
+            381461592300322821L,
+            522748524857917450L,
+            750800591189704714L,
+            723289657789513828L,
+            594617083631894624L,
+            630837805362184240L,
+            575113435524890646L,
+            427210944247234564L,
+            550256321149141002L
+    );
+    private final List<Long> notStrictByChannelServers = new CopyOnWriteArrayList<>();
 
     protected ACLCommand(@NotNull String prefix, @NotNull String description) {
         if (CommonUtils.isTrStringEmpty(prefix))
@@ -57,8 +69,8 @@ public abstract class ACLCommand {
         this.strictByChannels = true;
     }
 
-    protected final void addStrictByChannelOnServer(final long serverId) {
-        this.strictByChannelServers.add(serverId);
+    protected final void skipStrictByChannelWithAclBUg() {
+        notStrictByChannelServers.addAll(CURRENT_SERVER_WITH_ACL_BUG);
     }
 
     protected final void enableOnlyServerCommandStrict() {
@@ -99,7 +111,7 @@ public abstract class ACLCommand {
     }
 
     private boolean isStrictOnServer(@NotNull final Server server) {
-        return strictByChannels || strictByChannelServers.stream().anyMatch(es -> es == server.getId());
+        return strictByChannels && !notStrictByChannelServers.contains(server.getId());
     }
 
     public boolean canExecuteServerCommand(MessageCreateEvent event, Server server,

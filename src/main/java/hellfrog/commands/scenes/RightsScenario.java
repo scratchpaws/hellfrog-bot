@@ -888,7 +888,7 @@ public class RightsScenario
                                                  @NotNull User user) {
         StringBuilder descriptionText = new StringBuilder();
         descriptionText.append("The following commands have any specified permission on the server `")
-                .append(Message.ESCAPED_CHARACTER.matcher(server.getName()).replaceAll("${char}"))
+                .append(ServerSideResolver.getReadableContent(server.getName(), Optional.of(server)))
                 .append("`:\n");
         SettingsController settingsController = SettingsController.getInstance();
         ServerPreferences serverPreferences = settingsController.getServerPreferences(server.getId());
