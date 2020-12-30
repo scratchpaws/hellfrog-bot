@@ -10,11 +10,18 @@ import hellfrog.settings.ServerStatistic;
 import hellfrog.settings.SettingsController;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.DiscordEntity;
+import org.javacord.api.entity.Region;
+import org.javacord.api.entity.channel.ServerChannel;
+import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
+import org.javacord.api.entity.server.DefaultMessageNotificationLevel;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.server.ServerBuilder;
+import org.javacord.api.entity.server.VerificationLevel;
+import org.javacord.api.entity.server.invite.Invite;
 import org.javacord.api.entity.server.invite.InviteBuilder;
 import org.javacord.api.entity.user.User;
 import org.jetbrains.annotations.Contract;
@@ -29,6 +36,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -391,5 +399,88 @@ public class Bd {
     public static String date(long entityId) {
         Instant instant = DiscordEntity.getCreationTimestamp(entityId);
         return instant.toString();
+    }
+
+    @MethodInfo("Create server with bot-owner")
+    @NotNull
+    public static String cserver() {
+        DiscordApi api = SettingsController.getInstance().getDiscordApi();
+        long serverId;
+        try {
+            serverId = new ServerBuilder(api)
+                    .setName("Hellfrog Resources " + ThreadLocalRandom.current().nextInt(0, 100))
+                    .setIcon(api.getYourself().getAvatar())
+                    .setVerificationLevel(VerificationLevel.HIGH)
+                    .setDefaultMessageNotificationLevel(DefaultMessageNotificationLevel.ONLY_MENTIONS)
+                    .setRegion(Region.EU_CENTRAL)
+                    .create()
+                    .join();
+        } catch (Exception err) {
+            return "Unable to create new server: " + err.getMessage();
+        }
+        Optional<Server> mayBeCreated = api.getServerById(serverId);
+        if (mayBeCreated.isEmpty()) {
+            return "Cannot find created server. You can check it's presence manually by gcs() method.";
+        }
+        Server created = mayBeCreated.get();
+        ServerChannel inviteSource = null;
+        Optional<ServerTextChannel> mayBeSystemChannel = created.getSystemChannel();
+        if (mayBeSystemChannel.isPresent()) {
+            inviteSource = mayBeSystemChannel.get();
+        } else {
+            Optional<ServerTextChannel> firstChannel = created.getTextChannels().stream()
+                    .filter(ServerTextChannel::canYouCreateInstantInvite)
+                    .filter(ServerTextChannel::canYouSee)
+                    .limit(1L)
+                    .findFirst();
+            if (firstChannel.isPresent()) {
+                inviteSource = firstChannel.get();
+            }
+        }
+        if (inviteSource == null) {
+            return "Can't find a channel where I can create an invite. Server: " + created;
+        }
+        try {
+            Invite invite = new InviteBuilder(inviteSource)
+                    .setTemporary(false)
+                    .setNeverExpire()
+                    .setMaxUses(0)
+                    .create()
+                    .join();
+            return invite.getUrl().toString();
+        } catch (Exception err) {
+            return "Unable create invite for channel " + inviteSource + " (server " + created + "): " + err.getMessage();
+        }
+    }
+
+    @MethodInfo("Delete server by it's id")
+    @NotNull
+    public static String dserver(long serverId) {
+        DiscordApi api = SettingsController.getInstance().getDiscordApi();
+        Optional<Server> mayBeServer = api.getServerById(serverId);
+        if (mayBeServer.isEmpty()) {
+            return "Server with id " + serverId + " does not exists or i'm not present in this server";
+        }
+        Server server = mayBeServer.get();
+        if (server.getOwnerId() != api.getYourself().getId()) {
+            return "I'm not a owner of server " + server.getName();
+        }
+        try {
+            server.delete().join();
+            return "Server " + server.getName() + " successfully deleted";
+        } catch (Exception err) {
+            return "Server " + server.getName() + " cannot be delete: " + err.getMessage();
+        }
+    }
+
+    @MethodInfo("Display the list of servers where this bot is the owner")
+    @NotNull
+    public static String mserver() {
+        DiscordApi api = SettingsController.getInstance().getDiscordApi();
+        return api.getServers().stream()
+                .filter(server -> server.getOwnerId() == api.getYourself().getId())
+                .map(server -> "{Name: " + server.getName() + "; ID: " + server.getId() + "}")
+                .reduce(CommonUtils::reduceConcat)
+                .orElse("(none)");
     }
 }
