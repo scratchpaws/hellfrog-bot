@@ -120,8 +120,14 @@ public class EventsListener
                 .filter(r -> r.canReact(event))
                 .forEach(r -> r.onMessageCreate(event));
 
-        if (isPlainMessage)
+        if (isPlainMessage) {
             twoPhaseTransfer.transferAction(event);
+            if (event.getServer().isPresent()) {
+                SettingsController.getInstance()
+                        .getCongratulationsController()
+                        .processAndSave(event);
+            }
+        }
     }
 
     private boolean parseCmdLine(@NotNull MessageCreateEvent event) {

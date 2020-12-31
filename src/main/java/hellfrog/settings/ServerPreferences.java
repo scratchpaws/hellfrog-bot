@@ -38,6 +38,9 @@ public class ServerPreferences
 
     private ConcurrentHashMap<Long, WtfMap> wtfMapper = new ConcurrentHashMap<>();
 
+    private volatile Long congratulationChannel = null;
+    private volatile String timezone = null;
+
     /**
      * Получить префикс для вызова бота на данном сервере
      *
@@ -190,5 +193,21 @@ public class ServerPreferences
 
     public void setWtfMapper(ConcurrentHashMap<Long, WtfMap> wtfMapper) {
         this.wtfMapper = wtfMapper != null ? wtfMapper : new ConcurrentHashMap<>();
+    }
+
+    public Long getCongratulationChannel() {
+        return congratulationChannel;
+    }
+
+    public void setCongratulationChannel(Long congratulationChannel) {
+        this.congratulationChannel = congratulationChannel;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(String timezone) {
+        this.timezone = timezone;
     }
 }

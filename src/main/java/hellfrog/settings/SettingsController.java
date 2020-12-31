@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.HttpClientsPool;
-import hellfrog.core.AutoSaveSettingsTask;
-import hellfrog.core.InvitesController;
-import hellfrog.core.SessionsCheckTask;
-import hellfrog.core.VoteController;
+import hellfrog.core.*;
 import hellfrog.settings.db.InstanceType;
 import hellfrog.settings.db.MainDBController;
 import org.apache.logging.log4j.LogManager;
@@ -50,6 +47,7 @@ public class SettingsController {
     private final HttpClientsPool httpClientsPool;
     private final AutoSaveSettingsTask autoSaveSettingsTask;
     private final SessionsCheckTask sessionsCheckTask;
+    private final CongratulationsController congratulationsController;
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
     private volatile Instant lastCommandUsage = null;
@@ -72,6 +70,7 @@ public class SettingsController {
         invitesController = new InvitesController();
         autoSaveSettingsTask = new AutoSaveSettingsTask();
         sessionsCheckTask = new SessionsCheckTask();
+        congratulationsController = new CongratulationsController();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
                 SettingsController.getInstance().mainDBController.close()));
@@ -372,6 +371,10 @@ public class SettingsController {
 
     public InvitesController getInvitesController() {
         return invitesController;
+    }
+
+    public CongratulationsController getCongratulationsController() {
+        return congratulationsController;
     }
 
     public AutoSaveSettingsTask getAutoSaveSettingsTask() {
