@@ -10,10 +10,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class TestUtils {
@@ -204,5 +201,12 @@ public class TestUtils {
         } catch (Exception err) {
             return URI.create("https://www.example.com");
         }
+    }
+
+    public static TimeZone randomTimeZone() {
+        ThreadLocalRandom tlr = ThreadLocalRandom.current();
+        String[] allIds = TimeZone.getAvailableIDs();
+        String selectedId = allIds[tlr.nextInt(0, allIds.length)];
+        return TimeZone.getTimeZone(selectedId);
     }
 }
