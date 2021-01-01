@@ -169,4 +169,34 @@ class ServerPreferencesDAOImpl
     public boolean setNewAclMode(long serverId, boolean isNewMode) {
         return setBooleanValue(serverId, ServerPrefKey.NEW_ACL_MODE, isNewMode, NEW_ACL_MODE_DEFAULT);
     }
+
+    @Override
+    public boolean isCongratulationsEnabled(long serverId) {
+        return getBooleanValue(serverId, ServerPrefKey.CONGRAT_ENABLED, CONGRATULATIONS_ENABLED_DEFAULT);
+    }
+
+    @Override
+    public boolean setCongratulationEnabled(long serverId, boolean isEnabled) {
+        return setBooleanValue(serverId, ServerPrefKey.CONGRAT_ENABLED, isEnabled, CONGRATULATIONS_ENABLED_DEFAULT);
+    }
+
+    @Override
+    public long getCongratulationChannel(long serverId) {
+        return getLongValue(serverId, ServerPrefKey.CONGRAT_CHANNEL, CONGRATULATIONS_CHANNEL_DEFAULT);
+    }
+
+    @Override
+    public long setCongratulationChannel(long serverId, long congratulationChannel) {
+        return setLongValue(serverId, ServerPrefKey.CONGRAT_CHANNEL, congratulationChannel, CONGRATULATIONS_CHANNEL_DEFAULT);
+    }
+
+    @Override
+    public String getCongratulationTimeZone(long serverId) {
+        return getStringValue(serverId, ServerPrefKey.CONGRAT_TIMEZONE, CONGRATULATIONS_TIMEZONE_DEFAULT);
+    }
+
+    @Override
+    public String setCongratulationTimeZone(long serverId, @NotNull String newTimeZone) {
+        return setStringValue(serverId, ServerPrefKey.CONGRAT_TIMEZONE, newTimeZone, CONGRATULATIONS_TIMEZONE_DEFAULT);
+    }
 }

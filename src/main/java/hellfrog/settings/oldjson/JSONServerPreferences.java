@@ -37,6 +37,12 @@ public class JSONServerPreferences {
     private String communityControlEmoji = null;
     private Map<Long, JSONWtfMap> wtfMapper = Collections.emptyMap();
 
+    // hellfrog.settings.db.ServerPreferencesDAO.isCongratulationsEnabled
+    // hellfrog.settings.db.ServerPreferencesDAO.getCongratulationChannel
+    private Long congratulationChannel = null;
+    // hellfrog.settings.db.ServerPreferencesDAO.getCongratulationTimeZone
+    private String timezone = null;
+
     public String getBotPrefix() {
         return botPrefix;
     }
@@ -161,5 +167,21 @@ public class JSONServerPreferences {
 
     public void setWtfMapper(Map<Long, JSONWtfMap> wtfMapper) {
         this.wtfMapper = wtfMapper != null ? Collections.unmodifiableMap(wtfMapper) : this.wtfMapper;
+    }
+
+    public Long getCongratulationChannel() {
+        return congratulationChannel;
+    }
+
+    public void setCongratulationChannel(Long congratulationChannel) {
+        this.congratulationChannel = congratulationChannel;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(String timezone) {
+        this.timezone = timezone;
     }
 }

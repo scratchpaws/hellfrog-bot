@@ -14,10 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.sql.*;
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 class SchemaVersionCheckerSQLite {
@@ -142,6 +139,18 @@ class SchemaVersionCheckerSQLite {
                     boolean isNewAclMode = jsonServerPreferences.getNewAclMode();
                     sqlLog.info("Server {}: found new ACL state: {}", serverId, isNewAclMode);
                     serverPreferencesDAO.setNewAclMode(serverId, isNewAclMode);
+
+                    boolean congratulationsEnabled = jsonServerPreferences.getCongratulationChannel() != null
+                            && jsonServerPreferences.getCongratulationChannel() > 0L;
+                    long congratulationsChannelId = jsonServerPreferences.getCongratulationChannel() != null
+                            ? jsonServerPreferences.getCongratulationChannel() : 0L;
+                    String congratulationsTimeZoneId = jsonServerPreferences.getTimezone() != null
+                            ? jsonServerPreferences.getTimezone() : TimeZone.getDefault().getID();
+                    sqlLog.info("Server {}: congratulations enabled: {} at channel {} with timezone {}",
+                            serverId, congratulationsEnabled, congratulationsChannelId, congratulationsTimeZoneId);
+                    serverPreferencesDAO.setCongratulationEnabled(serverId, congratulationsEnabled);
+                    serverPreferencesDAO.setCongratulationChannel(serverId, congratulationsChannelId);
+                    serverPreferencesDAO.setCongratulationTimeZone(serverId, congratulationsTimeZoneId);
 
                     Map<String, JSONCommandRights> legacyRights = jsonServerPreferences.getSrvCommandRights();
                     if (!legacyRights.isEmpty()) {

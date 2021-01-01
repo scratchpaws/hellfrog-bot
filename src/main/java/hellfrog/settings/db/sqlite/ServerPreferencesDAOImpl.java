@@ -5,7 +5,6 @@ import hellfrog.common.ResourcesLoader;
 import hellfrog.settings.db.ServerPreferencesDAO;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
@@ -129,13 +128,11 @@ class ServerPreferencesDAOImpl
                 .map(result -> result.equals("1"));
     }
 
-    @Contract("_, _, !null -> !null")
     private String getStringValue(long serverId, @NotNull String key, @NotNull String defaultValue) {
         return upsertString(serverId, key, defaultValue, false)
                 .orElse(defaultValue);
     }
 
-    @Contract("_, _, _, !null -> !null")
     private String setStringValue(long serverId, @NotNull String key, @NotNull String newValue, @NotNull String defaultValue) {
         return upsertString(serverId, key, newValue, true)
                 .orElse(defaultValue);
@@ -199,5 +196,35 @@ class ServerPreferencesDAOImpl
     @Override
     public boolean setNewAclMode(long serverId, boolean isNewMode) {
         return setBooleanValue(serverId, NEW_ACL_MODE_KEY, isNewMode, NEW_ACL_MODE_DEFAULT);
+    }
+
+    @Override
+    public boolean isCongratulationsEnabled(long serverId) {
+        return getBooleanValue(serverId, CONGRATULATIONS_ENABLED_KEY, CONGRATULATIONS_ENABLED_DEFAULT);
+    }
+
+    @Override
+    public boolean setCongratulationEnabled(long serverId, boolean isEnabled) {
+        return setBooleanValue(serverId, CONGRATULATIONS_ENABLED_KEY, isEnabled, CONGRATULATIONS_ENABLED_DEFAULT);
+    }
+
+    @Override
+    public long getCongratulationChannel(long serverId) {
+        return getLongValue(serverId, CONGRATULATIONS_CHANNEL, CONGRATULATIONS_CHANNEL_DEFAULT);
+    }
+
+    @Override
+    public long setCongratulationChannel(long serverId, long congratulationChannel) {
+        return setLongValue(serverId, CONGRATULATIONS_CHANNEL, congratulationChannel, CONGRATULATIONS_CHANNEL_DEFAULT);
+    }
+
+    @Override
+    public String getCongratulationTimeZone(long serverId) {
+        return getStringValue(serverId, CONGRATULATIONS_TIMEZONE, CONGRATULATIONS_TIMEZONE_DEFAULT);
+    }
+
+    @Override
+    public String setCongratulationTimeZone(long serverId, @NotNull String newTimeZone) {
+        return setStringValue(serverId, CONGRATULATIONS_TIMEZONE, newTimeZone, CONGRATULATIONS_TIMEZONE_DEFAULT);
     }
 }
