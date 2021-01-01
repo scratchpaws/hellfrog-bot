@@ -31,8 +31,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 
 public class CongratulationsController
@@ -123,7 +123,7 @@ public class CongratulationsController
                             try (BufferedReader reader = Files.newBufferedReader(inputJson, StandardCharsets.UTF_8)) {
                                 ObjectMapper objectMapper = buildMapper();
                                 Congratulation congratulation = objectMapper.readValue(reader, Congratulation.class);
-                                if (congratulation.getAuthorId() > 0L && CommonUtils.isTrStringNotEmpty(congratulation.getMessage())) {
+                                if (congratulation.getAuthorId() > 0L) {
                                     try {
                                         User user = api.getUserById(congratulation.getAuthorId())
                                                 .get(CommonConstants.OP_WAITING_TIMEOUT, CommonConstants.OP_TIME_UNIT);
