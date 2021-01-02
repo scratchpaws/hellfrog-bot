@@ -23,7 +23,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MessageUtils
-    implements CommonConstants {
+        implements CommonConstants {
 
     public static final Pattern MESSAGE_LINK_SEARCH = Pattern.compile("https.*discord.*channels/\\d+/\\d+/\\d+", Pattern.MULTILINE);
 
@@ -45,9 +45,9 @@ public class MessageUtils
         SettingsController settingsController = SettingsController.getInstance();
         DiscordApi discordApi = settingsController.getDiscordApi();
         if (discordApi == null) {
-            return "";
+            return eventMessage;
         }
-        User yourself = discordApi.getYourself();
+        final User yourself = discordApi.getYourself();
         String botMentionTag = yourself.getMentionTag();
         String botMentionNicknameTag = yourself.getNicknameMentionTag();
         String botPrefix;
@@ -127,8 +127,8 @@ public class MessageUtils
 
         if (longMessage.length() <= 2000) {
             new MessageBuilder()
-                .append(longMessage)
-                .send(messageable);
+                    .append(longMessage)
+                    .send(messageable);
         } else {
             String[] lines = longMessage.split("\n");
             List<String> rebuilds = new ArrayList<>(lines.length);
@@ -155,7 +155,6 @@ public class MessageUtils
             }
         }
     }
-
 
 
     public static Optional<Message> findByIds(long serverId, long textChatId, long messageId) {
@@ -270,7 +269,8 @@ public class MessageUtils
                     new MessageBuilder()
                             .addAttachment(attach.getBytes(), attach.getFileName())
                             .send(ch).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
-                } catch (Exception ignore) {}
+                } catch (Exception ignore) {
+                }
             }
         }
     }

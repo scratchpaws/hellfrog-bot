@@ -1,6 +1,7 @@
 package hellfrog.commands.scenes;
 
 import hellfrog.common.*;
+import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
@@ -31,6 +32,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CoubGrabberScenario
@@ -38,9 +40,9 @@ public class CoubGrabberScenario
 
     private static final String PREFIX = "coub";
     private static final String DESCRIPTION = "Grab video from Coub url";
-    private final Bucket bucket;
-    private static final String COUB_HOSTNAME = "coub.com";
     private static final String VIDEO_FOR_SHARING = "cw_video_for_sharing";
+    private final Bucket bucket;
+    private final Pattern COUB_DETECT = Pattern.compile("/(embed|view)/\\w*", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
     private final Pattern MP4_VIDEO = Pattern.compile("mp4_.*_size.*\\.mp4", Pattern.CASE_INSENSITIVE);
     private final Pattern MP4_AUDIO = Pattern.compile("m4a_.*\\.m4a", Pattern.CASE_INSENSITIVE);
     private final Pattern MP3_AUDIO = Pattern.compile(".*\\.mp3$", Pattern.CASE_INSENSITIVE);
@@ -75,9 +77,17 @@ public class CoubGrabberScenario
 
     private void grabCoubVideo(@NotNull final MessageCreateEvent event) {
 
-        final String coubUrl = super.getMessageContentWithoutPrefix(event).replace("embed", "view");
-        if (CommonUtils.isTrStringEmpty(coubUrl)) {
+        final String userParameter = super.getMessageContentWithoutPrefix(event);
+        if (CommonUtils.isTrStringEmpty(userParameter)) {
             showErrorMessage("Coub video required", event);
+            return;
+        }
+
+        final URI coubUrl = findCoubURI(userParameter);
+        if (coubUrl == null) {
+            String errMsg = String.format("Can't find the coub url in text \"%s\"",
+                    ServerSideResolver.getReadableContent(userParameter, event.getServer()));
+            showErrorMessage(errMsg, event);
             return;
         }
 
@@ -169,22 +179,24 @@ public class CoubGrabberScenario
         }
     }
 
+    @Nullable
+    private URI findCoubURI(@NotNull final String userParameter) {
+        Matcher detectMatcher = COUB_DETECT.matcher(userParameter);
+        if (detectMatcher.find()) {
+            String urlValue = "https://coub.com" + detectMatcher.group().replace("/embed/", "/view/");
+            try {
+                return new URI(urlValue);
+            } catch (URISyntaxException err) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     private String parseCoubPage(@NotNull final SimpleHttpClient client,
-                                 @NotNull final String coubUrl) throws RuntimeException {
-        URI uri;
-        try {
-            uri = URI.create(coubUrl);
-        } catch (IllegalArgumentException uriParseErr) {
-            String errorMessage = String.format("Incorrect URL \"%s\": %s", coubUrl, uriParseErr.getMessage());
-            throw new RuntimeException(errorMessage);
-        }
+                                 @NotNull final URI coubUrl) throws RuntimeException {
 
-        if (!uri.getHost().equalsIgnoreCase(COUB_HOSTNAME)) {
-            String errorMessage = String.format("URL \"%s\" is not from coub.com", coubUrl);
-            throw new RuntimeException(errorMessage);
-        }
-
-        final HttpGet request = new HttpGet(uri);
+        final HttpGet request = new HttpGet(coubUrl);
         String responseText;
         try (CloseableHttpResponse httpResponse = client.execute(request)) {
             final int statusCode = httpResponse.getStatusLine().getStatusCode();
@@ -211,7 +223,7 @@ public class CoubGrabberScenario
             String errMsg = String.format("Coub.com received empty page from \"%s\"", coubUrl);
             throw new RuntimeException(errMsg);
         }
-        final Document parsedDom = Jsoup.parse(responseText, coubUrl);
+        final Document parsedDom = Jsoup.parse(responseText, coubUrl.toString());
         final Element coubPageCoubJson = parsedDom.getElementById("coubPageCoubJson");
         if (coubPageCoubJson == null) {
             String errMsg = String.format("Unable to find videos urls from page \"%s\"", coubUrl);
@@ -224,7 +236,7 @@ public class CoubGrabberScenario
                                          @NotNull final String mp4Video,
                                          @Nullable final String mp4Audio,
                                          @Nullable final String mp3Audio,
-                                         @NotNull final String coubUrl) throws RuntimeException {
+                                         @NotNull final URI coubUrl) throws RuntimeException {
         if (mp4Audio == null && mp3Audio == null) {
             String errMsg = String.format("Unable to find coub audio from page \"%s\"", coubUrl);
             throw new RuntimeException(errMsg);
@@ -261,7 +273,7 @@ public class CoubGrabberScenario
 
     private Path downloadCoubPart(@NotNull final SimpleHttpClient client,
                                   @NotNull final String partUrl,
-                                  @NotNull final String coubUrl) throws RuntimeException {
+                                  @NotNull final URI coubUrl) throws RuntimeException {
         URI uri;
         Path result;
         try {
