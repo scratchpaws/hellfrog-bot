@@ -6,6 +6,7 @@ import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.query.Query;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaDelete;
@@ -13,6 +14,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
@@ -38,6 +40,11 @@ class AutoSession
         return hibernateSession.createQuery(queryText, type);
     }
 
+    @Nullable
+    public<T> T get(Class<T> entityType, Serializable id) {
+        return hibernateSession.get(entityType, id);
+    }
+
     public Query createQuery(String queryText) {
         return hibernateSession.createQuery(queryText);
     }
@@ -54,8 +61,24 @@ class AutoSession
         return hibernateSession.createQuery(criteriaDelete);
     }
 
-    public<T> void remove(T object) {
+    public<T> void remove(@Nullable T object) {
+        if (object == null) {
+            return;
+        }
+        resetSuccess();
         hibernateSession.remove(object);
+        success();
+    }
+
+    public<T> void removeAll(@Nullable Collection<T> objects) {
+        if (objects == null || objects.isEmpty()) {
+            return;
+        }
+        resetSuccess();
+        for (T item : objects) {
+            hibernateSession.remove(item);
+        }
+        success();
     }
 
     @SuppressWarnings("unchecked")
@@ -73,13 +96,19 @@ class AutoSession
         return result;
     }
 
-    public<T> void save(T object) {
+    public<T> void save(@Nullable T object) {
+        if (object == null) {
+            return;
+        }
         resetSuccess();
         hibernateSession.saveOrUpdate(object);
         success();
     }
 
-    public<T> void saveAll(@NotNull Collection<T> objects) {
+    public<T> void saveAll(@Nullable Collection<T> objects) {
+        if (objects == null || objects.isEmpty()) {
+            return;
+        }
         resetSuccess();
         for (T item : objects) {
             hibernateSession.saveOrUpdate(item);

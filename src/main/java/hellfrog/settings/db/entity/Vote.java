@@ -95,7 +95,7 @@ public class Vote {
         this.finishTime = finishTime;
     }
 
-    @Column(name = "vote_text")
+    @Column(name = "vote_text", length = 2000)
     public String getVoteText() {
         return voteText;
     }
