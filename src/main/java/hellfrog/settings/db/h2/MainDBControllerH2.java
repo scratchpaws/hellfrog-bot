@@ -43,6 +43,7 @@ public class MainDBControllerH2
     private final RoleRightsDAO roleRightsDAO;
     private final TextChannelRightsDAO textChannelRightsDAO;
     private final ChannelCategoryRightsDAO categoryRightsDAO;
+    private final EmojiTotalStatisticDAO emojiTotalStatisticDAO;
 
     public MainDBControllerH2(@Nullable InstanceType type) throws IOException, SQLException {
         super(type);
@@ -100,6 +101,7 @@ public class MainDBControllerH2
             roleRightsDAO = new RoleRightsDAOImpl(autoSessionFactory);
             textChannelRightsDAO = new TextChannelRightsDAOImpl(autoSessionFactory);
             categoryRightsDAO = new ChannelCategoryRightsDAOImpl(autoSessionFactory);
+            emojiTotalStatisticDAO = new EmojiTotalStatisticDAOImpl(autoSessionFactory);
 
         } catch (Exception err) {
             String errMsg = String.format("Unable to create session factory: %s", err.getMessage());
@@ -214,7 +216,7 @@ public class MainDBControllerH2
 
     @Override
     public EmojiTotalStatisticDAO getEmojiTotalStatisticDAO() {
-        return null;
+        return emojiTotalStatisticDAO;
     }
 
     @Override

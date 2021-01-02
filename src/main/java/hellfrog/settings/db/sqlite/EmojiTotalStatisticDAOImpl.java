@@ -2,16 +2,13 @@ package hellfrog.settings.db.sqlite;
 
 import hellfrog.common.ResourcesLoader;
 import hellfrog.settings.db.EmojiTotalStatisticDAO;
-import hellfrog.settings.db.entity.EmojiStatistic;
+import hellfrog.settings.db.entity.EmojiTotalStatistic;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.UnmodifiableView;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,9 +29,6 @@ import java.util.List;
  */
 public class EmojiTotalStatisticDAOImpl
         implements EmojiTotalStatisticDAO {
-
-    private static final long NO_USAGES_FOUND = 0L;
-    private static final long ERR_REACHED = -1L;
 
     private final Connection connection;
     private final Logger log = LogManager.getLogger("Emoji total statistic");
@@ -144,7 +138,7 @@ public class EmojiTotalStatisticDAOImpl
             statement.setLong(1, lastUsageMilli);
             statement.setLong(2, currentDateTime);
             statement.setLong(3, serverId);
-            statement.setLong(5, emojiId);
+            statement.setLong(4, emojiId);
             int count = statement.executeUpdate();
             if (count == 0) {
                 insertStats(serverId, emojiId, (increment ? 1L : 0L), lastUsage);
@@ -176,9 +170,9 @@ public class EmojiTotalStatisticDAOImpl
 
     @Override
     @UnmodifiableView
-    public List<EmojiStatistic> getAllEmojiUsagesStatistic(long serverId) {
+    public List<EmojiTotalStatistic> getAllEmojiUsagesStatistic(long serverId) {
 
-        List<EmojiStatistic> result = new ArrayList<>();
+        List<EmojiTotalStatistic> result = new ArrayList<>();
 
         if (log.isDebugEnabled()) {
             log.debug("Query:\n{}\nParam 1: {}", getAllEmojiUsagesStatisticQuery, serverId);
@@ -187,15 +181,14 @@ public class EmojiTotalStatisticDAOImpl
         try (PreparedStatement statement = connection.prepareStatement(getAllEmojiUsagesStatisticQuery)) {
             statement.setLong(1, serverId);
             try (ResultSet resultSet = statement.executeQuery()) {
-                long emojiId, usagesCount;
-                Instant lastUsage;
-                EmojiStatistic entity;
+                EmojiTotalStatistic entity;
                 while (resultSet.next()) {
                     // emoji_id, usages_count, last_usage
-                    emojiId = resultSet.getLong(1);
-                    usagesCount = resultSet.getLong(2);
-                    lastUsage = Instant.ofEpochMilli(resultSet.getLong(3));
-                    entity = new EmojiStatistic(serverId, emojiId, usagesCount, lastUsage);
+                    entity = new EmojiTotalStatistic();
+                    entity.setId(0L);
+                    entity.setEmojiId(resultSet.getLong(1));
+                    entity.setUsagesCount(resultSet.getLong(2));
+                    entity.setLastUsage(Timestamp.from(Instant.ofEpochMilli(resultSet.getLong(3))));
                     result.add(entity);
                 }
             }

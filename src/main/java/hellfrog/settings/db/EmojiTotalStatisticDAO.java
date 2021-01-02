@@ -1,12 +1,15 @@
 package hellfrog.settings.db;
 
-import hellfrog.settings.db.entity.EmojiStatistic;
+import hellfrog.settings.db.entity.EmojiTotalStatistic;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
 import java.util.List;
 
 public interface EmojiTotalStatisticDAO {
+
+    long NO_USAGES_FOUND = 0L;
+    long ERR_REACHED = -1L;
 
     long getEmojiUsagesCount(long serverId, long emojiId);
 
@@ -20,5 +23,5 @@ public interface EmojiTotalStatisticDAO {
 
     void decrement(long serverId, long emojiId);
 
-    List<EmojiStatistic> getAllEmojiUsagesStatistic(long serverId);
+    List<EmojiTotalStatistic> getAllEmojiUsagesStatistic(long serverId);
 }

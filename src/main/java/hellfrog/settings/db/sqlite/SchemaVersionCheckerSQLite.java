@@ -317,6 +317,45 @@ class SchemaVersionCheckerSQLite {
                             }
                         }
                     }
+
+                }
+
+                EmojiTotalStatisticDAO emojiTotalStatisticDAO = mainDBController.getEmojiTotalStatisticDAO();
+                for (Map.Entry<Long, JSONServerStatistic> serverStats : jsonLegacySettings.getStatByServer().entrySet()) {
+
+                    long serverId = serverStats.getKey();
+                    JSONServerStatistic jsonServerStatistic = serverStats.getValue();
+
+                    if (jsonServerStatistic != null) {
+                        sqlLog.info("Found server statistics for id {}", serverId);
+                        Map<Long, JSONSmileStatistic> smileStats = jsonServerStatistic.getNonDefaultSmileStats();
+                        if (smileStats != null && !smileStats.isEmpty()) {
+                            sqlLog.info("Found emoji total statistic for server {}", serverId);
+
+                            for (Map.Entry<Long, JSONSmileStatistic> smileStat : smileStats.entrySet()) {
+                                long emojiId = smileStat.getKey();
+                                JSONSmileStatistic smileStatistic = smileStat.getValue();
+                                long usagesCount = smileStatistic.getUsagesCount() != null
+                                        ? smileStatistic.getUsagesCount().get()
+                                        : 0L;
+                                if (usagesCount < 0L) {
+                                    usagesCount = 0L;
+                                }
+                                Instant lastUpdate = Instant.now();
+                                if (smileStatistic.getLastUsage() != null) {
+                                    long rawLastUpdate = smileStatistic.getLastUsage().get();
+                                    if (rawLastUpdate > 0L) {
+                                        Calendar current = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                                        current.setTimeInMillis(rawLastUpdate);
+                                        lastUpdate = current.toInstant();
+                                    }
+                                }
+                                sqlLog.info("Found emoji stat: server {}, emoji id {}, usages count {}, last update {}",
+                                        serverId, emojiId, usagesCount, lastUpdate);
+                                emojiTotalStatisticDAO.insertStats(serverId, emojiId, usagesCount, lastUpdate);
+                            }
+                        }
+                    }
                 }
             }
         }
