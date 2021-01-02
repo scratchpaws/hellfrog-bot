@@ -93,6 +93,9 @@
         <Logger name="DB session" level="info" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
+        <Logger name="WTF assign" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
         <Logger name="com.optimaize" level="info" additivity="false">
             <AppenderRef ref="plainLogger"/>
         </Logger>

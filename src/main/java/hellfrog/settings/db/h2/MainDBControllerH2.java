@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -44,6 +45,7 @@ public class MainDBControllerH2
     private final TextChannelRightsDAO textChannelRightsDAO;
     private final ChannelCategoryRightsDAO categoryRightsDAO;
     private final EmojiTotalStatisticDAO emojiTotalStatisticDAO;
+    private final WtfAssignDAO wtfAssignDAO;
 
     public MainDBControllerH2(@Nullable InstanceType type) throws IOException, SQLException {
         super(type);
@@ -53,10 +55,11 @@ public class MainDBControllerH2
         }
         Path codeSourcePath = CodeSourceUtils.getCodeSourceParent();
         Path settingsPath = codeSourcePath.resolve(SETTINGS_DIR_NAME);
+        String currentDateTime = String.format("_%tF_%<tH-%<tM-%<tS", Calendar.getInstance());
         Path pathToDb = switch (type) {
             case PROD -> settingsPath.resolve(PROD_DB_FILE_NAME);
             case TEST -> settingsPath.resolve(TEST_DB_FILE_NAME);
-            case BACKUP -> settingsPath.resolve(BACKUP_DB_FILE_NAME);
+            case BACKUP -> settingsPath.resolve(BACKUP_DB_FILE_NAME + currentDateTime);
         };
         String JDBC_PREFIX = "jdbc:h2:";
         String connectionURL = JDBC_PREFIX + pathToDb.toString();
@@ -102,6 +105,7 @@ public class MainDBControllerH2
             textChannelRightsDAO = new TextChannelRightsDAOImpl(autoSessionFactory);
             categoryRightsDAO = new ChannelCategoryRightsDAOImpl(autoSessionFactory);
             emojiTotalStatisticDAO = new EmojiTotalStatisticDAOImpl(autoSessionFactory);
+            wtfAssignDAO = new WtfAssignDAOImpl(autoSessionFactory);
 
         } catch (Exception err) {
             String errMsg = String.format("Unable to create session factory: %s", err.getMessage());
@@ -211,7 +215,7 @@ public class MainDBControllerH2
 
     @Override
     public WtfAssignDAO getWtfAssignDAO() {
-        return null;
+        return wtfAssignDAO;
     }
 
     @Override
