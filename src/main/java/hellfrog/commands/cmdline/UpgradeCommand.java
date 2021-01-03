@@ -112,39 +112,42 @@ public class UpgradeCommand
     }
 
     private void doUpdateMainJar(@NotNull MessageCreateEvent event) {
-        BroadCast.sendBroadcastUnsafeUsageCE("upgrade main jar file", event);
-        List<MessageAttachment> attaches = event.getMessage().getAttachments();
-        if (attaches.size() != 1) {
-            showErrorMessage("One main jar file required.", event);
-            return;
-        }
-        MessageAttachment attachment = attaches.get(0);
-        if (!attachment.getFileName().toLowerCase().endsWith(".jar")) {
-            showErrorMessage("The file is not a jar file.", event);
-            return;
-        }
-        Path mainJar;
+        BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger()
+                .addUnsafeUsageCE("upgrade main jar file", event);
         try {
-            mainJar = CodeSourceUtils.getCodeSourceJarPath();
-        } catch (IOException err) {
-            showErrorMessage("Unable to resolve code source: " + err, event);
-            return;
-        }
-        if (mainJar == null) {
-            showErrorMessage("Replacing of code source not supported", event);
-            return;
-        }
-        showInfoMessage("Saving attachment", event);
-        try (SavedAttachment savedAttachment = new SavedAttachment(attachment)) {
-            showInfoMessage("Attachment saved", event);
+            List<MessageAttachment> attaches = event.getMessage().getAttachments();
+            if (attaches.size() != 1) {
+                showErrorMessage("One main jar file required.", event);
+                return;
+            }
+            MessageAttachment attachment = attaches.get(0);
+            if (!attachment.getFileName().toLowerCase().endsWith(".jar")) {
+                showErrorMessage("The file is not a jar file.", event);
+                return;
+            }
+            Path mainJar;
+            try {
+                mainJar = CodeSourceUtils.getCodeSourceJarPath();
+            } catch (IOException err) {
+                showErrorMessage("Unable to resolve code source: " + err, event);
+                return;
+            }
+            if (mainJar == null) {
+                showErrorMessage("Replacing of code source not supported", event);
+                return;
+            }
+            messagesLogger.addInfoMessage("Saving attachment");
+            try (SavedAttachment savedAttachment = new SavedAttachment(attachment)) {
+                messagesLogger.addInfoMessage("Attachment saved")
+                        .addInfoMessage("Replacing the main jar file");
+                savedAttachment.moveTo(mainJar);
+                messagesLogger.addInfoMessage("Replacing done");
 
-
-            showInfoMessage("Replacing the main jar file", event);
-            savedAttachment.moveTo(mainJar);
-            showInfoMessage("Replacing done", event);
-
-        } catch (IOException err) {
-            showErrorMessage("Unable to upgrade main jar file: " + err, event);
+            } catch (IOException err) {
+                messagesLogger.addErrorMessage("Unable to upgrade main jar file: " + err.getMessage());
+            }
+        } finally {
+            messagesLogger.send();
         }
     }
 
@@ -181,7 +184,9 @@ public class UpgradeCommand
     }
 
     private void doUploadLibrary(@NotNull MessageCreateEvent event) {
-        BroadCast.sendBroadcastUnsafeUsageCE("upgrade library jar file", event);
+        BroadCast.getLogger()
+                .addUnsafeUsageCE("upgrade library jar file", event)
+                .send();
         List<MessageAttachment> attaches = event.getMessage().getAttachments();
         if (attaches.isEmpty()) {
             showErrorMessage("One library jar file required.", event);
@@ -222,7 +227,10 @@ public class UpgradeCommand
     }
 
     private void doDeleteLibrary(@NotNull CommandLine cmdline, @NotNull MessageCreateEvent event) {
-        BroadCast.sendBroadcastUnsafeUsageCE("delete library", event);
+        BroadCast.getLogger()
+                .addUnsafeUsageCE("delete library", event)
+                .send();
+
         String[] names = cmdline.getOptionValues('d');
         if (names == null || names.length == 0) {
             showErrorMessage("Library names required.", event);
@@ -297,20 +305,25 @@ public class UpgradeCommand
     }
 
     private void upgradeTwoPhaseFile(@NotNull MessageCreateEvent event) {
-        BroadCast.sendBroadcastUnsafeUsageCE("upgrade two phase mix file", event);
-        if (event.getMessageAttachments().isEmpty()) {
-            showErrorMessage("Two phase file is empty", event);
-            return;
-        }
-
-        event.getMessageAttachments().forEach(ma -> {
-            try (SavedAttachment savedAttachment = new SavedAttachment(ma)) {
-                savedAttachment.moveTo(TwoPhaseTransfer.getPathToPhrasesFile());
-                TwoPhaseTransfer.replaceLined();
-                showInfoMessage("Success replaced", event);
-            } catch (IOException err) {
-                showErrorMessage("Unable to save attachment: " + err, event);
+        BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger()
+                .addUnsafeUsageCE("upgrade two phase mix file", event);
+        try {
+            if (event.getMessageAttachments().isEmpty()) {
+                showErrorMessage("Two phase file is empty", event);
+                return;
             }
-        });
+
+            event.getMessageAttachments().forEach(ma -> {
+                try (SavedAttachment savedAttachment = new SavedAttachment(ma)) {
+                    savedAttachment.moveTo(TwoPhaseTransfer.getPathToPhrasesFile());
+                    TwoPhaseTransfer.replaceLined();
+                    messagesLogger.addInfoMessage("Success replaced");
+                } catch (IOException err) {
+                    messagesLogger.addErrorMessage("Unable to save attachment: " + err.getMessage());
+                }
+            });
+        } finally {
+            messagesLogger.send();
+        }
     }
 }

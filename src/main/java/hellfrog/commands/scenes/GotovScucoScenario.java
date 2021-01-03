@@ -75,6 +75,7 @@ public class GotovScucoScenario
         SimpleHttpClient client = SettingsController.getInstance()
                 .getHttpClientsPool()
                 .borrowClient();
+        BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
         try {
             HttpGet request = new HttpGet(SERVICE_URI);
             String responseText;
@@ -93,14 +94,14 @@ public class GotovScucoScenario
                 int statusCode = httpResponse.getStatusLine().getStatusCode();
                 if (statusCode != HttpStatus.SC_OK) {
                     String message = String.format("Service HTTP error: %d", statusCode);
-                    BroadCast.sendServiceMessage(message);
+                    messagesLogger.addErrorMessage(message);
                     showErrorMessage(message, event);
                 }
                 targetURL = client.getLatestURI(request);
             } catch (Exception err) {
                 String errMsg = String.format("Unable send request to GPT-server: %s", err.getMessage());
                 log.error(errMsg, err);
-                BroadCast.sendServiceMessage(errMsg);
+                messagesLogger.addErrorMessage(errMsg);
                 return;
             }
             Document htmlDocument = Jsoup.parse(responseText, targetURL.toString());
@@ -140,7 +141,7 @@ public class GotovScucoScenario
                         String errMsg = String.format("Unable create URI of %s: %s",
                                 source, warn.getMessage());
                         log.warn(errMsg, warn);
-                        BroadCast.sendServiceMessage(errMsg);
+                        messagesLogger.addErrorMessage(errMsg);
                     }
                 }
             }
@@ -171,6 +172,7 @@ public class GotovScucoScenario
             SettingsController.getInstance()
                     .getHttpClientsPool()
                     .returnClient(client);
+            messagesLogger.send();
         }
     }
 }

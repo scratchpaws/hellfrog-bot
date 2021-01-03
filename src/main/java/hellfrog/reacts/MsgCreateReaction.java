@@ -78,11 +78,11 @@ public abstract class MsgCreateReaction
             boolean serverIsLimited = RateLimiter.serverIsLimited(event);
             if (userIsLimited) {
                 String errorMessage = "This user exceeded the number of requests: " + ServerSideResolver.getFullUserDescriptionByEvent(event);
-                BroadCast.sendServiceMessage(errorMessage);
+                BroadCast.getLogger().addWarnMessage(errorMessage).send();
                 return;
             } else if (serverIsLimited) {
                 String errorMessage = "This user exceeded the number of request for the server: " + ServerSideResolver.getFullUserDescriptionByEvent(event);
-                BroadCast.sendServiceMessage(errorMessage);
+                BroadCast.getLogger().addWarnMessage(errorMessage).send();
                 return;
             }
         }

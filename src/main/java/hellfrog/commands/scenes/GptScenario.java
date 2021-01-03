@@ -78,6 +78,7 @@ public class GptScenario
             return;
         }
 
+        BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
         ObjectMapper objectMapper = new ObjectMapper();
         GptRequest gptRequest = new GptRequest();
         gptRequest.setPrompt(messageWoCommandPrefix);
@@ -88,7 +89,7 @@ public class GptScenario
             showErrorMessage("Internal bot error", event);
             String errMsg = String.format("Unable serialize \"%s\" to JSON: %s",
                     gptRequest.toString(), err.getMessage());
-            BroadCast.sendServiceMessage(errMsg);
+            messagesLogger.addErrorMessage(errMsg).send();
             log.error(errMsg, err);
             return;
         }
@@ -109,7 +110,7 @@ public class GptScenario
                 int statusCode = httpResponse.getStatusLine().getStatusCode();
                 if (statusCode != HttpStatus.SC_OK) {
                     String message = String.format("Service HTTP error: %d", statusCode);
-                    BroadCast.sendServiceMessage(message);
+                    messagesLogger.addErrorMessage(message);
                     new MessageBuilder()
                             .setEmbed(new EmbedBuilder()
                                     .setAuthor(event.getApi().getYourself())
@@ -122,7 +123,7 @@ public class GptScenario
             } catch (Exception err) {
                 String errMsg = String.format("Unable send request to GPT-server: %s", err.getMessage());
                 log.error(errMsg, err);
-                BroadCast.sendServiceMessage(errMsg);
+                messagesLogger.addErrorMessage(errMsg);
                 new MessageBuilder()
                         .setEmbed(new EmbedBuilder()
                                 .setAuthor(event.getApi().getYourself())
@@ -139,13 +140,13 @@ public class GptScenario
             } catch (Exception err) {
                 String errMsg = String.format("Unable decode json \"%s\": %s", responseText,
                         err.getMessage());
-                BroadCast.sendServiceMessage(errMsg);
+                messagesLogger.addErrorMessage(errMsg);
                 log.error(errMsg, err);
                 return;
             }
 
             if (CommonUtils.isTrStringNotEmpty(gptResponse.getDetail())) {
-                BroadCast.sendServiceMessage("Fail to send request to GPT: " +
+                messagesLogger.addErrorMessage("Fail to send request to GPT: " +
                         gptResponse.getDetail());
                 return;
             }
@@ -166,6 +167,7 @@ public class GptScenario
             SettingsController.getInstance()
                     .getHttpClientsPool()
                     .returnClient(client);
+            messagesLogger.send();
         }
     }
 

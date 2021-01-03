@@ -136,6 +136,11 @@ public class MainDBControllerSQLite
     }
 
     @Override
+    public byte[] generateDDL() {
+        return new byte[0];
+    }
+
+    @Override
     public void close() {
         if (!closed) {
             try {

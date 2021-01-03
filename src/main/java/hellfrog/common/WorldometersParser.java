@@ -61,6 +61,7 @@ public class WorldometersParser {
     private static Map<String, CovidStatistic> parseCoronavirusPage() {
 
         SimpleHttpClient httpClient = SettingsController.getInstance().getHttpClientsPool().borrowClient();
+        BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
         try {
             HttpGet pageGet = new HttpGet(COVID_PAGE);
             String responseText;
@@ -79,13 +80,13 @@ public class WorldometersParser {
                 if (statusCode != HttpStatus.SC_OK) {
                     String errMsg = String.format("Unable load page %s: HTTP code: %d", COVID_PAGE, statusCode);
                     log.error(errMsg);
-                    BroadCast.sendServiceMessage(errMsg);
+                    messagesLogger.addErrorMessage(errMsg);
                     return Collections.emptyMap();
                 }
             } catch (Exception err) {
                 String errMsg = String.format("Unable load page %s: %s", COVID_PAGE, err.getMessage());
                 log.error(errMsg, err);
-                BroadCast.sendServiceMessage(errMsg);
+                messagesLogger.addErrorMessage(errMsg);
                 return Collections.emptyMap();
             }
 
@@ -129,7 +130,7 @@ public class WorldometersParser {
                             }
                         } catch (Exception err) {
                             String errMsg = String.format("Error while parse page from %s: %s", COVID_PAGE, err.getMessage());
-                            BroadCast.sendServiceMessage(errMsg);
+                            messagesLogger.addErrorMessage(errMsg);
                             log.error(errMsg, err);
                         }
                     }
@@ -142,10 +143,11 @@ public class WorldometersParser {
                 return Collections.unmodifiableMap(result);
             } else {
                 String warnMsg = String.format("Warn: page %s return result that cannot be parsed", COVID_PAGE);
-                BroadCast.sendServiceMessage(warnMsg);
+                messagesLogger.addWarnMessage(warnMsg);
             }
         } finally {
             SettingsController.getInstance().getHttpClientsPool().returnClient(httpClient);
+            messagesLogger.send();
         }
         return Collections.emptyMap();
     }

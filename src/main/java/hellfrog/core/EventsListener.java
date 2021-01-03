@@ -351,7 +351,8 @@ public class EventsListener
     }
 
     void onReady() {
-        DiceReaction.rebuildRoflIndexes();
+        final BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger()
+                .add(DiceReaction.rebuildRoflIndexes(false));
         final SettingsController settingsController = SettingsController.getInstance();
         final long highRollImagesChannelId = settingsController.getMainDBController()
                 .getCommonPreferencesDAO()
@@ -362,22 +363,26 @@ public class EventsListener
         Optional<DiscordApi> mayBeApi = Optional.ofNullable(settingsController.getDiscordApi());
         mayBeApi.ifPresentOrElse(discordApi -> {
             discordApi.getServerTextChannelById(highRollImagesChannelId).ifPresent(textChannel -> {
-                textChannel.addMessageCreateListener(event -> DiceReaction.rebuildRoflIndexes());
-                textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes());
-                textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes());
+                textChannel.addMessageCreateListener(event -> DiceReaction.rebuildRoflIndexes(true));
+                textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes(true));
+                textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes(true));
             });
             discordApi.getServerTextChannelById(lowRollImagesChannelId).ifPresent(textChannel -> {
-                textChannel.addMessageCreateListener(event -> DiceReaction.rebuildRoflIndexes());
-                textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes());
-                textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes());
+                textChannel.addMessageCreateListener(event -> DiceReaction.rebuildRoflIndexes(true));
+                textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes(true));
+                textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes(true));
             });
             botInviteUrl = discordApi.createBotInvite(Permissions.fromBitmask(335932481));
-            String invite = "Invite url: " + botInviteUrl;
-            String readyMsg = "Bot started. " + invite;
+
+            String invite = "Invite url: " + botInviteUrl + " ";
+            log.info(invite);
+            String readyMsg = "Bot started. ";
             log.info(readyMsg);
-            BroadCast.sendServiceMessage(readyMsg);
+            messagesLogger.addInfoMessage(invite)
+                    .addInfoMessage(readyMsg);
+            settingsController.getInvitesController().updateInvitesList();
+            messagesLogger.send();
         }, () -> log.fatal("Unable to start - api is null!"));
-        mayBeApi.ifPresent(discordApi -> settingsController.getInvitesController().updateInvitesList());
     }
 
     @Override

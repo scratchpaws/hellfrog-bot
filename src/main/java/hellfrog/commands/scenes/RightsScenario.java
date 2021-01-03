@@ -1326,8 +1326,9 @@ public class RightsScenario
                                           @NotNull User user,
                                           @NotNull SessionState sessionState,
                                           boolean isBotOwner) {
-        BroadCast.sendServiceMessage("Exec of " + RightsScenario.class.getName()
-                + "::privateReactionStep!");
+        BroadCast.getLogger()
+                .addUnsafeUsageCE("executed " + RightsScenario.class.getName() + "::privateReactionStep!", event)
+                .send();
         return true;
     }
 
@@ -1339,8 +1340,9 @@ public class RightsScenario
                                           @NotNull PrivateChannel privateChannel,
                                           @NotNull User user,
                                           boolean isBotOwner) {
-        BroadCast.sendServiceMessage("Exec of " + RightsScenario.class.getName()
-                + "::executePrivateFirstRun!");
+        BroadCast.getLogger()
+                .addUnsafeUsageCE("executed " + RightsScenario.class.getName() + "::executePrivateFirstRun!", event)
+                .send();
     }
 
     /**
@@ -1352,8 +1354,9 @@ public class RightsScenario
                                          @NotNull User user,
                                          @NotNull SessionState sessionState,
                                          boolean isBotOwner) {
-        BroadCast.sendServiceMessage("Exec of " + RightsScenario.class.getName()
-                + "::privateMessageStep!");
+        BroadCast.getLogger()
+                .addUnsafeUsageCE("executed " + RightsScenario.class.getName() + "::privateMessageStep!", event)
+                .send();
         return true;
     }
 

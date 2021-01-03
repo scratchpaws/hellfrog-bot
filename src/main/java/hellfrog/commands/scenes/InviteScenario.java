@@ -93,7 +93,7 @@ public class InviteScenario
                 log.error(errorMessage, err);
                 super.showErrorMessage("Due to an internal error, I " +
                         "cannot create an invite for you.", event);
-                BroadCast.sendServiceMessage(errorMessage);
+                BroadCast.getLogger().addErrorMessage(errorMessage);
             }
         } else {
             super.showErrorMessage("I do not have permission to create " +

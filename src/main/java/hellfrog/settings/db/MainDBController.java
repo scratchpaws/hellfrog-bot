@@ -44,6 +44,8 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
 
     public abstract EmojiTotalStatisticDAO getEmojiTotalStatisticDAO();
 
+    public abstract byte[] generateDDL();
+
     @Override
     public abstract void close();
 

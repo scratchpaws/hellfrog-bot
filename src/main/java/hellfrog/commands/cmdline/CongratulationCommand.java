@@ -34,6 +34,7 @@ public class CongratulationCommand
 
     private final Option channelOption = Option.builder("c")
             .hasArg()
+            .optionalArg(true)
             .argName("Channel")
             .longOpt("channel")
             .desc("Set text channel for enable congratulations. Empty to disable the accumulation of messages and disable congratulations.")

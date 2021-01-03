@@ -15,10 +15,11 @@ import org.hibernate.tool.hbm2ddl.SchemaExport;
 import org.hibernate.tool.schema.TargetType;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.List;
@@ -48,6 +49,10 @@ public class MainDBControllerH2
     private final WtfAssignDAO wtfAssignDAO;
     private final VotesDAO votesDAO;
 
+    private final String connectionURL;
+    private final String connectionLogin;
+    private final String connectionPassword;
+
     public MainDBControllerH2(@Nullable InstanceType type) throws IOException, SQLException {
         super(type);
         sqlLog.info("Starting database");
@@ -63,7 +68,9 @@ public class MainDBControllerH2
             case BACKUP -> settingsPath.resolve(BACKUP_DB_FILE_NAME + currentDateTime);
         };
         String JDBC_PREFIX = "jdbc:h2:";
-        String connectionURL = JDBC_PREFIX + pathToDb.toString();
+        this.connectionURL = JDBC_PREFIX + pathToDb.toString();
+        this.connectionLogin = "sa";
+        this.connectionPassword = "sa";
         try {
             if (!Files.exists(settingsPath) || !Files.isDirectory(settingsPath)) {
                 Files.createDirectory(settingsPath);
@@ -76,8 +83,8 @@ public class MainDBControllerH2
             try (HibernateXmlCfgGenerator xmlCfgGenerator = new HibernateXmlCfgGenerator(sqlLog)) {
                 xmlCfgGenerator.setProperty(Environment.DRIVER, "org.h2.Driver");
                 xmlCfgGenerator.setProperty(Environment.DIALECT, "org.hibernate.dialect.H2Dialect");
-                xmlCfgGenerator.setProperty(Environment.USER, "sa");
-                xmlCfgGenerator.setProperty(Environment.PASS, "sa");
+                xmlCfgGenerator.setProperty(Environment.USER, connectionLogin);
+                xmlCfgGenerator.setProperty(Environment.PASS, connectionPassword);
                 xmlCfgGenerator.setProperty(Environment.HBM2DDL_AUTO, "update");
                 xmlCfgGenerator.setProperty(Environment.URL, connectionURL);
                 if (type.equals(InstanceType.TEST)) {
@@ -145,6 +152,37 @@ public class MainDBControllerH2
     }
 
     @Override
+    public byte[] generateDDL() {
+        if (metadata != null) {
+            Path tempFile = null;
+            try {
+                SchemaExport schemaExport = new SchemaExport();
+                schemaExport.setDelimiter(";");
+                schemaExport.setFormat(true);
+                Path rootPath = CodeSourceUtils.getCodeSourceParent();
+                tempFile = Files.createTempFile(rootPath, "hellfrog_ddl_", ".sql");
+                schemaExport.setOutputFile(tempFile.toString());
+                EnumSet<TargetType> targers = EnumSet.of(TargetType.SCRIPT);
+                schemaExport.execute(targers, SchemaExport.Action.CREATE, metadata);
+                return Files.readAllBytes(tempFile);
+            } catch (Exception err) {
+                String errMsg = String.format("Unable to generate DDL: %s", err.getMessage());
+                sqlLog.error(errMsg, err);
+            } finally {
+                try {
+                    if (tempFile != null)
+                        Files.deleteIfExists(tempFile);
+                } catch (IOException warn) {
+                    String warnMsg = String.format("Unable to delete temporary DDL file \"%s\": %s",
+                            tempFile, warn.getMessage());
+                    sqlLog.warn(warnMsg, warn);
+                }
+            }
+        }
+        return new byte[0];
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public String executeRawQuery(@Nullable String rawQuery) {
         if (CommonUtils.isTrStringEmpty(rawQuery)) {
@@ -153,26 +191,44 @@ public class MainDBControllerH2
         if (closed) {
             return "(Connection is closed)";
         }
-        StringBuilder output = new StringBuilder();
-        final AutoSessionFactory autoSessionFactory = new AutoSessionFactory(sessionFactory);
-        try (AutoSession autoSession = autoSessionFactory.openSession()) {
-            NativeQuery query = autoSession.createNativeQuery(rawQuery);
-            if (StringUtils.startsWithIgnoreCase(rawQuery, "select")) {
-                List<Object[]> result = query.list();
-                for (Object[] data : result) {
-                    for (int i = 0; i < data.length; i++) {
-                        output.append(data[i].toString());
-                        if (i < (data.length - 1)) {
-                            output.append('|');
+        StringBuilder result = new StringBuilder();
+        try (Connection connection = DriverManager.getConnection(connectionURL, connectionLogin, connectionPassword)) {
+            try (Statement statement = connection.createStatement()) {
+                boolean hasResult = statement.execute(rawQuery);
+                if (!hasResult) {
+                    int updateCount = statement.getUpdateCount();
+                    return "Successful. Updated " + updateCount + " rows";
+                } else {
+                    try (ResultSet resultSet = statement.getResultSet()) {
+                        ResultSetMetaData metaData = resultSet.getMetaData();
+                        for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                            String label = metaData.getColumnLabel(i);
+                            result.append(label);
+                            if (i < metaData.getColumnCount()) {
+                                result.append("|");
+                            }
+                        }
+                        result.append('\n');
+                        result.append("-".repeat(Math.max(0, result.length())));
+                        result.append('\n');
+                        while (resultSet.next()) {
+                            for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                                String value = resultSet.getString(i);
+                                result.append(value);
+                                if (i < metaData.getColumnCount()) {
+                                    result.append("|");
+                                }
+                            }
+                            result.append('\n');
                         }
                     }
-                    output.append('\n');
                 }
             }
-        } catch (Exception err) {
+        } catch (SQLException err) {
             return err.getMessage();
         }
-        return output.toString();
+
+        return result.toString();
     }
 
     @Override

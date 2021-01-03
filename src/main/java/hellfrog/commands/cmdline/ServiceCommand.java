@@ -16,6 +16,7 @@ import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
 
@@ -82,7 +83,8 @@ public class ServiceCommand
             .desc("Show last bot usage")
             .build();
 
-    private final Option secureTransfer = Option.builder("sec")
+    private final Option secureTransfer = Option.builder("e")
+            .longOpt("sec")
             .desc("Enable two-phase transfer from bot private")
             .hasArg()
             .optionalArg(true)
@@ -94,11 +96,16 @@ public class ServiceCommand
             .desc("Execute raw SQL query in the main DB")
             .build();
 
+    private final Option getDDL = Option.builder("a")
+            .longOpt("ddl")
+            .desc("Generate DDL for current instance")
+            .build();
+
     public ServiceCommand() {
         super(PREF, DESCRIPTIONS);
 
         super.addCmdlineOption(stopBot, memInfo, botDate, runGc, runtimeShell, lastUsage, secureTransfer,
-                executeQuery);
+                executeQuery, getDDL);
 
         super.disableUpdateLastCommandUsage();
     }
@@ -153,9 +160,10 @@ public class ServiceCommand
         boolean lastUsageAction = cmdline.hasOption(this.lastUsage.getOpt());
         boolean secureTransfer = cmdline.hasOption(this.secureTransfer.getOpt());
         boolean executeQuery = cmdline.hasOption(this.executeQuery.getOpt());
+        boolean generateDDL = cmdline.hasOption(this.getDDL.getOpt());
         String transferChat = cmdline.getOptionValue(this.secureTransfer.getOpt(), "");
 
-        if (stopAction ^ memInfo ^ getDate ^ runGc ^ runtimeShell ^ lastUsageAction ^ secureTransfer ^ executeQuery) {
+        if (stopAction ^ memInfo ^ getDate ^ runGc ^ runtimeShell ^ lastUsageAction ^ secureTransfer ^ executeQuery ^ generateDDL) {
 
             if (stopAction) {
                 doStopAction(event);
@@ -264,6 +272,13 @@ public class ServiceCommand
             if (executeQuery) {
                 doExecuteQuery(anotherLines, event);
             }
+
+            if (generateDDL) {
+                event.getMessageAuthor()
+                        .asUser()
+                        .flatMap(User::getPrivateChannel)
+                        .ifPresent(this::generateDDL);
+            }
         } else {
             showErrorMessage("Only one service command may be execute", event);
         }
@@ -285,8 +300,10 @@ public class ServiceCommand
         settingsController.getServerListWithStatistic()
                 .forEach(settingsController::saveServerSideStatistic);
 
-        BroadCast.sendBroadcastUnsafeUsageCE("call bot stopping", event);
-        BroadCast.sendServiceMessage("Bot stopping NOW!");
+        BroadCast.getLogger()
+                .addUnsafeUsageCE("call bot stopping", event)
+                .addInfoMessage("Bot stopping NOW!")
+                .send();
 
         if (settingsController.getDiscordApi() != null) {
             settingsController.getDiscordApi().disconnect();
@@ -302,7 +319,9 @@ public class ServiceCommand
 
     private void doExecuteQuery(@NotNull ArrayList<String> anotherLines,
                                 @NotNull MessageCreateEvent event) {
-        BroadCast.sendBroadcastUnsafeUsageCE("run SQL query", event);
+        BroadCast.getLogger()
+                .addUnsafeUsageCE("run SQL query", event)
+                .send();
 
         Optional<String> mayBeQuery = anotherLines.stream()
                 .reduce(CommonUtils::reduceNewLine);
@@ -352,8 +371,30 @@ public class ServiceCommand
                 }));
     }
 
+    private void generateDDL(@NotNull final TextChannel target) {
+        byte[] textFile = SettingsController.getInstance()
+                .getMainDBController()
+                .generateDDL();
+        if (textFile.length > 0) {
+            new MessageBuilder()
+                    .setEmbed(new EmbedBuilder()
+                            .setDescription("Generated DDL into attachment")
+                            .setTimestampToNow())
+                    .addAttachment(textFile, "DDL.sql")
+                    .send(target);
+        } else {
+            new MessageBuilder()
+                    .setEmbed(new EmbedBuilder()
+                            .setDescription("Generated DDL is empty (operation not supported or error reached)")
+                            .setTimestampToNow())
+                    .send(target);
+        }
+    }
+
     private void doRunShellAction(ArrayList<String> anotherLines, MessageCreateEvent event) {
-        BroadCast.sendBroadcastUnsafeUsageCE("call remote debug shell module", event);
+        BroadCast.getLogger()
+                .addUnsafeUsageCE("call remote debug shell module", event)
+                .send();
 
         final SettingsController settingsController = SettingsController.getInstance();
         final long channelId = event.getChannel().getId();

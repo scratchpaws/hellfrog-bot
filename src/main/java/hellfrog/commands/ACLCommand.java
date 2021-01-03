@@ -270,12 +270,12 @@ public abstract class ACLCommand {
         if (userIsLimited) {
             showErrorMessage("You have exceeded the number of requests", event);
             String errorMessage = "This user exceeded the number of requests: " + ServerSideResolver.getFullUserDescriptionByEvent(event);
-            BroadCast.sendServiceMessage(errorMessage);
+            BroadCast.getLogger().addWarnMessage(errorMessage).send();
             return true;
         } else if (serverIsLimited) {
             showErrorMessage("The number of requests exceeded from this server", event);
             String errorMessage = "This user exceeded the number of request for the server: " + ServerSideResolver.getFullUserDescriptionByEvent(event);
-            BroadCast.sendServiceMessage(errorMessage);
+            BroadCast.getLogger().addWarnMessage(errorMessage).send();
             return true;
         } else {
             return false;

@@ -92,6 +92,7 @@ public class DuckDuckGoScenario
         SimpleHttpClient client = SettingsController.getInstance()
                 .getHttpClientsPool()
                 .borrowClient();
+        BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
         try {
             URI nonJsPageQuery;
             try {
@@ -102,13 +103,13 @@ public class DuckDuckGoScenario
                         .addParameter("t", "ffsb")
                         .build();
             } catch (URISyntaxException err) {
-                BroadCast.sendServiceMessage("DuckDuckGo URI build error: " + err.getMessage());
+                messagesLogger.addErrorMessage("DuckDuckGo URI build error: " + err.getMessage());
                 showErrorMessage("Internal bot error", event);
                 return;
             }
 
             HttpGet request = new HttpGet(nonJsPageQuery);
-            String responseText = executeHttpRequest(client, request, event);
+            String responseText = executeHttpRequest(client, request, event, messagesLogger);
             if (CommonUtils.isTrStringEmpty(responseText)) {
                 return;
             }
@@ -134,7 +135,7 @@ public class DuckDuckGoScenario
                         responseText.indexOf("');", secondScriptLocation));
             } catch (IndexOutOfBoundsException err) {
                 showErrorMessage("Unable to parse search result", event);
-                BroadCast.sendServiceMessage(DuckDuckGoScenario.class.getSimpleName() + " parse error: " +
+                messagesLogger.addErrorMessage(DuckDuckGoScenario.class.getSimpleName() + " parse error: " +
                         err.getMessage());
                 return;
             }
@@ -146,7 +147,7 @@ public class DuckDuckGoScenario
                 secondScriptURI = new URI("https://duckduckgo.com" + secondScriptQuery);
             } catch (URISyntaxException err) {
                 showErrorMessage("Unable to parse search result", event);
-                BroadCast.sendServiceMessage(DuckDuckGoScenario.class.getSimpleName() + " parse error: " +
+                messagesLogger.addErrorMessage(DuckDuckGoScenario.class.getSimpleName() + " parse error: " +
                         err.getMessage());
                 return;
             }
@@ -154,8 +155,8 @@ public class DuckDuckGoScenario
             HttpGet firstScriptGet = new HttpGet(firstScriptURI);
             HttpGet secondScriptGet = new HttpGet(secondScriptURI);
 
-            String firstResponse = executeHttpRequest(client, firstScriptGet, event);
-            String secondResponse = executeHttpRequest(client, secondScriptGet, event);
+            String firstResponse = executeHttpRequest(client, firstScriptGet, event, messagesLogger);
+            String secondResponse = executeHttpRequest(client, secondScriptGet, event, messagesLogger);
             if (CommonUtils.isTrStringEmpty(firstResponse) && CommonUtils.isTrStringEmpty(secondResponse)) {
                 showErrorMessage("No search results found", event);
                 return;
@@ -182,7 +183,7 @@ public class DuckDuckGoScenario
                         + "]}";
             } catch (IndexOutOfBoundsException err) {
                 showErrorMessage("Unable to parse search result", event);
-                BroadCast.sendServiceMessage(DuckDuckGoScenario.class.getSimpleName() + " parse error: " +
+                messagesLogger.addErrorMessage(DuckDuckGoScenario.class.getSimpleName() + " parse error: " +
                         err.getMessage());
                 return;
             }
@@ -195,7 +196,7 @@ public class DuckDuckGoScenario
                 String errMsg = String.format("Unable decode json \"%s\": %s", responseText,
                         err.getMessage());
                 showErrorMessage("Unable to parse search result", event);
-                BroadCast.sendServiceMessage(errMsg);
+                messagesLogger.addErrorMessage(errMsg);
                 log.error(errMsg, err);
                 return;
             }
@@ -233,17 +234,19 @@ public class DuckDuckGoScenario
             SettingsController.getInstance()
                     .getHttpClientsPool()
                     .returnClient(client);
+            messagesLogger.send();
         }
     }
 
     private String executeHttpRequest(@NotNull SimpleHttpClient client,
                                       @NotNull HttpUriRequest request,
-                                      @NotNull MessageCreateEvent event) {
+                                      @NotNull MessageCreateEvent event,
+                                      @NotNull BroadCast.MessagesLogger messagesLogger) {
         try (CloseableHttpResponse httpResponse = client.execute(request)) {
             int statusCode = httpResponse.getStatusLine().getStatusCode();
             if (statusCode != HttpStatus.SC_OK) {
                 String message = String.format("Service HTTP error: %d", statusCode);
-                BroadCast.sendServiceMessage(message);
+                messagesLogger.addErrorMessage(message);
                 showErrorMessage(message, event);
             }
             HttpEntity entity = httpResponse.getEntity();
@@ -260,7 +263,7 @@ public class DuckDuckGoScenario
         } catch (Exception err) {
             String errMsg = String.format("Unable send request to DDG-server: %s", err.getMessage());
             log.error(errMsg, err);
-            BroadCast.sendServiceMessage(errMsg);
+            messagesLogger.addErrorMessage(errMsg);
             return "";
         }
     }

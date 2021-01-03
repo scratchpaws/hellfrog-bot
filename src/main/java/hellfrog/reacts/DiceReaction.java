@@ -351,7 +351,8 @@ public class DiceReaction
         }
     }
 
-    public static void rebuildRoflIndexes() {
+    public static BroadCast.MessagesLogger rebuildRoflIndexes(final boolean sendBroadcastSeparately) {
+        final BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
         final SettingsController settingsController = SettingsController.getInstance();
         final long highRollImagesChannelId = settingsController.getMainDBController()
                 .getCommonPreferencesDAO()
@@ -370,14 +371,14 @@ public class DiceReaction
                                     highRoflUrls.add(messageAttachment.getUrl().toString())));
                     HIGH_ROFL_LIST.clear();
                     HIGH_ROFL_LIST.addAll(highRoflUrls);
-                    BroadCast.sendServiceMessage("Found " + HIGH_ROFL_LIST.size()
+                    messagesLogger.addInfoMessage("Found " + HIGH_ROFL_LIST.size()
                             + " URLs images into channel " + textChannel.getName());
                 } else {
-                    BroadCast.sendServiceMessage("Unable to see messages and history for " +
+                    messagesLogger.addErrorMessage("Unable to see messages and history for " +
                             "channel " + textChannel.getName() + " (channel with high rofl images)");
                 }
             }, () ->
-                    BroadCast.sendServiceMessage("Unable to find server text channel "
+                    messagesLogger.addErrorMessage("Unable to find server text channel "
                             + highRollImagesChannelId + " with high rofl images"));
             List<String> lowRoflUrls = new ArrayList<>();
             discordApi.getServerTextChannelById(lowRollImagesChannelId).ifPresentOrElse(textChannel -> {
@@ -388,16 +389,21 @@ public class DiceReaction
                                     lowRoflUrls.add(messageAttachment.getUrl().toString())));
                     LOW_ROFL_LIST.clear();
                     LOW_ROFL_LIST.addAll(lowRoflUrls);
-                    BroadCast.sendServiceMessage("Found " + LOW_ROFL_LIST.size()
+                    messagesLogger.addInfoMessage("Found " + LOW_ROFL_LIST.size()
                             + " URLs images into channel " + textChannel.getName());
                 } else {
-                    BroadCast.sendServiceMessage("Unable to see messages and history for " +
+                    messagesLogger.addErrorMessage("Unable to see messages and history for " +
                             "channel " + textChannel.getName() + " (channel with low rofl images)");
                 }
-            }, () -> BroadCast.sendServiceMessage("Unable to find server text channel "
+            }, () -> messagesLogger.addErrorMessage("Unable to find server text channel "
                     + lowRollImagesChannelId + " with low rofl images"));
 
         }, () -> log.fatal("Unable to rebuild dice reaction rofl indexes - api is null!"));
+
+        if (sendBroadcastSeparately) {
+            messagesLogger.send();
+        }
+        return messagesLogger;
     }
 
     private static class SumModifier {

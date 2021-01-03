@@ -124,7 +124,7 @@ public class GrammarScenario extends OneShotScenario {
             } catch (IOException err) {
                 String errMsg = String.format("Unable to check text with %s languagetool: %s", lang, err.getMessage());
                 log.error(errMsg, err);
-                BroadCast.sendServiceMessage(errMsg);
+                BroadCast.getLogger().addErrorMessage(errMsg).send();
                 showErrorMessage("Spellcheck engine error", event);
                 return;
             }

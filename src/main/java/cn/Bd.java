@@ -8,6 +8,8 @@ import hellfrog.core.SessionState;
 import hellfrog.core.SessionsCheckTask;
 import hellfrog.settings.ServerStatistic;
 import hellfrog.settings.SettingsController;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.DiscordEntity;
 import org.javacord.api.entity.Region;
@@ -40,7 +42,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-public class Bd {
+public class Bd
+        implements CommonConstants {
+
+    private static final Logger log = LogManager.getLogger(Bd.class.getSimpleName());
 
     private volatile static Server selectedServer = null;
     private volatile static TextChannel serverTextChannel = null;
@@ -203,54 +208,58 @@ public class Bd {
         }
 
         CompletableFuture.runAsync(() -> {
-            boolean successCreate = false;
-            try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(
-                    Files.newOutputStream(tmpZip)))) {
-                TreeSet<String> knownNames = new TreeSet<>();
-                for (KnownCustomEmoji emoji : selectedServer.getCustomEmojis()) {
-                    String fileName = emoji.getName() + (emoji.isAnimated() ? ".gif" : ".png");
-                    int suffix = 1;
-                    while (knownNames.contains(fileName)) {
-                        fileName = emoji.getName() + suffix + (emoji.isAnimated() ? ".gif" : ".png");
-                        suffix++;
+            final BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
+            try {
+                boolean successCreate = false;
+                try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(
+                        Files.newOutputStream(tmpZip)))) {
+                    TreeSet<String> knownNames = new TreeSet<>();
+                    for (KnownCustomEmoji emoji : selectedServer.getCustomEmojis()) {
+                        String fileName = emoji.getName() + (emoji.isAnimated() ? ".gif" : ".png");
+                        int suffix = 1;
+                        while (knownNames.contains(fileName)) {
+                            fileName = emoji.getName() + suffix + (emoji.isAnimated() ? ".gif" : ".png");
+                            suffix++;
+                        }
+                        ZipEntry zipEntry = new ZipEntry(fileName);
+                        byte[] rawData = emoji.getImage().asByteArray().join();
+                        zipEntry.setSize(rawData.length);
+                        zos.putNextEntry(zipEntry);
+                        zos.write(rawData);
+                        zos.closeEntry();
+                        knownNames.add(fileName);
                     }
-                    ZipEntry zipEntry = new ZipEntry(fileName);
-                    byte[] rawData = emoji.getImage().asByteArray().join();
-                    zipEntry.setSize(rawData.length);
-                    zos.putNextEntry(zipEntry);
-                    zos.write(rawData);
-                    zos.closeEntry();
-                    knownNames.add(fileName);
-                }
-                BroadCast.sendServiceMessage("Grab emoji from " + selectedServer +
-                        " complete at file " + tmpZip);
-                successCreate = true;
-            } catch (IOException err) {
-                err.printStackTrace();
-                BroadCast.sendServiceMessage("Grab emoji from " + selectedServer +
-                        " terminated with " + err.getMessage());
-                try {
-                    Files.deleteIfExists(tmpZip);
-                } catch (IOException ignore) {
-                }
-            }
-            if (successCreate) {
-                try {
-                    byte[] attach = Files.readAllBytes(tmpZip);
-                    if (attach.length >= (8 * 1024 * 1024)) {
-                        BroadCast.sendServiceMessage("Cannot send archive, it" +
-                                "'s very large");
-                    } else {
-                        new MessageBuilder()
-                                .addAttachment(attach, tmpZip.getFileName().toString())
-                                .send(selectedUser);
-                        Files.deleteIfExists(tmpZip);
-                    }
+                    messagesLogger.addInfoMessage("Grab emoji from " + selectedServer +
+                            " complete at file " + tmpZip);
+                    successCreate = true;
                 } catch (IOException err) {
-                    err.printStackTrace();
-                    BroadCast.sendServiceMessage("Grab emoji from " + selectedServer +
-                            " terminated with" + err.getMessage());
+                    log.error(err);
+                    messagesLogger.addErrorMessage("Grab emoji from " + selectedServer +
+                            " terminated with " + err.getMessage());
+                    try {
+                        Files.deleteIfExists(tmpZip);
+                    } catch (IOException ignore) {
+                    }
                 }
+                if (successCreate) {
+                    try {
+                        byte[] attach = Files.readAllBytes(tmpZip);
+                        if (attach.length > CommonConstants.MAX_FILE_SIZE) {
+                            messagesLogger.addErrorMessage("Cannot send archive, it's very large");
+                        } else {
+                            new MessageBuilder()
+                                    .addAttachment(attach, tmpZip.getFileName().toString())
+                                    .send(selectedUser);
+                            Files.deleteIfExists(tmpZip);
+                        }
+                    } catch (IOException err) {
+                        log.error(err);
+                        messagesLogger.addErrorMessage("Grab emoji from " + selectedServer +
+                                " terminated with" + err.getMessage());
+                    }
+                }
+            } finally {
+                messagesLogger.send();
             }
         });
         return "OK";
@@ -278,8 +287,9 @@ public class Bd {
                                         .append(i.getUrl())
                                         .send(_selectedUser))
                                 .exceptionally(th -> {
-                                    BroadCast.sendServiceMessage("Unable to send" +
-                                            " invite to " + _selectedUser + ": " + th);
+                                    BroadCast.getLogger()
+                                            .addErrorMessage("Unable to send invite to " + _selectedUser + ": " + th)
+                                            .send();
                                     return null;
                                 });
                         ;
