@@ -3,26 +3,22 @@ package hellfrog.settings.db.h2;
 import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.CommonUtils;
 import hellfrog.settings.db.*;
-import org.apache.commons.lang3.StringUtils;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Environment;
-import org.hibernate.query.NativeQuery;
 import org.hibernate.tool.hbm2ddl.SchemaExport;
 import org.hibernate.tool.schema.TargetType;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.*;
 import java.util.Calendar;
 import java.util.EnumSet;
-import java.util.List;
 
 public class MainDBControllerH2
         extends MainDBController {
@@ -43,7 +39,7 @@ public class MainDBControllerH2
     private final ServerPreferencesDAO serverPreferencesDAO;
     private final UserRightsDAO userRightsDAO;
     private final RoleRightsDAO roleRightsDAO;
-    private final TextChannelRightsDAO textChannelRightsDAO;
+    private final ChannelRightsDAO channelRightsDAO;
     private final ChannelCategoryRightsDAO categoryRightsDAO;
     private final EmojiTotalStatisticDAO emojiTotalStatisticDAO;
     private final WtfAssignDAO wtfAssignDAO;
@@ -79,13 +75,15 @@ public class MainDBControllerH2
             mainLog.fatal("Unable to create settings directory: " + err);
             throw err;
         }
+        SchemaVersionCheckerH2 versionCheckerH2 = new SchemaVersionCheckerH2(this.connectionURL, this.connectionLogin, this.connectionPassword);
+        final boolean requiredMigration = versionCheckerH2.checkSchema();
         try {
             try (HibernateXmlCfgGenerator xmlCfgGenerator = new HibernateXmlCfgGenerator(sqlLog)) {
                 xmlCfgGenerator.setProperty(Environment.DRIVER, "org.h2.Driver");
                 xmlCfgGenerator.setProperty(Environment.DIALECT, "org.hibernate.dialect.H2Dialect");
                 xmlCfgGenerator.setProperty(Environment.USER, connectionLogin);
                 xmlCfgGenerator.setProperty(Environment.PASS, connectionPassword);
-                xmlCfgGenerator.setProperty(Environment.HBM2DDL_AUTO, "update");
+                xmlCfgGenerator.setProperty(Environment.HBM2DDL_AUTO, "validate");
                 xmlCfgGenerator.setProperty(Environment.URL, connectionURL);
                 if (type.equals(InstanceType.TEST)) {
                     xmlCfgGenerator.setProperty(Environment.FORMAT_SQL, "true");
@@ -110,7 +108,7 @@ public class MainDBControllerH2
             serverPreferencesDAO = new ServerPreferencesDAOImpl(autoSessionFactory);
             userRightsDAO = new UserRightsDAOImpl(autoSessionFactory);
             roleRightsDAO = new RoleRightsDAOImpl(autoSessionFactory);
-            textChannelRightsDAO = new TextChannelRightsDAOImpl(autoSessionFactory);
+            channelRightsDAO = new ChannelRightsDAOImpl(autoSessionFactory);
             categoryRightsDAO = new ChannelCategoryRightsDAOImpl(autoSessionFactory);
             emojiTotalStatisticDAO = new EmojiTotalStatisticDAOImpl(autoSessionFactory);
             wtfAssignDAO = new WtfAssignDAOImpl(autoSessionFactory);
@@ -120,6 +118,9 @@ public class MainDBControllerH2
             String errMsg = String.format("Unable to create session factory: %s", err.getMessage());
             sqlLog.fatal(errMsg, err);
             throw new SQLException(err);
+        }
+        if (requiredMigration && type.equals(InstanceType.PROD)) {
+            versionCheckerH2.convertLegacy(this);
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -257,8 +258,8 @@ public class MainDBControllerH2
     }
 
     @Override
-    public TextChannelRightsDAO getTextChannelRightsDAO() {
-        return textChannelRightsDAO;
+    public ChannelRightsDAO getTextChannelRightsDAO() {
+        return channelRightsDAO;
     }
 
     @Override

@@ -11,6 +11,9 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Выполняет загрузку текстовых ресурсов из файла, когда в самом коде вставлять их
@@ -119,5 +122,12 @@ public class ResourcesLoader {
             throw new RuntimeException(errMsg);
         }
         return result.toString();
+    }
+
+    public static List<String> getFilenamesInResourceDir(@NotNull final String resourceDirectory) {
+        return Arrays.stream(fromTextFile(resourceDirectory).split("\n"))
+                .sorted()
+                .filter(CommonUtils::isTrStringNotEmpty)
+                .collect(Collectors.toUnmodifiableList());
     }
 }

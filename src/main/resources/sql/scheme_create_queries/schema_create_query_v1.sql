@@ -97,7 +97,7 @@ CREATE UNIQUE INDEX "uniq_role_right" ON "role_rights" (
                                                         "command_prefix",
                                                         "role_id"
     );
--- hellfrog.settings.db.sqlite.TextChannelRightsDAOImpl
+-- hellfrog.settings.db.sqlite.ChannelRightsDAOImpl
 CREATE TABLE "text_channel_rights"
 (
     "id"             INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,

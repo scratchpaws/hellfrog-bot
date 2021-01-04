@@ -1,16 +1,16 @@
 package hellfrog.settings.db.h2;
 
 import hellfrog.common.TriFunction;
-import hellfrog.settings.db.TextChannelRightsDAO;
+import hellfrog.settings.db.ChannelRightsDAO;
 import hellfrog.settings.db.entity.ChannelRight;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Timestamp;
 import java.time.Instant;
 
-class TextChannelRightsDAOImpl
+class ChannelRightsDAOImpl
         extends EntityRightsDAOImpl<ChannelRight>
-        implements TextChannelRightsDAO {
+        implements ChannelRightsDAO {
 
     private static final String LOGGER_NAME = "Channel rights";
     private static final TriFunction<Long, String, Long, ChannelRight> CHANNELS_BUILDER =
@@ -23,7 +23,7 @@ class TextChannelRightsDAOImpl
                 return channelRight;
             };
 
-    TextChannelRightsDAOImpl(@NotNull final AutoSessionFactory sessionFactory) {
+    ChannelRightsDAOImpl(@NotNull final AutoSessionFactory sessionFactory) {
         super(sessionFactory, LOGGER_NAME, ChannelRight.class, CHANNELS_BUILDER, "channelId");
     }
 }

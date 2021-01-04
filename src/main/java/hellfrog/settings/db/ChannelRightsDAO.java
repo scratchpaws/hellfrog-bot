@@ -1,5 +1,5 @@
 package hellfrog.settings.db;
 
-public interface TextChannelRightsDAO
+public interface ChannelRightsDAO
         extends RightsDAO{
 }

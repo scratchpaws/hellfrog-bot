@@ -1,7 +1,6 @@
 package hellfrog.settings.db;
 
 import hellfrog.settings.db.h2.MainDBControllerH2;
-import hellfrog.settings.db.sqlite.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Contract;
@@ -34,7 +33,7 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
 
     public abstract RoleRightsDAO getRoleRightsDAO();
 
-    public abstract TextChannelRightsDAO getTextChannelRightsDAO();
+    public abstract ChannelRightsDAO getTextChannelRightsDAO();
 
     public abstract ChannelCategoryRightsDAO getChannelCategoryRightsDAO();
 
@@ -51,12 +50,10 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
 
     @Contract("_ -> new")
     public static @NotNull MainDBController getInstance(@Nullable InstanceType type) throws IOException, SQLException {
-        //return new MainDBControllerSQLite(type);
         return new MainDBControllerH2(type);
     }
 
     public static void destroyTestDatabase() throws IOException {
-        MainDBControllerSQLite.destroyTestDatabase();
         MainDBControllerH2.destroyTestDatabase();
     }
 }

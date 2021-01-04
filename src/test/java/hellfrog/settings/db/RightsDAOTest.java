@@ -35,7 +35,7 @@ public class RightsDAOTest {
         try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
             RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
-            TextChannelRightsDAO textChannelRightsDAO = mainDBController.getTextChannelRightsDAO();
+            ChannelRightsDAO channelRightsDAO = mainDBController.getTextChannelRightsDAO();
             ChannelCategoryRightsDAO channelCategoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
 
             testServers.parallelStream()
@@ -66,13 +66,13 @@ public class RightsDAOTest {
                         rights.allowedTextChats
                                 .parallelStream()
                                 .forEach(textChatId -> {
-                                    boolean isAllowed = textChannelRightsDAO.isAllowed(testServer.serverId,
+                                    boolean isAllowed = channelRightsDAO.isAllowed(testServer.serverId,
                                             textChatId, cmd);
                                     Assertions.assertFalse(isAllowed);
-                                    boolean isAdded = textChannelRightsDAO.allow(testServer.serverId,
+                                    boolean isAdded = channelRightsDAO.allow(testServer.serverId,
                                             textChatId, cmd);
                                     Assertions.assertTrue(isAdded);
-                                    isAllowed = textChannelRightsDAO.isAllowed(testServer.serverId,
+                                    isAllowed = channelRightsDAO.isAllowed(testServer.serverId,
                                             textChatId, cmd);
                                     Assertions.assertTrue(isAllowed);
                                 });
@@ -94,7 +94,7 @@ public class RightsDAOTest {
                         Assertions.assertEquals(rights.allowedRoles.size(),
                                 roleRightsDAO.getAllAllowed(testServer.serverId, cmd).size());
                         Assertions.assertEquals(rights.allowedTextChats.size(),
-                                textChannelRightsDAO.getAllAllowed(testServer.serverId, cmd).size());
+                                channelRightsDAO.getAllAllowed(testServer.serverId, cmd).size());
                         Assertions.assertEquals(rights.allowedCategories.size(),
                                 channelCategoryRightsDAO.getAllAllowed(testServer.serverId, cmd).size());
                     }));
@@ -103,7 +103,7 @@ public class RightsDAOTest {
         try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
             RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
-            TextChannelRightsDAO textChannelRightsDAO = mainDBController.getTextChannelRightsDAO();
+            ChannelRightsDAO channelRightsDAO = mainDBController.getTextChannelRightsDAO();
             ChannelCategoryRightsDAO channelCategoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
 
             testServers.parallelStream()
@@ -134,13 +134,13 @@ public class RightsDAOTest {
                         rights.allowedTextChats
                                 .parallelStream()
                                 .forEach(textChatId -> {
-                                    boolean isAllowed = textChannelRightsDAO.isAllowed(testServer.serverId,
+                                    boolean isAllowed = channelRightsDAO.isAllowed(testServer.serverId,
                                             textChatId, cmd);
                                     Assertions.assertTrue(isAllowed);
-                                    boolean isDeleted = textChannelRightsDAO.deny(testServer.serverId,
+                                    boolean isDeleted = channelRightsDAO.deny(testServer.serverId,
                                             textChatId, cmd);
                                     Assertions.assertTrue(isDeleted);
-                                    isAllowed = textChannelRightsDAO.isAllowed(testServer.serverId,
+                                    isAllowed = channelRightsDAO.isAllowed(testServer.serverId,
                                             textChatId, cmd);
                                     Assertions.assertFalse(isAllowed);
                                 });
@@ -159,7 +159,7 @@ public class RightsDAOTest {
                                 });
                         Assertions.assertTrue(userRightsDAO.getAllAllowed(testServer.serverId, cmd).isEmpty());
                         Assertions.assertTrue(roleRightsDAO.getAllAllowed(testServer.serverId, cmd).isEmpty());
-                        Assertions.assertTrue(textChannelRightsDAO.getAllAllowed(testServer.serverId, cmd)
+                        Assertions.assertTrue(channelRightsDAO.getAllAllowed(testServer.serverId, cmd)
                                 .isEmpty());
                         Assertions.assertTrue(channelCategoryRightsDAO.getAllAllowed(testServer.serverId, cmd)
                                 .isEmpty());
