@@ -2,6 +2,7 @@ package hellfrog.settings.oldjson;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+// hellfrog.settings.db.entity.EmojiTotalStatistic
 public class JSONSmileStatistic {
 
     private AtomicLong usagesCount = new AtomicLong(0L);

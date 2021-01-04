@@ -383,7 +383,7 @@ class SchemaVersionCheckerH2 {
                                         lastEntry = wtfEntry;
                                     }
                                     log.info("Converted wtf entry: {}", wtfEntry.toString());
-                                    AddUpdateState state = wtfAssignDAO.addOrUpdate(serverId, userId, wtfEntry);
+                                    AddUpdateState state = wtfAssignDAO.addOrUpdate(wtfEntry);
                                     if (state.equals(AddUpdateState.ADDED)) {
                                         log.info("Saved OK");
                                     } else {
@@ -395,7 +395,7 @@ class SchemaVersionCheckerH2 {
                             }
                             if (lastEntry != null) {
                                 log.info("Updating last entry by date: {}", lastEntry);
-                                AddUpdateState state = wtfAssignDAO.addOrUpdate(serverId, userId, lastEntry);
+                                AddUpdateState state = wtfAssignDAO.addOrUpdate(lastEntry);
                                 if (state.equals(AddUpdateState.UPDATED)) {
                                     log.info("Updated OK");
                                 } else {

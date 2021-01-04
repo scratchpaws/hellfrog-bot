@@ -5,7 +5,6 @@ import hellfrog.common.CommonUtils;
 import javax.persistence.*;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.Objects;
 
 @Entity
 @Table(name = "vote_points")
@@ -116,37 +115,5 @@ public class VotePoint {
                 ", createDate=" + createDate +
                 ", updateDate=" + updateDate +
                 '}';
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        VotePoint votePoint = (VotePoint) o;
-        return id == votePoint.id;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
-
-    public enum Columns {
-
-        ID(13, -1),
-        VOTE_ID(14, 1),
-        POINT_TEXT(15, 2),
-        UNICODE_EMOJI(16, 3),
-        CUSTOM_EMOJI_ID(17, 4),
-        CREATE_DATE(18, 5),
-        UPDATE_DATE(19, 6);
-
-        public final int selectColumn;
-        public final int insertColumn;
-
-        Columns(int selectColumn, int insertColumn) {
-            this.selectColumn = selectColumn;
-            this.insertColumn = insertColumn;
-        }
     }
 }

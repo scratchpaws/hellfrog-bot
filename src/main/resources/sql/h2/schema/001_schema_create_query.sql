@@ -250,7 +250,6 @@ create table wtf_assigns
     author_id   bigint    not null,
     target_id   bigint    not null,
     description varchar(2000),
-    image_url   varchar(2000),
     create_date timestamp not null default sysdate,
     update_date timestamp not null default sysdate,
     constraint uniq_wft_assign unique (server_id,
@@ -264,14 +263,33 @@ comment on column wtf_assigns.server_id is 'Discord server ID';
 comment on column wtf_assigns.author_id is 'Discord member ID by comment author';
 comment on column wtf_assigns.target_id is 'Discord member ID by member about whom the comment was written';
 comment on column wtf_assigns.description is 'Comment message';
-comment on column wtf_assigns.image_url is 'Comment attached picture';
 comment on column wtf_assigns.create_date is 'Record create date';
 comment on column wtf_assigns.update_date is 'Record update date';
 
 create sequence wtf_assign_ids start with 1 increment by 50;
 
 -- hellfrog.settings.db.h2.WtfAssignDAOImpl
--- hellfrog.settings.db.entity.WtfEntry
+-- hellfrog.settings.db.entity.WtfEntryAttach
+create table wtf_assigns_attaches
+(
+    id          bigint        not null primary key,
+    entry_id    bigint        not null,
+    uri         varchar(2000) not null,
+    create_date timestamp     not null default sysdate,
+    constraint wtf_attach_fk foreign key (entry_id) references wtf_assigns (id),
+    constraint wtf_assigns_attaches unique (entry_id, uri)
+);
+
+comment on table wtf_assigns_attaches is 'Attaches for comments that left by members';
+comment on column wtf_assigns_attaches.id is 'Unique record ID';
+comment on column wtf_assigns_attaches.entry_id is 'Comment ID. See wtf_assigns.id';
+comment on column wtf_assigns_attaches.uri is 'Attachment URI';
+comment on column wtf_assigns_attaches.create_date is 'Record create date';
+
+create sequence wtf_assigns_attach_ids start with 1 increment by 50;
+
+-- hellfrog.settings.db.h2.EmojiTotalStatisticDAOImpl
+-- hellfrog.settings.db.entity.EmojiTotalStatistic
 create table emoji_total_statistics
 (
     id           bigint    not null primary key,

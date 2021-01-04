@@ -3,7 +3,7 @@ package hellfrog.settings.db.entity;
 import javax.persistence.*;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.Objects;
+import java.util.Set;
 
 /**
  * Descriptions of one participant that another participant gave him
@@ -19,7 +19,7 @@ public class WtfEntry {
     private long authorId;
     private long targetId;
     private String description;
-    private String imageUri;
+    private Set<WtfEntryAttach> attaches;
     private Timestamp createDate;
     private Timestamp updateDate;
 
@@ -89,13 +89,13 @@ public class WtfEntry {
         this.description = description;
     }
 
-    @Column(name = "image_url", length = 2000)
-    public String getImageUri() {
-        return imageUri;
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "wtfEntry")
+    public Set<WtfEntryAttach> getAttaches() {
+        return attaches;
     }
 
-    public void setImageUri(String imageUri) {
-        this.imageUri = imageUri;
+    public void setAttaches(Set<WtfEntryAttach> attaches) {
+        this.attaches = attaches;
     }
 
     @Column(name = "create_date", nullable = false)
@@ -117,29 +117,16 @@ public class WtfEntry {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        WtfEntry wtfEntry = (WtfEntry) o;
-        return id == wtfEntry.id;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
-
-    @Override
     public String toString() {
         return "WtfEntry{" +
-                "id=" + id +
-                ", serverId=" + serverId +
-                ", authorId=" + authorId +
-                ", targetId=" + targetId +
-                ", description='" + description + '\'' +
-                ", imageUri='" + imageUri + '\'' +
-                ", createDate=" + createDate +
-                ", updateDate=" + updateDate +
-                '}';
+                "\n  id=" + id +
+                ",\n  serverId=" + serverId +
+                ",\n  authorId=" + authorId +
+                ",\n  targetId=" + targetId +
+                ",\n  description='" + description + '\'' +
+                ",\n  attaches=" + attaches +
+                ",\n  createDate=" + createDate +
+                ",\n  updateDate=" + updateDate +
+                "\n}";
     }
 }

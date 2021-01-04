@@ -5,6 +5,7 @@ import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.AddUpdateState;
 import hellfrog.settings.db.WtfAssignDAO;
 import hellfrog.settings.db.entity.WtfEntry;
+import hellfrog.settings.db.entity.WtfEntryAttach;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.query.Query;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 class WtfAssignDAOImpl
         implements WtfAssignDAO {
@@ -64,35 +66,38 @@ class WtfAssignDAOImpl
     }
 
     @Override
-    public AddUpdateState addOrUpdate(long serverId, long userId, @NotNull WtfEntry wtfEntry) {
+    public AddUpdateState addOrUpdate(@NotNull WtfEntry wtfEntry) {
 
-        if (CommonUtils.isTrStringEmpty(wtfEntry.getDescription()) && CommonUtils.isTrStringEmpty(wtfEntry.getImageUri())) {
-            return remove(serverId, wtfEntry.getAuthorId(), userId);
+        if (CommonUtils.isTrStringEmpty(wtfEntry.getDescription())
+                && (wtfEntry.getAttaches() == null || wtfEntry.getAttaches().isEmpty())) {
+            return remove(wtfEntry.getServerId(), wtfEntry.getAuthorId(), wtfEntry.getTargetId());
         }
 
         try (AutoSession session = sessionFactory.openSession()) {
-
-            int updatedCount = session.createQuery("update " + wtfEntry.getClass().getSimpleName() + " w " +
-                    "set w.description = :description, w.imageUri = :imageUri, w.updateDate = :updateDate " +
-                    "where w.serverId = :serverId and w.authorId = :authorId and w.targetId = :targetId")
-                    .setParameter("description", wtfEntry.getDescription())
-                    .setParameter("imageUri", wtfEntry.getImageUri())
-                    .setParameter("updateDate", wtfEntry.getUpdateDate() != null ? wtfEntry.getUpdateDate() : Timestamp.from(Instant.now()))
-                    .setParameter("serverId", serverId)
+            List<WtfEntry> found = session.createQuery("from " + wtfEntry.getClass().getSimpleName() + " w " +
+                    "where w.serverId = :serverId and w.authorId = :authorId and w.targetId = :targetId", WtfEntry.class)
+                    .setParameter("serverId", wtfEntry.getServerId())
                     .setParameter("authorId", wtfEntry.getAuthorId())
-                    .setParameter("targetId", userId)
-                    .executeUpdate();
+                    .setParameter("targetId", wtfEntry.getTargetId())
+                    .list();
 
-            if (updatedCount == 1) {
-                session.success();
+            if (found != null && !found.isEmpty()) {
+                if (found.size() > 1) {
+                    throw new SQLException(String.format("Present non-unique values of server id \"%d\" and user id \"%d\" and " +
+                            "author id \"%d\"", wtfEntry.getServerId(), wtfEntry.getTargetId(), wtfEntry.getAuthorId()));
+                }
+
+                WtfEntry entry = found.get(0);
+                session.removeAll(entry.getAttaches());
+                entry.setUpdateDate(Timestamp.from(Instant.now()));
+                entry.setDescription(wtfEntry.getDescription());
+                replaceAttachments(wtfEntry, entry);
+                saveEntry(session, entry);
                 return AddUpdateState.UPDATED;
-            } else if (updatedCount > 1) {
-                throw new SQLException(String.format("Present non-unique values of server id \"%d\" and user id \"%d\" and " +
-                        "author id \"%d\"", serverId, userId, wtfEntry.getAuthorId()));
             }
         } catch (Exception err) {
             String errMsg = String.format("Unable to update wtf entry for server id \"%d\" and user id \"%d\" with " +
-                    "%s: %s", serverId, userId, wtfEntry, err.getMessage());
+                    "%s: %s", wtfEntry.getServerId(), wtfEntry.getTargetId(), wtfEntry, err.getMessage());
             log.error(errMsg, err);
             LogsStorage.addErrorMessage(errMsg);
             return AddUpdateState.ERROR;
@@ -102,30 +107,57 @@ class WtfAssignDAOImpl
             List<WtfEntry> entries = session.createQuery("from " + WtfEntry.class.getSimpleName() + " w " +
                             "where w.serverId = :serverId and w.authorId = :authorId and w.targetId = :targetId",
                     WtfEntry.class)
-                    .setParameter("serverId", serverId)
+                    .setParameter("serverId", wtfEntry.getServerId())
                     .setParameter("authorId", wtfEntry.getAuthorId())
-                    .setParameter("targetId", userId)
+                    .setParameter("targetId", wtfEntry.getTargetId())
                     .list();
             Optional<WtfEntry> mayBeEntry = CommonUtils.getFirstOrEmpty(entries);
             WtfEntry entry = mayBeEntry.orElse(wtfEntry);
             if (mayBeEntry.isPresent()) {
                 entry.setDescription(wtfEntry.getDescription());
-                entry.setImageUri(wtfEntry.getImageUri());
+                session.removeAll(entry.getAttaches());
             } else {
-                entry.setServerId(serverId);
-                entry.setTargetId(userId);
+                entry.setId(0L);
             }
+            replaceAttachments(wtfEntry, entry);
             entry.setUpdateDate(wtfEntry.getUpdateDate() != null ? wtfEntry.getUpdateDate() : Timestamp.from(Instant.now()));
             entry.setCreateDate(wtfEntry.getCreateDate() != null ? wtfEntry.getCreateDate() : Timestamp.from(Instant.now()));
-            session.save(entry);
+            saveEntry(session, entry);
             return mayBeEntry.isEmpty() ? AddUpdateState.ADDED : AddUpdateState.UPDATED;
         } catch (Exception err) {
             String errMsg = String.format("Unable to insert wtf entry for server id \"%d\" and user id \"%d\" with " +
-                    "%s: %s", serverId, userId, wtfEntry, err.getMessage());
+                    "%s: %s", wtfEntry.getServerId(), wtfEntry.getTargetId(), wtfEntry, err.getMessage());
             log.error(errMsg, err);
             LogsStorage.addErrorMessage(errMsg);
             return AddUpdateState.ERROR;
         }
+    }
+
+    private void saveEntry(AutoSession session, WtfEntry entry) {
+        session.save(entry);
+        boolean saveAttachments = false;
+        for (WtfEntryAttach attach : entry.getAttaches()) {
+            if (attach.getId() == 0L) {
+                saveAttachments = true;
+                break;
+            }
+        }
+        if (saveAttachments) {
+            session.saveAll(entry.getAttaches());
+        }
+    }
+
+    private void replaceAttachments(@NotNull WtfEntry fromEntry, @NotNull WtfEntry toEntry) {
+        Set<WtfEntryAttach> attaches = Collections.emptySet();
+        if (fromEntry.getAttaches() != null && !fromEntry.getAttaches().isEmpty()) {
+            attaches = fromEntry.getAttaches();
+            for (WtfEntryAttach attach : attaches) {
+                attach.setWtfEntry(toEntry);
+                attach.setId(0L);
+                attach.setCreateDate(Timestamp.from(Instant.now()));
+            }
+        }
+        toEntry.setAttaches(attaches);
     }
 
     @Override
@@ -133,16 +165,19 @@ class WtfAssignDAOImpl
 
         try (AutoSession session = sessionFactory.openSession()) {
 
-            int deletedCount = session.createQuery("delete from " + WtfEntry.class.getSimpleName() + " w " +
-                    "where w.serverId = :serverId and w.authorId = :authorId and w.targetId = :targetId")
+            List<WtfEntry> found = session.createQuery("from " + WtfEntry.class.getSimpleName() + " w " +
+                    "where w.serverId = :serverId and w.authorId = :authorId and w.targetId = :targetId", WtfEntry.class)
                     .setParameter("serverId", serverId)
                     .setParameter("authorId", authorId)
                     .setParameter("targetId", userId)
-                    .executeUpdate();
-            if (deletedCount > 0) {
-                session.success();
+                    .list();
+
+            for (WtfEntry entry : found) {
+                session.removeAll(entry.getAttaches());
             }
-            return deletedCount > 0 ? AddUpdateState.REMOVED : AddUpdateState.NO_CHANGES;
+            session.removeAll(found);
+            return !found.isEmpty() ? AddUpdateState.REMOVED : AddUpdateState.NO_CHANGES;
+
         } catch (Exception err) {
             String errMsg = String.format("Unable delete wtf entry for server id \"%d\" and user id \"%d\" " +
                     "and author id \"%d\": %s", serverId, userId, authorId, err.getMessage());

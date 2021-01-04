@@ -2,19 +2,16 @@ package hellfrog.settings.db;
 
 import hellfrog.TestUtils;
 import hellfrog.settings.db.entity.WtfEntry;
+import hellfrog.settings.db.entity.WtfEntryAttach;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnmodifiableView;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.net.URI;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class WtfAssignDAOTest {
@@ -39,40 +36,39 @@ public class WtfAssignDAOTest {
                     .forEach(testServer -> {
                         // Addition test
                         testServer.firstMap.parallelStream().forEach(wtfMap -> {
-                            AddUpdateState state = wtfAssignDAO.addOrUpdate(testServer.serverId,
-                                    wtfMap.member, wtfMap.wtfEntry);
+                            AddUpdateState state = wtfAssignDAO.addOrUpdate(wtfMap);
                             Assertions.assertEquals(AddUpdateState.ADDED, state);
-                            Optional<WtfEntry> mayBeEntry = wtfAssignDAO.getLatest(testServer.serverId, wtfMap.member);
+                            Optional<WtfEntry> mayBeEntry = wtfAssignDAO.getLatest(testServer.serverId, wtfMap.getTargetId());
                             Assertions.assertTrue(mayBeEntry.isPresent());
                         });
                         // Test presence
                         testServer.firstMap.parallelStream().forEach(wtfMap -> {
-                            List<WtfEntry> found = wtfAssignDAO.getAll(testServer.serverId, wtfMap.member);
-                            Assertions.assertTrue(checkPresent(wtfMap.wtfEntry, found));
+                            List<WtfEntry> found = wtfAssignDAO.getAll(testServer.serverId, wtfMap.getTargetId());
+                            Assertions.assertTrue(checkPresent(wtfMap, found));
                         });
                         // Test update
                         testServer.firstUpgrade.parallelStream().forEach(wtfMap -> {
-                            AddUpdateState state = wtfAssignDAO.addOrUpdate(testServer.serverId,
-                                    wtfMap.member, wtfMap.wtfEntry);
+                            AddUpdateState state = wtfAssignDAO.addOrUpdate(wtfMap);
                             Assertions.assertEquals(AddUpdateState.UPDATED, state);
-                            List<WtfEntry> found = wtfAssignDAO.getAll(testServer.serverId, wtfMap.member);
-                            Assertions.assertTrue(checkPresent(wtfMap.wtfEntry, found));
+                            List<WtfEntry> found = wtfAssignDAO.getAll(testServer.serverId, wtfMap.getTargetId());
+                            String messages = "Search:\n" + wtfMap + "\nIn:\n" + found;
+                            Assertions.assertTrue(checkPresent(wtfMap, found), messages);
                         });
                         // Test second update
                         testServer.secondUpgrade.parallelStream().forEach(wtfMap -> {
-                            AddUpdateState state = wtfAssignDAO.addOrUpdate(testServer.serverId,
-                                    wtfMap.member, wtfMap.wtfEntry);
+                            AddUpdateState state = wtfAssignDAO.addOrUpdate(wtfMap);
                             Assertions.assertEquals(AddUpdateState.UPDATED, state);
-                            List<WtfEntry> found = wtfAssignDAO.getAll(testServer.serverId, wtfMap.member);
-                            Assertions.assertTrue(checkPresent(wtfMap.wtfEntry, found));
+                            List<WtfEntry> found = wtfAssignDAO.getAll(testServer.serverId, wtfMap.getTargetId());
+                            String messages = "Search:\n" + wtfMap + "\nIn:\n" + found;
+                            Assertions.assertTrue(checkPresent(wtfMap, found), messages);
                         });
                         // Deletion test
                         testServer.deletion.parallelStream().forEach(wtfMap -> {
                             AddUpdateState state = wtfAssignDAO.remove(testServer.serverId,
-                                    wtfMap.wtfEntry.getAuthorId(), wtfMap.member);
+                                    wtfMap.getAuthorId(), wtfMap.getTargetId());
                             Assertions.assertEquals(AddUpdateState.REMOVED, state);
-                            List<WtfEntry> found = wtfAssignDAO.getAll(testServer.serverId, wtfMap.member);
-                            Assertions.assertFalse(checkPresent(wtfMap.wtfEntry, found));
+                            List<WtfEntry> found = wtfAssignDAO.getAll(testServer.serverId, wtfMap.getTargetId());
+                            Assertions.assertFalse(checkPresent(wtfMap, found));
                         });
                     });
         }
@@ -86,10 +82,36 @@ public class WtfAssignDAOTest {
         boolean equalsDescription = first.getDescription() == null && second.getDescription() == null
                 || (first.getDescription() != null && second.getDescription() != null
                 && first.getDescription().equals(second.getDescription()));
-        boolean equalsURI = first.getImageUri() == null && second.getImageUri() == null
-                || (first.getImageUri() != null && second.getImageUri() != null
-                && first.getImageUri().equals(second.getImageUri()));
+        boolean equalsURI = checkEquals(first.getAttaches(), second.getAttaches());
         return equalsDescription && equalsURI && equalsAuthors && equalsTargets && equalsServers;
+    }
+
+    private boolean checkEquals(@Nullable Set<WtfEntryAttach> first, @Nullable Set<WtfEntryAttach> second) {
+        if (isEmptySet(first) && isEmptySet(second)) return true;
+        if (isEmptySet(first) || isEmptySet(second)) return false;
+        for (WtfEntryAttach firstAttach : first) {
+            boolean found = false;
+            for (WtfEntryAttach secondAttach : second) {
+                if (checkEquals(firstAttach, secondAttach)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isEmptySet(@Nullable Set<WtfEntryAttach> set) {
+        return set == null || set.isEmpty();
+    }
+
+    private boolean checkEquals(@Nullable WtfEntryAttach first, @Nullable WtfEntryAttach second) {
+        if (first == null || second == null) return false;
+        return first.getAttachURI() != null && second.getAttachURI() != null
+                && first.getAttachURI().equals(second.getAttachURI());
     }
 
     private boolean checkPresent(@NotNull WtfEntry first, @NotNull List<WtfEntry> list) {
@@ -102,58 +124,52 @@ public class WtfAssignDAOTest {
     }
 
     @NotNull
-    static WtfEntry buildEntry(long author) {
+    static WtfEntry buildEntry(long serverId, long author, long member) {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         String description = null;
         if (tlr.nextBoolean()) {
             description = TestUtils.randomStringName(50);
         }
-        URI uri = null;
-        if (tlr.nextBoolean() || description == null) {
-            uri = TestUtils.randomURI();
-        }
         WtfEntry wtfEntry = new WtfEntry();
-        wtfEntry.setDescription(description);
+        if (tlr.nextBoolean()) {
+            wtfEntry.setId(TestUtils.randomDiscordEntityId());
+        }
+        wtfEntry.setServerId(serverId);
         wtfEntry.setAuthorId(author);
+        wtfEntry.setTargetId(member);
+        wtfEntry.setDescription(description);
         Timestamp now = Timestamp.from(Instant.now());
         wtfEntry.setCreateDate(now);
         wtfEntry.setUpdateDate(now);
-        wtfEntry.setImageUri(uri != null ? uri.toString() : null);
+        if (tlr.nextBoolean() || wtfEntry.getDescription() == null) {
+            int attachesCount = tlr.nextInt(1, 3);
+            Set<WtfEntryAttach> attaches = new HashSet<>();
+            for (int i = 0; i < attachesCount; i++) {
+                WtfEntryAttach entryAttach = new WtfEntryAttach();
+                if (tlr.nextBoolean()) {
+                    entryAttach.setWtfEntry(wtfEntry);
+                }
+                if (tlr.nextBoolean()) {
+                    entryAttach.setId(TestUtils.randomDiscordEntityId());
+                }
+                entryAttach.setAttachURI(TestUtils.randomURI().toString());
+                attaches.add(entryAttach);
+            }
+            wtfEntry.setAttaches(attaches);
+        }
         return wtfEntry;
     }
 
     @NotNull
-    static WtfEntry upgradeEntry(@NotNull WtfEntry entry) {
-        WtfEntry update = buildEntry(entry.getAuthorId());
-        update.setCreateDate(entry.getCreateDate());
-        update.setTargetId(entry.getTargetId());
-        update.setServerId(entry.getServerId());
-        return update;
-    }
-
-    static class WtfMap {
-
-        final long member;
-        final WtfEntry wtfEntry;
-
-        WtfMap(long member, @NotNull WtfEntry wtfEntry) {
-            this.member = member;
-            this.wtfEntry = wtfEntry;
-        }
-    }
-
-    @NotNull
     @UnmodifiableView
-    private static List<WtfMap> generateWtfMaps(final long serverId,
-                                                @NotNull List<Long> members,
-                                                @NotNull List<Long> authors) {
-        List<WtfMap> result = new ArrayList<>();
+    private static List<WtfEntry> generateWtfEntries(final long serverId,
+                                                     @NotNull List<Long> members,
+                                                     @NotNull List<Long> authors) {
+        List<WtfEntry> result = new ArrayList<>();
         for (long author : authors) {
             List<Long> targets = TestUtils.randomSublist(members, MIN_MEMBERS_COUNT, members.size());
             for (long member : targets) {
-                WtfMap wtfMap = new WtfMap(member, buildEntry(author));
-                wtfMap.wtfEntry.setServerId(serverId);
-                wtfMap.wtfEntry.setTargetId(member);
+                WtfEntry wtfMap = buildEntry(serverId, author, member);
                 result.add(wtfMap);
             }
         }
@@ -162,13 +178,12 @@ public class WtfAssignDAOTest {
 
     @NotNull
     @UnmodifiableView
-    private static List<WtfMap> generateUpdate(@NotNull List<WtfMap> previousList) {
-        List<WtfMap> subList = TestUtils.randomSublist(previousList, previousList.size() > 0 ? 1 : 0, previousList.size());
-        List<WtfMap> result = new ArrayList<>();
-        for (WtfMap wtfMap : subList) {
-            WtfEntry upgradedEntry = upgradeEntry(wtfMap.wtfEntry);
-            WtfMap upgradedMap = new WtfMap(wtfMap.member, upgradedEntry);
-            result.add(upgradedMap);
+    private static List<WtfEntry> generateUpdate(@NotNull List<WtfEntry> previousList) {
+        List<WtfEntry> subList = TestUtils.randomSublist(previousList, previousList.size() > 0 ? 1 : 0, previousList.size());
+        List<WtfEntry> result = new ArrayList<>();
+        for (WtfEntry wtfMap : subList) {
+            WtfEntry upgradedEntry = buildEntry(wtfMap.getServerId(), wtfMap.getAuthorId(), wtfMap.getTargetId());
+            result.add(upgradedEntry);
         }
         return Collections.unmodifiableList(result);
     }
@@ -177,9 +192,9 @@ public class WtfAssignDAOTest {
         final long serverId = TestUtils.randomDiscordEntityId();
         final List<Long> members = TestUtils.randomDiscordEntitiesIds(MIN_MEMBERS_COUNT, MAX_MEMBERS_COUNT);
         final List<Long> authors = TestUtils.randomSublist(members, 1, MAX_AUTHORS);
-        final List<WtfMap> firstMap = generateWtfMaps(serverId, members, authors);
-        final List<WtfMap> firstUpgrade = generateUpdate(firstMap);
-        final List<WtfMap> secondUpgrade = generateUpdate(firstMap);
-        final List<WtfMap> deletion = TestUtils.randomSublist(firstMap, firstMap.size() > 0 ? 1 : 0, firstMap.size());
+        final List<WtfEntry> firstMap = generateWtfEntries(serverId, members, authors);
+        final List<WtfEntry> firstUpgrade = generateUpdate(firstMap);
+        final List<WtfEntry> secondUpgrade = generateUpdate(firstMap);
+        final List<WtfEntry> deletion = TestUtils.randomSublist(firstMap, firstMap.size() > 0 ? 1 : 0, firstMap.size());
     }
 }

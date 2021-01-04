@@ -198,28 +198,4 @@ public class Vote {
                 ", rolesFilter=" + rolesFilter +
                 '}';
     }
-
-    public enum Columns {
-
-        ID(1, -1),
-        SERVER_ID(2, 1),
-        TEXT_CHAT_ID(3, 2),
-        MESSAGE_ID(4, 3),
-        FINISH_DATE(5, 4),
-        VOTE_TEXT(6, 5),
-        HAS_TIMER(7, 6),
-        IS_EXCEPTIONAL(8, 7),
-        HAS_DEFAULT(9, 8),
-        WIN_THRESHOLD(10, 9),
-        CREATE_DATE(11, 10),
-        UPDATE_DATE(12, 11);
-
-        public final int selectColumn;
-        public final int insertColumn;
-
-        Columns(int selectColumn, int insertColumn) {
-            this.selectColumn = selectColumn;
-            this.insertColumn = insertColumn;
-        }
-    }
 }

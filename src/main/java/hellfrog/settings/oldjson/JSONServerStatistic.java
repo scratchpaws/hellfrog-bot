@@ -6,7 +6,7 @@ import java.util.Map;
 public class JSONServerStatistic {
 
     private boolean collectNonDefaultSmileStats = false;
-    // hellfrog.settings.db.EmojiTotalStatisticDAOTest
+    // hellfrog.settings.db.entity.EmojiTotalStatistic
     private Map<Long, JSONSmileStatistic> nonDefaultSmileStats = Collections.emptyMap();
     private Map<Long, JSONMessageStatistic> userMessagesStats = Collections.emptyMap();
     private Map<Long, JSONMessageStatistic> textChatStats = Collections.emptyMap();

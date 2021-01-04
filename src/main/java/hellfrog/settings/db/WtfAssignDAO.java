@@ -12,7 +12,7 @@ public interface WtfAssignDAO {
 
     List<WtfEntry> getAll(long serverId, long userId);
 
-    AddUpdateState addOrUpdate(long serverId, long userId, @NotNull WtfEntry wtfEntry);
+    AddUpdateState addOrUpdate(@NotNull WtfEntry wtfEntry);
 
     AddUpdateState remove(long serverId, long authorId, long userId);
 }
