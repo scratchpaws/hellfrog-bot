@@ -2,6 +2,7 @@ package hellfrog.settings.db.h2;
 
 import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.CommonUtils;
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.*;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
@@ -168,6 +169,7 @@ public class MainDBControllerH2
                 return Files.readAllBytes(tempFile);
             } catch (Exception err) {
                 String errMsg = String.format("Unable to generate DDL: %s", err.getMessage());
+                LogsStorage.addErrorMessage(errMsg);
                 sqlLog.error(errMsg, err);
             } finally {
                 try {
@@ -176,6 +178,7 @@ public class MainDBControllerH2
                 } catch (IOException warn) {
                     String warnMsg = String.format("Unable to delete temporary DDL file \"%s\": %s",
                             tempFile, warn.getMessage());
+                    LogsStorage.addWarnMessage(warnMsg);
                     sqlLog.warn(warnMsg, warn);
                 }
             }
@@ -184,7 +187,6 @@ public class MainDBControllerH2
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public String executeRawQuery(@Nullable String rawQuery) {
         if (CommonUtils.isTrStringEmpty(rawQuery)) {
             return "(Query is empty or null)";

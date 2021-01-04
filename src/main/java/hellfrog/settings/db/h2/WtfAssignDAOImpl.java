@@ -1,6 +1,7 @@
 package hellfrog.settings.db.h2;
 
 import hellfrog.common.CommonUtils;
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.AddUpdateState;
 import hellfrog.settings.db.WtfAssignDAO;
 import hellfrog.settings.db.entity.WtfEntry;
@@ -46,6 +47,7 @@ class WtfAssignDAOImpl
             String errMsg = String.format("Unable get all wtf for server id %d and user id %d: %s",
                     serverId, userId, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return Collections.emptyList();
         }
     }
@@ -92,6 +94,7 @@ class WtfAssignDAOImpl
             String errMsg = String.format("Unable to update wtf entry for server id \"%d\" and user id \"%d\" with " +
                     "%s: %s", serverId, userId, wtfEntry, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return AddUpdateState.ERROR;
         }
 
@@ -120,6 +123,7 @@ class WtfAssignDAOImpl
             String errMsg = String.format("Unable to insert wtf entry for server id \"%d\" and user id \"%d\" with " +
                     "%s: %s", serverId, userId, wtfEntry, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return AddUpdateState.ERROR;
         }
     }
@@ -143,6 +147,7 @@ class WtfAssignDAOImpl
             String errMsg = String.format("Unable delete wtf entry for server id \"%d\" and user id \"%d\" " +
                     "and author id \"%d\": %s", serverId, userId, authorId, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return AddUpdateState.ERROR;
         }
     }

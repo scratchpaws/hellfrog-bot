@@ -1,5 +1,6 @@
 package hellfrog.settings.db.h2;
 
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.BotOwnersDAO;
 import hellfrog.settings.db.entity.BotOwner;
 import org.apache.logging.log4j.LogManager;
@@ -38,6 +39,7 @@ class BotOwnersDAOImpl
         } catch (Exception err) {
             String errMsg = String.format("Unable to get all bot owners: %s", err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return Collections.emptyList();
         }
     }
@@ -61,6 +63,7 @@ class BotOwnersDAOImpl
             String errMsg = String.format("Unable to check what user with id %d is present into bot owners: %s",
                     userId, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
         }
         return false;
     }
@@ -76,6 +79,7 @@ class BotOwnersDAOImpl
             } catch (Exception err) {
                 String errMsg = String.format("Unable to add %d to global bot owners: %s", userId, err.getMessage());
                 log.error(errMsg, err);
+                LogsStorage.addErrorMessage(errMsg);
                 return false;
             }
             return isPresent(userId);
@@ -97,6 +101,7 @@ class BotOwnersDAOImpl
             } catch (Exception err) {
                 String errMsg = String.format("Unable to delete %d from global bot owners: %s", userId, err.getMessage());
                 log.error(errMsg, err);
+                LogsStorage.addErrorMessage(errMsg);
             }
             return !isPresent(userId);
         }

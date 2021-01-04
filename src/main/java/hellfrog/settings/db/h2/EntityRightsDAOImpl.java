@@ -2,6 +2,7 @@ package hellfrog.settings.db.h2;
 
 import hellfrog.common.CommonUtils;
 import hellfrog.common.TriFunction;
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.entity.EntityRight;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -59,6 +60,7 @@ abstract class EntityRightsDAOImpl<T extends EntityRight> {
             String errMsg = String.format("Unable to get all allowed \"%s\" for server %d and command \"%s\": %s",
                     managedClass.getSimpleName(), serverId, commandPrefix, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
         }
         return Collections.emptyList();
     }
@@ -87,6 +89,7 @@ abstract class EntityRightsDAOImpl<T extends EntityRight> {
             String errMsg = String.format("Unable to check what \"%s\" with id %d is allowed for server %d and command \"%s\": %s",
                     managedClass.getSimpleName(), what, serverId, commandPrefix, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
         }
 
         return false;
@@ -101,6 +104,7 @@ abstract class EntityRightsDAOImpl<T extends EntityRight> {
             } catch (Exception err) {
                 String errMsg = String.format("Unable to give access to \"%s\" with id %d to command \"%s\" on server with id %d: %s",
                         managedClass.getSimpleName(), who, commandPrefix, serverId, err.getMessage());
+                LogsStorage.addErrorMessage(errMsg);
                 log.error(errMsg, err);
             }
         } else if (log.isDebugEnabled()) {
@@ -127,6 +131,7 @@ abstract class EntityRightsDAOImpl<T extends EntityRight> {
                 String errMsg = String.format("Unable to deny access to \"%s\" with id %d to command \"%s\" on server with id %d: %s",
                         managedClass.getSimpleName(), who, commandPrefix, serverId, err.getMessage());
                 log.error(errMsg, err);
+                LogsStorage.addErrorMessage(errMsg);
             }
         } else if (log.isDebugEnabled()) {
             log.debug("Entity {} with id {} already denied to execute command " +

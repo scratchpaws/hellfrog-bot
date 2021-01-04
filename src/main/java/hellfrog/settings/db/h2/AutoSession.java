@@ -1,5 +1,6 @@
 package hellfrog.settings.db.h2;
 
+import hellfrog.core.LogsStorage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
@@ -133,6 +134,7 @@ class AutoSession
                 hibernateSession.getTransaction().rollback();
             } catch (Exception err) {
                 String errMsg = String.format("Unable to rollback transaction: %s", err.getMessage());
+                LogsStorage.addErrorMessage(errMsg);
                 throw new IOException(errMsg, err);
             }
         } else if (commitRequired) {
@@ -140,6 +142,7 @@ class AutoSession
                 hibernateSession.getTransaction().commit();
             } catch (Exception err) {
                 String errMsg = String.format("Unable to commit transaction: %s", err.getMessage());
+                LogsStorage.addErrorMessage(errMsg);
                 throw new IOException(errMsg, err);
             }
         }
@@ -147,6 +150,7 @@ class AutoSession
             hibernateSession.close();
         } catch (Exception err) {
             String errMsg = String.format("Unable to close session: %s", err.getMessage());
+            LogsStorage.addErrorMessage(errMsg);
             throw new IOException(errMsg, err);
         }
     }

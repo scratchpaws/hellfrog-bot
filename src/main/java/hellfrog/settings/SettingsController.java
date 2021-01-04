@@ -48,6 +48,7 @@ public class SettingsController {
     private final AutoSaveSettingsTask autoSaveSettingsTask;
     private final SessionsCheckTask sessionsCheckTask;
     private final CongratulationsController congratulationsController;
+    private final ServiceLogsNotificator serviceLogsNotificator;
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
     private volatile Instant lastCommandUsage = null;
@@ -71,6 +72,7 @@ public class SettingsController {
         autoSaveSettingsTask = new AutoSaveSettingsTask();
         sessionsCheckTask = new SessionsCheckTask();
         congratulationsController = new CongratulationsController();
+        serviceLogsNotificator = new ServiceLogsNotificator();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
                 SettingsController.getInstance().mainDBController.close()));
@@ -433,9 +435,11 @@ public class SettingsController {
         return this.mainDBController;
     }
 
-
-
     public HttpClientsPool getHttpClientsPool() {
         return httpClientsPool;
+    }
+
+    public ServiceLogsNotificator getServiceLogsNotificator() {
+        return serviceLogsNotificator;
     }
 }

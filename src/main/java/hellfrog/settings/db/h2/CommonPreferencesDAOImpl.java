@@ -1,5 +1,6 @@
 package hellfrog.settings.db.h2;
 
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.CommonPreferencesDAO;
 import hellfrog.settings.db.entity.CommonPreference;
 import org.apache.logging.log4j.LogManager;
@@ -34,6 +35,7 @@ class CommonPreferencesDAOImpl
         } catch (Exception err) {
             String errMsg = String.format("Unable to get all common preferences: %s", err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return Collections.emptyList();
         }
     }
@@ -43,6 +45,7 @@ class CommonPreferencesDAOImpl
             session.saveAll(preferences);
         } catch (Exception err) {
             String errMsg = String.format("Unable to persist common preferences: %s", err.getMessage());
+            LogsStorage.addErrorMessage(errMsg);
             log.error(errMsg, err);
         }
     }
@@ -71,6 +74,7 @@ class CommonPreferencesDAOImpl
         } catch (Exception err) {
             String errMsg = String.format("Unable to fetch common preference value for \"%s\": %s", key, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
         }
 
         if (!present || override) {
@@ -91,6 +95,7 @@ class CommonPreferencesDAOImpl
                 String errMsg = String.format("Unable to persist common preference value %s: %s",
                         newValue.toString(), err.getMessage());
                 log.error(errMsg, err);
+                LogsStorage.addErrorMessage(errMsg);
             }
         }
 

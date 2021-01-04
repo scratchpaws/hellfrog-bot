@@ -1,6 +1,7 @@
 package hellfrog.settings.db.h2;
 
 import hellfrog.common.CommonUtils;
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.VoteCreateException;
 import hellfrog.settings.db.VotesDAO;
 import hellfrog.settings.db.entity.Vote;
@@ -44,6 +45,7 @@ class VotesDAOImpl
             String errMsg = String.format("Unable extract votes for serverId \"%d\": %s",
                     serverId, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return Collections.emptyList();
         }
     }
@@ -73,6 +75,7 @@ class VotesDAOImpl
             String errMsg = String.format("Unable extract expired votes for serverId \"%d\": %s",
                     serverId, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return Collections.emptyList();
         }
     }
@@ -95,6 +98,7 @@ class VotesDAOImpl
             String errMsg = String.format("Unable to fetch allowed roles for vote with message id \"%d\": %s",
                     messageId, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return Collections.emptyList();
         }
     }
@@ -103,12 +107,18 @@ class VotesDAOImpl
     public Vote addVote(@NotNull Vote vote) throws VoteCreateException {
 
         if (vote.getVotePoints() == null || vote.getVotePoints().isEmpty()) {
-            log.error("Vote points is empty: {}", vote.toString());
+            String warnMsg = String.format("BUG: Vote points is empty, it must be checked before saving to the database: %s",
+                    vote.toString());
+            log.warn(warnMsg);
+            LogsStorage.addWarnMessage(warnMsg);
             throw new VoteCreateException("one or more vote points required");
         }
 
         if (vote.getServerId() <= 0L) {
-            log.error("Server id is less or equal zero");
+            String warnMsg = String.format("BUG: Server id is less or equal zero, it must be checked before saving to the database: %s",
+                    vote.toString());
+            log.warn(warnMsg);
+            LogsStorage.addWarnMessage(warnMsg);
             throw new VoteCreateException("server required");
         }
 
@@ -120,12 +130,21 @@ class VotesDAOImpl
 
         for (VotePoint votePoint : vote.getVotePoints()) {
             if (CommonUtils.isTrStringEmpty(vote.getVoteText())) {
+                String warnMsg = String.format("BUG: There should be no vote points with empty descriptions, " +
+                        "it must be checked before saving to the database: %s", vote.toString());
+                LogsStorage.addWarnMessage(warnMsg);
                 throw new VoteCreateException("there should be no vote points with empty descriptions");
             }
             if (CommonUtils.isTrStringEmpty(votePoint.getUnicodeEmoji()) && votePoint.getCustomEmojiId() <= 0L) {
+                String warnMsg = String.format("BUG: there should be no vote points with empty emoji, " +
+                        "it must be checked before saving to the database: %s", vote.toString());
+                LogsStorage.addWarnMessage(warnMsg);
                 throw new VoteCreateException("there should be no vote points with empty emoji");
             }
             if (CommonUtils.isTrStringNotEmpty(votePoint.getUnicodeEmoji()) && votePoint.getCustomEmojiId() > 0L) {
+                String warnMsg = String.format("BUG: There should be no items with unicode and server emoji at the same time: %s",
+                        vote.toString());
+                LogsStorage.addWarnMessage(warnMsg);
                 throw new VoteCreateException("application error (there should be no items with unicode and server emoji at the same time)");
             }
             votePoint.setVote(vote);
@@ -139,6 +158,9 @@ class VotesDAOImpl
 
         for (VoteRoleFilter filter : vote.getRolesFilter()) {
             if (filter.getRoleId() <= 0L) {
+                String errMsg = String.format("BUG: The vote role filter must have a non-zero role identifier: %s, vote id: %d",
+                        filter.toString(), vote.getId());
+                LogsStorage.addErrorMessage(errMsg);
                 throw new VoteCreateException("application error (role id is zero)");
             }
             filter.setMessageId(vote.getMessageId());
@@ -157,20 +179,28 @@ class VotesDAOImpl
         try (AutoSession session = sessionFactory.openSession()) {
             session.save(vote);
             if (vote.getId() <= 0L) {
-                log.error("Vote with empty/zero vote id is created: {}", vote);
+                String errMsg = String.format("Vote with empty/zero vote id is created: %s", vote.toString());
+                log.error(errMsg);
+                LogsStorage.addErrorMessage(errMsg);
                 throw new VoteCreateException("database error");
             }
             for (VotePoint votePoint : vote.getVotePoints()) {
                 session.save(votePoint);
                 if (votePoint.getId() <= 0L) {
-                    log.error("VotePoint with empty/zero vote id is created: {}", votePoint);
+                    String errMsg = String.format("VotePoint with empty/zero vote id is created: %s, vote id: %d",
+                            votePoint, vote.getId());
+                    log.error(errMsg);
+                    LogsStorage.addErrorMessage(errMsg);
                     throw new VoteCreateException("database error");
                 }
             }
             for (VoteRoleFilter voteRoleFilter : vote.getRolesFilter()) {
                 session.save(voteRoleFilter);
                 if (voteRoleFilter.getId() <= 0L) {
-                    log.error("VoteRoleFilter with empty/zero vote id is created: {}", voteRoleFilter);
+                    String errMsg = String.format("VoteRoleFilter with empty/zero vote id is created: %s, vote id: %d",
+                            voteRoleFilter.toString(), vote.getId());
+                    log.error(errMsg);
+                    LogsStorage.addErrorMessage(errMsg);
                     throw new VoteCreateException("database error");
                 }
             }
@@ -178,6 +208,7 @@ class VotesDAOImpl
             String errMsg = String.format("Unable to insert new vote \"%s\" value: %s",
                     vote, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             throw new VoteCreateException("database error", err);
         }
 
@@ -191,13 +222,18 @@ class VotesDAOImpl
         long voteId = vote.getId();
 
         if (messageId <= 0L) {
-            log.error("messageId required (must be great that zero): {}", vote.toString());
+            String warnMsg = String.format("BUG: It is necessary to check before saving to the database that a non-zero message " +
+                    "identifier is specified to activate voting: %s", vote.toString());
+            log.warn(warnMsg);
+            LogsStorage.addWarnMessage(warnMsg);
             throw new VoteCreateException("message not sent, voting message identifier missing");
         }
 
         if (voteId <= 0L) {
-            log.error("voteId required (must be great that zero) (vote is not saved?): {}",
+            String warnMsg = String.format("BUG: voteId required (must be great that zero) (vote is not saved?): %s",
                     vote.toString());
+            log.warn(warnMsg);
+            LogsStorage.addWarnMessage(warnMsg);
             throw new VoteCreateException("this vote was not stored in the database");
         }
 
@@ -206,7 +242,9 @@ class VotesDAOImpl
         try (AutoSession session = sessionFactory.openSession()) {
             Vote persisted = session.get(Vote.class, voteId);
             if (persisted == null) {
-                log.error("This vote is not present into database: {}", vote);
+                String errMsg = String.format("This vote is not present into database: %s", vote.toString());
+                log.error(errMsg);
+                LogsStorage.addErrorMessage(errMsg);
                 throw new VoteCreateException("this vote was not stored in the database");
             }
             persisted.setMessageId(messageId);
@@ -224,6 +262,7 @@ class VotesDAOImpl
             String errMsg = String.format("Unable to update vote with vote_id \"%d\": %s",
                     vote.getId(), err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             throw new VoteCreateException("database error");
         }
     }
@@ -253,6 +292,7 @@ class VotesDAOImpl
             String errMsg = String.format("Unable to delete vote points with vote_id \"%d\": %s",
                     vote.getId(), err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return false;
         }
     }

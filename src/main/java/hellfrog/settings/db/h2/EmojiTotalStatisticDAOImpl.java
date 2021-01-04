@@ -1,5 +1,6 @@
 package hellfrog.settings.db.h2;
 
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.EmojiTotalStatisticDAO;
 import hellfrog.settings.db.entity.EmojiTotalStatistic;
 import org.apache.logging.log4j.LogManager;
@@ -40,6 +41,7 @@ class EmojiTotalStatisticDAOImpl
             String errMsg = String.format("Unable to get total emoji usages count for server id \"%d\" and emoji id \"%d\": %s",
                     serverId, emojiId, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return ERR_REACHED;
         }
     }
@@ -78,6 +80,7 @@ class EmojiTotalStatisticDAOImpl
                             "emoji id: \"%d\", usages count: \"%d\", last usage: \"%s\": %s",
                     serverId, emojiId, usagesCount, lastUsage, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
         }
     }
 
@@ -105,6 +108,7 @@ class EmojiTotalStatisticDAOImpl
                             "emoji id: \"%d\", last usage: \"%s\": %s",
                     serverId, emojiId, lastUsage, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
         }
         if (!present) {
             insertStats(serverId, emojiId, (increment ? 1L : 0L), lastUsage);
@@ -149,6 +153,7 @@ class EmojiTotalStatisticDAOImpl
             String errMsg = String.format("Unable to fetch all total emoji statistic usages for server with id \"%d\": %s",
                     serverId, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
             return Collections.emptyList();
         }
     }

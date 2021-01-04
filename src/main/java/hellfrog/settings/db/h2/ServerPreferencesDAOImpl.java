@@ -1,5 +1,6 @@
 package hellfrog.settings.db.h2;
 
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.ServerPreferencesDAO;
 import hellfrog.settings.db.entity.ServerPrefKey;
 import hellfrog.settings.db.entity.ServerPreference;
@@ -50,6 +51,7 @@ class ServerPreferencesDAOImpl
             String errMsg = String.format("Unable to fetch value for server id %d and key \"%s\": %s",
                     serverId, key, err.getMessage());
             log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
         }
 
         if (!present || override) {
@@ -73,6 +75,7 @@ class ServerPreferencesDAOImpl
                 String errMsg = String.format("Unable to persist server preference value %s: %s",
                         newValue.toString(), err.getMessage());
                 log.error(errMsg, err);
+                LogsStorage.addErrorMessage(errMsg);
             }
         }
 
