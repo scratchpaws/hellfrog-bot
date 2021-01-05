@@ -2,6 +2,7 @@ package hellfrog.settings.db;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Instant;
 import java.util.TimeZone;
 
 public interface ServerPreferencesDAO {
@@ -9,6 +10,7 @@ public interface ServerPreferencesDAO {
     long NAN_LONG = 0L;
     String NAN_STRING = "0";
     boolean NAN_BOOL = false;
+    Instant NAN_DATE_TIME = Instant.EPOCH;
 
     String PREFIX_DEFAULT = ">>";
     boolean JOIN_LEAVE_DISPLAY_DEFAULT = false;
@@ -17,14 +19,8 @@ public interface ServerPreferencesDAO {
     boolean CONGRATULATIONS_ENABLED_DEFAULT = false;
     long CONGRATULATIONS_CHANNEL_DEFAULT = 0L;
     String CONGRATULATIONS_TIMEZONE_DEFAULT = TimeZone.getTimeZone("UTC").getID();
-
-    String PREFIX_KEY = "bot.prefix";
-    String JOIN_LEAVE_DISPLAY_KEY = "join.leave.key";
-    String JOIN_LEAVE_CHANNEL_ID_KEY = "join.leave.channel";
-    String NEW_ACL_MODE_KEY = "new.acl.mode";
-    String CONGRATULATIONS_ENABLED_KEY = "congr.enabled";
-    String CONGRATULATIONS_CHANNEL = "congr.channel";
-    String CONGRATULATIONS_TIMEZONE = "congr.timezone";
+    Instant STATISTIC_START_DATE_DEFAULT = NAN_DATE_TIME;
+    boolean STATISTIC_ENABLED_DEFAULT = false;
 
     String getPrefix(long serverId);
 
@@ -53,4 +49,12 @@ public interface ServerPreferencesDAO {
     String getCongratulationTimeZone(long serverId);
 
     String setCongratulationTimeZone(long serverId, @NotNull String newTimeZone);
+
+    boolean isStatisticEnabled(long serverId);
+
+    boolean setStatisticEnabled(long serverId, boolean enabled);
+
+    Instant getStatisticStartDate(long serverId);
+
+    Instant setStatisticStartDate(long serverId, @NotNull final Instant startDate);
 }

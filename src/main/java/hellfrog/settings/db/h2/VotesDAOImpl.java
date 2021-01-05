@@ -240,7 +240,7 @@ class VotesDAOImpl
         Timestamp now = Timestamp.from(Instant.now());
 
         try (AutoSession session = sessionFactory.openSession()) {
-            Vote persisted = session.get(Vote.class, voteId);
+            Vote persisted = session.find(Vote.class, voteId);
             if (persisted == null) {
                 String errMsg = String.format("This vote is not present into database: %s", vote.toString());
                 log.error(errMsg);
@@ -270,7 +270,7 @@ class VotesDAOImpl
     @Override
     public Vote getVoteById(long voteId) throws SQLException {
         try (AutoSession session = sessionFactory.openSession()) {
-            return session.get(Vote.class, voteId);
+            return session.find(Vote.class, voteId);
         } catch (Exception err) {
             throw new SQLException(err.getMessage(), err);
         }
@@ -280,7 +280,7 @@ class VotesDAOImpl
     public boolean deleteVote(@NotNull Vote vote) {
         long voteId = vote.getId();
         try (AutoSession session = sessionFactory.openSession()) {
-            Vote persisted = session.get(Vote.class, voteId);
+            Vote persisted = session.find(Vote.class, voteId);
             if (persisted == null) {
                 return false;
             }

@@ -5,11 +5,13 @@ import java.util.Map;
 
 public class JSONServerStatistic {
 
+    // hellfrog.settings.db.ServerPreferencesDAO.isStatisticEnabled
     private boolean collectNonDefaultSmileStats = false;
     // hellfrog.settings.db.entity.EmojiTotalStatistic
     private Map<Long, JSONSmileStatistic> nonDefaultSmileStats = Collections.emptyMap();
     private Map<Long, JSONMessageStatistic> userMessagesStats = Collections.emptyMap();
     private Map<Long, JSONMessageStatistic> textChatStats = Collections.emptyMap();
+    // hellfrog.settings.db.ServerPreferencesDAO.getStatisticStartDate
     private long startDate = 0L;
 
     public Long getStartDate() {

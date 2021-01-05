@@ -4,6 +4,7 @@ import hellfrog.TestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -36,6 +37,8 @@ public class ServerPreferencesDAOTest {
             boolean awaitCongratulationsEnabled = ServerPreferencesDAO.CONGRATULATIONS_ENABLED_DEFAULT;
             long awaitCongratulationsChannelId = ServerPreferencesDAO.CONGRATULATIONS_CHANNEL_DEFAULT;
             String awaitCongratulationsTimeZoneId = ServerPreferencesDAO.CONGRATULATIONS_TIMEZONE_DEFAULT;
+            boolean awaitEnabledStatistic = ServerPreferencesDAO.STATISTIC_ENABLED_DEFAULT;
+            Instant awaitStatisticDate = ServerPreferencesDAO.STATISTIC_START_DATE_DEFAULT;
 
             // извлечение значений по-умолчанию
             for (Map.Entry<Long, ServerSettings> entry : servers.entrySet()) {
@@ -48,6 +51,8 @@ public class ServerPreferencesDAOTest {
                 boolean congratulationsEnabled = preferencesDAO.isCongratulationsEnabled(serverId);
                 long congratulationsChannelId = preferencesDAO.getCongratulationChannel(serverId);
                 String congratulationsTimeZoneId = preferencesDAO.getCongratulationTimeZone(serverId);
+                boolean enabledStatistic = preferencesDAO.isStatisticEnabled(serverId);
+                Instant statisticDate = preferencesDAO.getStatisticStartDate(serverId);
 
                 Assertions.assertEquals(awaitPrefix, prefix);
                 Assertions.assertEquals(awaitJoinLeaveDisplay, joinLeaveDisplay);
@@ -56,6 +61,8 @@ public class ServerPreferencesDAOTest {
                 Assertions.assertEquals(awaitCongratulationsEnabled, congratulationsEnabled);
                 Assertions.assertEquals(awaitCongratulationsChannelId, congratulationsChannelId);
                 Assertions.assertEquals(awaitCongratulationsTimeZoneId, congratulationsTimeZoneId);
+                Assertions.assertEquals(awaitEnabledStatistic, enabledStatistic);
+                Assertions.assertEquals(awaitStatisticDate, statisticDate);
             }
 
             // задание значений, здесь извлекаются всё ещё значения по-умолчанию
@@ -69,7 +76,9 @@ public class ServerPreferencesDAOTest {
                 boolean newAclMode = preferencesDAO.setNewAclMode(serverId, settings.newAclMode);
                 boolean congratulationsEnabled = preferencesDAO.setCongratulationEnabled(serverId, settings.enabledCongratulations);
                 long congratulationsChannelId = preferencesDAO.setCongratulationChannel(serverId, settings.congratulationsChannel);
-                String congratulationsTimeZoneId = preferencesDAO.setCongratulationTimeZone(serverId, settings.congratulaitionsTimezone);
+                String congratulationsTimeZoneId = preferencesDAO.setCongratulationTimeZone(serverId, settings.congratulationsTimezone);
+                boolean enabledStatistic = preferencesDAO.setStatisticEnabled(serverId, settings.enableStatistic);
+                Instant statisticDate = preferencesDAO.setStatisticStartDate(serverId, settings.statisticStartDate);
 
                 Assertions.assertEquals(awaitPrefix, prefix);
                 Assertions.assertEquals(awaitJoinLeaveDisplay, joinLeaveDisplay);
@@ -78,6 +87,8 @@ public class ServerPreferencesDAOTest {
                 Assertions.assertEquals(awaitCongratulationsEnabled, congratulationsEnabled);
                 Assertions.assertEquals(awaitCongratulationsChannelId, congratulationsChannelId);
                 Assertions.assertEquals(awaitCongratulationsTimeZoneId, congratulationsTimeZoneId);
+                Assertions.assertEquals(awaitEnabledStatistic, enabledStatistic);
+                Assertions.assertEquals(awaitStatisticDate, statisticDate);
             }
 
             // проверяем, что значения сохранились
@@ -92,6 +103,8 @@ public class ServerPreferencesDAOTest {
                 boolean congratulationsEnabled = preferencesDAO.isCongratulationsEnabled(serverId);
                 long congratulationsChannelId = preferencesDAO.getCongratulationChannel(serverId);
                 String congratulationsTimeZoneId = preferencesDAO.getCongratulationTimeZone(serverId);
+                boolean enabledStatistic = preferencesDAO.isStatisticEnabled(serverId);
+                Instant statisticDate = preferencesDAO.getStatisticStartDate(serverId);
 
                 Assertions.assertEquals(settings.prefix, prefix);
                 Assertions.assertEquals(settings.joinLeaveDisplay, joinLeaveDisplay);
@@ -99,7 +112,9 @@ public class ServerPreferencesDAOTest {
                 Assertions.assertEquals(settings.newAclMode, newAclMode);
                 Assertions.assertEquals(settings.enabledCongratulations, congratulationsEnabled);
                 Assertions.assertEquals(settings.congratulationsChannel, congratulationsChannelId);
-                Assertions.assertEquals(settings.congratulaitionsTimezone, congratulationsTimeZoneId);
+                Assertions.assertEquals(settings.congratulationsTimezone, congratulationsTimeZoneId);
+                Assertions.assertEquals(settings.enableStatistic, enabledStatistic);
+                Assertions.assertEquals(settings.statisticStartDate, statisticDate);
             }
 
             // проверяем, что значения не перезаписались дефолтом при извлечении данных
@@ -114,6 +129,8 @@ public class ServerPreferencesDAOTest {
                 boolean congratulationsEnabled = preferencesDAO.isCongratulationsEnabled(serverId);
                 long congratulationsChannelId = preferencesDAO.getCongratulationChannel(serverId);
                 String congratulationsTimeZoneId = preferencesDAO.getCongratulationTimeZone(serverId);
+                boolean enabledStatistic = preferencesDAO.isStatisticEnabled(serverId);
+                Instant statisticDate = preferencesDAO.getStatisticStartDate(serverId);
 
                 Assertions.assertEquals(settings.prefix, prefix);
                 Assertions.assertEquals(settings.joinLeaveDisplay, joinLeaveDisplay);
@@ -121,7 +138,9 @@ public class ServerPreferencesDAOTest {
                 Assertions.assertEquals(settings.newAclMode, newAclMode);
                 Assertions.assertEquals(settings.enabledCongratulations, congratulationsEnabled);
                 Assertions.assertEquals(settings.congratulationsChannel, congratulationsChannelId);
-                Assertions.assertEquals(settings.congratulaitionsTimezone, congratulationsTimeZoneId);
+                Assertions.assertEquals(settings.congratulationsTimezone, congratulationsTimeZoneId);
+                Assertions.assertEquals(settings.enableStatistic, enabledStatistic);
+                Assertions.assertEquals(settings.statisticStartDate, statisticDate);
             }
         }
 
@@ -140,6 +159,8 @@ public class ServerPreferencesDAOTest {
                 boolean congratulationsEnabled = preferencesDAO.isCongratulationsEnabled(serverId);
                 long congratulationsChannelId = preferencesDAO.getCongratulationChannel(serverId);
                 String congratulationsTimeZoneId = preferencesDAO.getCongratulationTimeZone(serverId);
+                boolean enabledStatistic = preferencesDAO.isStatisticEnabled(serverId);
+                Instant statisticDate = preferencesDAO.getStatisticStartDate(serverId);
 
                 Assertions.assertEquals(settings.prefix, prefix);
                 Assertions.assertEquals(settings.joinLeaveDisplay, joinLeaveDisplay);
@@ -147,7 +168,9 @@ public class ServerPreferencesDAOTest {
                 Assertions.assertEquals(settings.newAclMode, newAclMode);
                 Assertions.assertEquals(settings.enabledCongratulations, congratulationsEnabled);
                 Assertions.assertEquals(settings.congratulationsChannel, congratulationsChannelId);
-                Assertions.assertEquals(settings.congratulaitionsTimezone, congratulationsTimeZoneId);
+                Assertions.assertEquals(settings.congratulationsTimezone, congratulationsTimeZoneId);
+                Assertions.assertEquals(settings.enableStatistic, enabledStatistic);
+                Assertions.assertEquals(settings.statisticStartDate, statisticDate);
             }
         }
     }
@@ -160,7 +183,9 @@ public class ServerPreferencesDAOTest {
         final boolean newAclMode;
         final boolean enabledCongratulations;
         final long congratulationsChannel;
-        final String congratulaitionsTimezone;
+        final String congratulationsTimezone;
+        final boolean enableStatistic;
+        final Instant statisticStartDate;
 
         ServerSettings() {
             ThreadLocalRandom lr = ThreadLocalRandom.current();
@@ -170,7 +195,9 @@ public class ServerPreferencesDAOTest {
             newAclMode = lr.nextBoolean();
             enabledCongratulations = lr.nextBoolean();
             congratulationsChannel = TestUtils.randomDiscordEntityId();
-            congratulaitionsTimezone = TestUtils.randomTimeZone().getID();
+            congratulationsTimezone = TestUtils.randomTimeZone().getID();
+            enableStatistic = lr.nextBoolean();
+            statisticStartDate = TestUtils.randomInstant();
         }
     }
 }

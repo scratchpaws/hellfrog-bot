@@ -96,6 +96,12 @@
         <Logger name="WTF assign" level="info" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
+        <Logger name="Total statistic" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Entity cache" level="info" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
         <Logger name="com.optimaize" level="info" additivity="false">
             <AppenderRef ref="plainLogger"/>
         </Logger>

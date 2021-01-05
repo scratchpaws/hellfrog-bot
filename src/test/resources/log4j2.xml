@@ -93,13 +93,19 @@
         <Logger name="DB session" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
-        <Logger name="WTF assign" level="info" additivity="false">
+        <Logger name="WTF assign" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
-        <Logger name="com.optimaize" level="debug" additivity="false">
+        <Logger name="Total statistic" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Entity cache" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="com.optimaize" level="info" additivity="false">
             <AppenderRef ref="plainLogger"/>
         </Logger>
-        <Logger name="org.languagetool" level="debug" additivity="false">
+        <Logger name="org.languagetool" level="info" additivity="false">
             <AppenderRef ref="plainLogger"/>
         </Logger>
         <Root level="debug">

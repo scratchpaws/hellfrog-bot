@@ -46,6 +46,11 @@ class AutoSession
         return hibernateSession.get(entityType, id);
     }
 
+    @Nullable
+    public<T> T find(Class<T> entityType, Object primaryKey) {
+        return hibernateSession.find(entityType, primaryKey);
+    }
+
     public Query createQuery(String queryText) {
         return hibernateSession.createQuery(queryText);
     }

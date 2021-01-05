@@ -3,10 +3,7 @@ package hellfrog.settings.db.h2;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.ResourcesLoader;
 import hellfrog.settings.db.*;
-import hellfrog.settings.db.entity.Vote;
-import hellfrog.settings.db.entity.VotePoint;
-import hellfrog.settings.db.entity.VoteRoleFilter;
-import hellfrog.settings.db.entity.WtfEntry;
+import hellfrog.settings.db.entity.*;
 import hellfrog.settings.oldjson.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import java.sql.*;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 class SchemaVersionCheckerH2 {
@@ -404,17 +402,34 @@ class SchemaVersionCheckerH2 {
                             }
                         }
                     }
-
                 }
 
-                EmojiTotalStatisticDAO emojiTotalStatisticDAO = mainDBController.getEmojiTotalStatisticDAO();
+                TotalStatisticDAO totalStatisticDAO = mainDBController.getTotalStatisticDAO();
+                EntityNameCacheDAO nameCacheDAO = mainDBController.getEntityNameCacheDAO();
                 for (Map.Entry<Long, JSONServerStatistic> serverStats : jsonLegacySettings.getStatByServer().entrySet()) {
 
                     long serverId = serverStats.getKey();
                     JSONServerStatistic jsonServerStatistic = serverStats.getValue();
 
                     if (jsonServerStatistic != null) {
-                        log.info("Found server statistics for id {}", serverId);
+
+                        boolean enableStatistic = jsonServerStatistic.isCollectNonDefaultSmileStats();
+                        Long startDateMs = jsonServerStatistic.getStartDate();
+                        Instant startDate;
+                        if (startDateMs != null && startDateMs > 0L) {
+                            Calendar since = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                            since.setTimeInMillis(startDateMs);
+                            startDate = since.toInstant();
+                        } else {
+                            startDate = ServerPreferencesDAO.STATISTIC_START_DATE_DEFAULT;
+                        }
+
+                        log.info("Found server statistics for id: {}. Statistic is enabled: {}, since: {}",
+                                serverId, enableStatistic, startDate);
+
+                        serverPreferencesDAO.setStatisticEnabled(serverId, enableStatistic);
+                        serverPreferencesDAO.setStatisticStartDate(serverId, startDate);
+
                         Map<Long, JSONSmileStatistic> smileStats = jsonServerStatistic.getNonDefaultSmileStats();
                         if (smileStats != null && !smileStats.isEmpty()) {
                             log.info("Found emoji total statistic for server {}", serverId);
@@ -439,7 +454,37 @@ class SchemaVersionCheckerH2 {
                                 }
                                 log.info("Found emoji stat: server {}, emoji id {}, usages count {}, last update {}",
                                         serverId, emojiId, usagesCount, lastUpdate);
-                                emojiTotalStatisticDAO.insertStats(serverId, emojiId, usagesCount, lastUpdate);
+                                totalStatisticDAO.insertEmojiStats(serverId, emojiId, usagesCount, lastUpdate);
+                            }
+                        }
+
+                        Map<Long, JSONMessageStatistic> userMessagesStat = jsonServerStatistic.getUserMessagesStats();
+                        if (userMessagesStat != null && !userMessagesStat.isEmpty()) {
+                            log.info("Found user message statistic for server {}", serverId);
+
+                            for (Map.Entry<Long, JSONMessageStatistic> statisticEntry : userMessagesStat.entrySet()) {
+
+                                long userId = statisticEntry.getKey();
+                                JSONMessageStatistic oldMessageStat = statisticEntry.getValue();
+
+                                if (CommonUtils.isTrStringNotEmpty(oldMessageStat.getLastKnownName())) {
+                                    log.info("Found last known name \"{}\" for id {}", oldMessageStat.getLastKnownName(), userId);
+                                    nameCacheDAO.update(userId, oldMessageStat.getLastKnownName(), NameType.USER);
+                                }
+
+                                long messagesCount = oldMessageStat.getCountOfMessages();
+                                long bytesCount = oldMessageStat.getCountOfBytes();
+                                long symbolsCount = oldMessageStat.getCountOfSymbols();
+                                AtomicLong lastMessageDateMs = oldMessageStat.getLastMessageDate();
+                                Instant lastMessageDate;
+                                if (lastMessageDateMs != null) {
+                                    long value = lastMessageDateMs.get();
+                                    Calendar result = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                                    result.setTimeInMillis(value);
+                                    lastMessageDate = result.toInstant();
+                                } else {
+                                    lastMessageDate = Instant.EPOCH;
+                                }
                             }
                         }
                     }

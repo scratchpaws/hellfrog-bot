@@ -18,6 +18,7 @@ public class ServerPreference {
     private String stringValue;
     private long longValue;
     private boolean boolValue;
+    private Timestamp dateValue;
     private Timestamp createDate;
     private Timestamp updateDate;
 
@@ -98,6 +99,15 @@ public class ServerPreference {
         this.boolValue = boolValue;
     }
 
+    @Column(name = "date_value", nullable = false)
+    public Timestamp getDateValue() {
+        return dateValue;
+    }
+
+    public void setDateValue(Timestamp dateValue) {
+        this.dateValue = dateValue;
+    }
+
     @Column(name = "create_date", nullable = false)
     public Timestamp getCreateDate() {
         return createDate;
@@ -117,26 +127,15 @@ public class ServerPreference {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ServerPreference that = (ServerPreference) o;
-        return id == that.id;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
-
-    @Override
     public String toString() {
         return "ServerPreference{" +
                 "id=" + id +
                 ", serverId=" + serverId +
-                ", key='" + key + '\'' +
+                ", key=" + key +
                 ", stringValue='" + stringValue + '\'' +
                 ", longValue=" + longValue +
+                ", boolValue=" + boolValue +
+                ", dateValue=" + dateValue +
                 ", createDate=" + createDate +
                 ", updateDate=" + updateDate +
                 '}';

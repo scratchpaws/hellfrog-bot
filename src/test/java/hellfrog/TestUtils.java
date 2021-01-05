@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -27,6 +28,9 @@ public class TestUtils {
         return ThreadLocalRandom.current()
                 .nextLong(100000000000000000L, 999999999999999999L);
     }
+
+    private static final long INSTANT_MILLIS_MIN = Instant.EPOCH.toEpochMilli();
+    private static final long INSTANT_MILLIS_MAX = Instant.now().toEpochMilli();
 
     @NotNull
     public static String randomStringName(int length) {
@@ -208,5 +212,10 @@ public class TestUtils {
         String[] allIds = TimeZone.getAvailableIDs();
         String selectedId = allIds[tlr.nextInt(0, allIds.length)];
         return TimeZone.getTimeZone(selectedId);
+    }
+
+    public static Instant randomInstant() {
+        ThreadLocalRandom tlr = ThreadLocalRandom.current();
+        return Instant.ofEpochMilli(tlr.nextLong(INSTANT_MILLIS_MIN, INSTANT_MILLIS_MAX));
     }
 }

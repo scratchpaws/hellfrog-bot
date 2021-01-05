@@ -42,9 +42,10 @@ public class MainDBControllerH2
     private final RoleRightsDAO roleRightsDAO;
     private final ChannelRightsDAO channelRightsDAO;
     private final ChannelCategoryRightsDAO categoryRightsDAO;
-    private final EmojiTotalStatisticDAO emojiTotalStatisticDAO;
+    private final TotalStatisticDAO totalStatisticDAO;
     private final WtfAssignDAO wtfAssignDAO;
     private final VotesDAO votesDAO;
+    private final EntityNameCacheDAO entityNameCacheDAO;
 
     private final String connectionURL;
     private final String connectionLogin;
@@ -111,9 +112,10 @@ public class MainDBControllerH2
             roleRightsDAO = new RoleRightsDAOImpl(autoSessionFactory);
             channelRightsDAO = new ChannelRightsDAOImpl(autoSessionFactory);
             categoryRightsDAO = new ChannelCategoryRightsDAOImpl(autoSessionFactory);
-            emojiTotalStatisticDAO = new EmojiTotalStatisticDAOImpl(autoSessionFactory);
             wtfAssignDAO = new WtfAssignDAOImpl(autoSessionFactory);
             votesDAO = new VotesDAOImpl(autoSessionFactory);
+            totalStatisticDAO = new TotalStatisticDAOImpl(autoSessionFactory);
+            entityNameCacheDAO = new EntityNameCacheDAOImpl(autoSessionFactory);
 
         } catch (Exception err) {
             String errMsg = String.format("Unable to create session factory: %s", err.getMessage());
@@ -280,8 +282,13 @@ public class MainDBControllerH2
     }
 
     @Override
-    public EmojiTotalStatisticDAO getEmojiTotalStatisticDAO() {
-        return emojiTotalStatisticDAO;
+    public TotalStatisticDAO getTotalStatisticDAO() {
+        return totalStatisticDAO;
+    }
+
+    @Override
+    public EntityNameCacheDAO getEntityNameCacheDAO() {
+        return entityNameCacheDAO;
     }
 
     @Override

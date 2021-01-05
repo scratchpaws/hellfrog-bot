@@ -41,7 +41,9 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
 
     public abstract WtfAssignDAO getWtfAssignDAO();
 
-    public abstract EmojiTotalStatisticDAO getEmojiTotalStatisticDAO();
+    public abstract TotalStatisticDAO getTotalStatisticDAO();
+
+    public abstract EntityNameCacheDAO getEntityNameCacheDAO();
 
     public abstract byte[] generateDDL();
 

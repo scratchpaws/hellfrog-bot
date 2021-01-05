@@ -1,18 +1,3 @@
------------------------------
--- Schema versions table init
------------------------------
-create table schema_versions
-(
-    version     bigint not null primary key,
-    script_name varchar(60),
-    apply_date  timestamp default sysdate,
-    constraint schema_ver_uniq_script unique (script_name)
-);
-
--- Current schema version
-insert into schema_versions (version, script_name)
-values (1, '001_schema_create_query.sql');
-
 ----------------------
 -- Create new entities
 ----------------------
@@ -44,6 +29,7 @@ create table server_preferences
     string_value varchar(64) not null,
     long_value   bigint      not null,
     bool_value   bigint      not null,
+    date_value   timestamp   not null,
     create_date  timestamp   not null default sysdate,
     update_date  timestamp   not null default sysdate,
     constraint uniq_serv_key unique (key, server_id)
@@ -55,6 +41,7 @@ comment on column server_preferences.server_id is 'Discord server ID';
 comment on column server_preferences.string_value is 'Settings string value';
 comment on column server_preferences.long_value is 'Settings numeric value';
 comment on column server_preferences.bool_value is 'Settings logical value';
+comment on column server_preferences.date_value is 'Settings date and time value';
 comment on column server_preferences.create_date is 'Record create date';
 comment on column server_preferences.update_date is 'Record update date';
 
@@ -288,7 +275,7 @@ comment on column wtf_assigns_attaches.create_date is 'Record create date';
 
 create sequence wtf_assigns_attach_ids start with 1 increment by 50;
 
--- hellfrog.settings.db.h2.EmojiTotalStatisticDAOImpl
+-- hellfrog.settings.db.h2.TotalStatisticDAOImpl
 -- hellfrog.settings.db.entity.EmojiTotalStatistic
 create table emoji_total_statistics
 (
@@ -313,3 +300,111 @@ comment on column emoji_total_statistics.create_date is 'Record create date';
 comment on column emoji_total_statistics.update_date is 'Record update date';
 
 create sequence emoji_total_stat_ids start with 1 increment by 50;
+
+-- hellfrog.settings.db.h2.TotalStatisticDAOImpl
+-- hellfrog.settings.db.entity.TextChannelTotalStatistic
+create table text_channel_total_stats
+(
+    id                bigint    not null primary key,
+    server_id         bigint    not null,
+    text_channel_id   bigint    not null,
+    user_id           bigint    not null,
+    messages_count    bigint    not null default 0,
+    last_message_date timestamp not null default sysdate,
+    symbols_count     bigint    not null default 0,
+    bytes_count       bigint    not null default 0,
+    create_date       timestamp not null default sysdate,
+    update_date       timestamp not null default sysdate,
+    constraint uniq_text_channel_total_stat unique (server_id, text_channel_id, user_id)
+);
+
+comment on table text_channel_total_stats is 'General statistics on messages and members in channels';
+comment on column text_channel_total_stats.id is 'Unique record ID';
+comment on column text_channel_total_stats.server_id is 'Discord server ID';
+comment on column text_channel_total_stats.text_channel_id is 'Discord channel ID';
+comment on column text_channel_total_stats.user_id is 'Discord member ID';
+comment on column text_channel_total_stats.messages_count is 'Total messages count';
+comment on column text_channel_total_stats.last_message_date is 'Last message date by user in channel';
+comment on column text_channel_total_stats.symbols_count is 'Total symbols count';
+comment on column text_channel_total_stats.bytes_count is 'Total bytes count';
+comment on column text_channel_total_stats.create_date is 'Record create date';
+comment on column text_channel_total_stats.update_date is 'Record update date';
+
+create sequence text_channel_total_stat_idx start with 1 increment by 50;
+
+create table auto_promote_configs
+(
+    id          bigint    not null primary key,
+    server_id   bigint    not null,
+    role_id     bigint    not null,
+    timeout     bigint    not null default 0,
+    create_date timestamp not null default sysdate,
+    constraint uniq_auto_promote_role_cfg unique (server_id, role_id)
+);
+
+comment on table auto_promote_configs is 'List of auto-assigned roles';
+comment on column auto_promote_configs.id is 'Unique record ID';
+comment on column auto_promote_configs.server_id is 'Discord server ID';
+comment on column auto_promote_configs.role_id is 'Discord server role ID';
+comment on column auto_promote_configs.timeout is 'The time, in seconds, after which all new members are assigned a role';
+comment on column auto_promote_configs.create_date is 'Record create date';
+
+create sequence auto_promote_config_idx start with 1 increment by 50;
+
+create table role_assign_queue
+(
+    id          bigint    not null primary key,
+    server_id   bigint    not null,
+    user_id     bigint    not null,
+    role_id     bigint    not null,
+    assign_date timestamp not null,
+    create_date timestamp not null default sysdate
+);
+
+comment on table role_assign_queue is 'A queue of assigned roles for server members';
+comment on column role_assign_queue.id is 'Unique record ID';
+comment on column role_assign_queue.server_id is 'Discord server ID';
+comment on column role_assign_queue.user_id is 'Discord member ID';
+comment on column role_assign_queue.role_id is 'Discord server role ID';
+comment on column role_assign_queue.assign_date is 'Date and time the specified role was assigned';
+comment on column role_assign_queue.create_date is 'Record create date';
+
+create sequence role_assign_queue_idx start with 1 increment by 50;
+
+-- hellfrog.settings.db.h2.EntityNameCacheDAOImpl
+-- hellfrog.settings.db.entity.EntityNameCache
+create table names_cache
+(
+    entity_id   bigint       not null primary key,
+    entity_name varchar(120) not null,
+    entity_type varchar(30)  not null,
+    create_date timestamp    not null default sysdate,
+    update_date timestamp    not null default sysdate
+);
+
+comment on table names_cache is 'Discord entity names cache';
+comment on column names_cache.entity_id is 'Discord entity ID';
+comment on column names_cache.entity_name is 'Discord entity display name';
+comment on column names_cache.entity_type is 'Discord entity type name';
+comment on column names_cache.create_date is 'Record create date';
+comment on column names_cache.update_date is 'Record update date';
+
+-----------------------------
+-- Schema versions table init
+-----------------------------
+create table schema_versions
+(
+    version     bigint not null primary key,
+    script_name varchar(120),
+    apply_date  timestamp default sysdate,
+    constraint schema_ver_uniq_script unique (script_name)
+);
+
+comment on table schema_versions is 'A table listing all installed database migration schemes. The current version is the largest version of the script number.';
+comment on column schema_versions.version is 'Migration script version number';
+comment on column schema_versions.script_name is 'Migration script name';
+comment on column schema_versions.apply_date is 'Migration script execution date and time';
+
+-- Current schema version
+insert into schema_versions (version, script_name)
+values (1, '001_schema_create_query.sql');

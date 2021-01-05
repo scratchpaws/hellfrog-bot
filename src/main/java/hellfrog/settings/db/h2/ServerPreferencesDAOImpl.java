@@ -18,6 +18,8 @@ class ServerPreferencesDAOImpl
 
     private final AutoSessionFactory sessionFactory;
     private final Logger log = LogManager.getLogger("Server preferences");
+    private static final boolean OVERRIDE = true;
+    private static final boolean NOT_OVERRIDE = false;
 
     ServerPreferencesDAOImpl(AutoSessionFactory sessionFactory) {
         this.sessionFactory = sessionFactory;
@@ -28,6 +30,7 @@ class ServerPreferencesDAOImpl
                                               @NotNull final String stringValue,
                                               final long longValue,
                                               final boolean boolValue,
+                                              @NotNull final Instant dateTimeValue,
                                               final boolean override) {
 
         boolean present = false;
@@ -67,6 +70,7 @@ class ServerPreferencesDAOImpl
             newValue.setStringValue(stringValue);
             newValue.setLongValue(longValue);
             newValue.setBoolValue(boolValue);
+            newValue.setDateValue(Timestamp.from(dateTimeValue));
             newValue.setUpdateDate(Timestamp.from(Instant.now()));
 
             try (AutoSession session = sessionFactory.openSession()) {
@@ -85,7 +89,7 @@ class ServerPreferencesDAOImpl
     private String getStringValue(final long serverId,
                                   @NotNull final ServerPrefKey key,
                                   @NotNull final String defaultValue) {
-        return upsert(serverId, key, defaultValue, NAN_LONG, NAN_BOOL,false)
+        return upsert(serverId, key, defaultValue, NAN_LONG, NAN_BOOL, NAN_DATE_TIME, NOT_OVERRIDE)
                 .map(ServerPreference::getStringValue)
                 .orElse(defaultValue);
     }
@@ -94,7 +98,7 @@ class ServerPreferencesDAOImpl
                                   @NotNull final ServerPrefKey key,
                                   @NotNull final String value,
                                   @NotNull String defaultValue) {
-        return upsert(serverId, key, value, NAN_LONG, NAN_BOOL, true)
+        return upsert(serverId, key, value, NAN_LONG, NAN_BOOL, NAN_DATE_TIME, OVERRIDE)
                 .map(ServerPreference::getStringValue)
                 .orElse(defaultValue);
     }
@@ -102,7 +106,7 @@ class ServerPreferencesDAOImpl
     private long getLongValue(final long serverId,
                               @NotNull final ServerPrefKey key,
                               final long defaultValue) {
-        return upsert(serverId, key, NAN_STRING, defaultValue, NAN_BOOL, false)
+        return upsert(serverId, key, NAN_STRING, defaultValue, NAN_BOOL, NAN_DATE_TIME, NOT_OVERRIDE)
                 .map(ServerPreference::getLongValue)
                 .orElse(defaultValue);
     }
@@ -111,7 +115,7 @@ class ServerPreferencesDAOImpl
                               @NotNull final ServerPrefKey key,
                               final long value,
                               final long defaultValue) {
-        return upsert(serverId, key, NAN_STRING, value, NAN_BOOL, true)
+        return upsert(serverId, key, NAN_STRING, value, NAN_BOOL, NAN_DATE_TIME, OVERRIDE)
                 .map(ServerPreference::getLongValue)
                 .orElse(defaultValue);
     }
@@ -119,7 +123,7 @@ class ServerPreferencesDAOImpl
     private boolean getBooleanValue(final long serverId,
                                     @NotNull final ServerPrefKey key,
                                     final boolean defaultValue) {
-        return upsert(serverId, key, NAN_STRING, NAN_LONG, defaultValue, false)
+        return upsert(serverId, key, NAN_STRING, NAN_LONG, defaultValue, NAN_DATE_TIME, NOT_OVERRIDE)
                 .map(ServerPreference::isBoolValue)
                 .orElse(defaultValue);
     }
@@ -128,8 +132,27 @@ class ServerPreferencesDAOImpl
                                     @NotNull final ServerPrefKey key,
                                     final boolean value,
                                     final boolean defaultValue) {
-        return upsert(serverId, key, NAN_STRING, NAN_LONG, value, true)
+        return upsert(serverId, key, NAN_STRING, NAN_LONG, value, NAN_DATE_TIME, OVERRIDE)
                 .map(ServerPreference::isBoolValue)
+                .orElse(defaultValue);
+    }
+
+    private Instant getDateTimeValue(final long serverId,
+                                     @NotNull final ServerPrefKey key,
+                                     @NotNull final Instant defaultValue) {
+        return upsert(serverId, key, NAN_STRING, NAN_LONG, NAN_BOOL, defaultValue, NOT_OVERRIDE)
+                .map(ServerPreference::getDateValue)
+                .map(Timestamp::toInstant)
+                .orElse(defaultValue);
+    }
+
+    private Instant setDateTimeValue(final long serverId,
+                                     @NotNull final ServerPrefKey key,
+                                     @NotNull final Instant value,
+                                     @NotNull final Instant defaultValue) {
+        return upsert(serverId, key, NAN_STRING, NAN_LONG, NAN_BOOL, value, OVERRIDE)
+                .map(ServerPreference::getDateValue)
+                .map(Timestamp::toInstant)
                 .orElse(defaultValue);
     }
 
@@ -201,5 +224,21 @@ class ServerPreferencesDAOImpl
     @Override
     public String setCongratulationTimeZone(long serverId, @NotNull String newTimeZone) {
         return setStringValue(serverId, ServerPrefKey.CONGRAT_TIMEZONE, newTimeZone, CONGRATULATIONS_TIMEZONE_DEFAULT);
+    }
+
+    public boolean isStatisticEnabled(long serverId) {
+        return getBooleanValue(serverId, ServerPrefKey.STATISTIC_ENABLED, STATISTIC_ENABLED_DEFAULT);
+    }
+
+    public boolean setStatisticEnabled(long serverId, boolean enabled) {
+        return setBooleanValue(serverId, ServerPrefKey.STATISTIC_ENABLED, enabled, STATISTIC_ENABLED_DEFAULT);
+    }
+
+    public Instant getStatisticStartDate(long serverId) {
+        return getDateTimeValue(serverId, ServerPrefKey.STATISTIC_DATE, STATISTIC_START_DATE_DEFAULT);
+    }
+
+    public Instant setStatisticStartDate(long serverId, @NotNull final Instant startDate) {
+        return setDateTimeValue(serverId, ServerPrefKey.STATISTIC_DATE, startDate, STATISTIC_START_DATE_DEFAULT);
     }
 }
