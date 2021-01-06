@@ -13,6 +13,8 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 class SchemaVersionCheckerH2 {
@@ -40,6 +42,8 @@ class SchemaVersionCheckerH2 {
     private final String connectionUser;
     private final String connectionPassword;
     private final Logger log = LogManager.getLogger("Schema version checker");
+
+    private final Pattern OLD_LAST_KNOWN_DISCRIMINATE_DETECTOR = Pattern.compile("\\(.{2,32}#\\d{4}\\)", Pattern.UNICODE_CHARACTER_CLASS);
 
     SchemaVersionCheckerH2(@NotNull final String connectionURL,
                            @NotNull final String connectionUser,
@@ -469,6 +473,7 @@ class SchemaVersionCheckerH2 {
                                         log.info("Found last known name for text chat entry {}: \"{}\"",
                                                 textChannelId, oldChannelStat.getLastKnownName());
                                         nameCacheDAO.update(textChannelId, oldChannelStat.getLastKnownName(), NameType.CHANNEL);
+                                        nameCacheDAO.update(serverId, textChannelId, oldChannelStat.getLastKnownName());
                                     }
 
                                     for (Map.Entry<Long, JSONMessageStatistic> byUserEntry : byUserStats.entrySet()) {
@@ -484,9 +489,18 @@ class SchemaVersionCheckerH2 {
                                             if (CommonUtils.isTrStringNotEmpty(userStats.getLastKnownName())
                                                     && nameCacheDAO.find(userId).isEmpty()) {
 
-                                                log.info("Found last known name for user {}: {}", userId,
-                                                        userStats.getLastKnownName());
-                                                nameCacheDAO.update(userId, userStats.getLastKnownName(), NameType.USER);
+                                                Matcher discriminateNameFinder = OLD_LAST_KNOWN_DISCRIMINATE_DETECTOR
+                                                        .matcher(userStats.getLastKnownName());
+                                                if (discriminateNameFinder.find()) {
+                                                    String discriminationName = discriminateNameFinder.group();
+                                                    String displayName = CommonUtils.cutRightString(userStats.getLastKnownName(),
+                                                            discriminationName);
+                                                    log.info("Found last known name for user {}: {}. Convert to " +
+                                                                    " display name: {}, discriminate name: {}", userId,
+                                                            userStats.getLastKnownName(), displayName, discriminationName);
+                                                    nameCacheDAO.update(userId, discriminationName, NameType.USER);
+                                                    nameCacheDAO.update(serverId, userId, displayName);
+                                                }
                                             }
 
                                             long messagesCount = userStats.getCountOfMessages();
