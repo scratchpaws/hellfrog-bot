@@ -218,4 +218,20 @@ public class TestUtils {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         return Instant.ofEpochMilli(tlr.nextLong(INSTANT_MILLIS_MIN, INSTANT_MILLIS_MAX));
     }
+
+    public static<E> void assertEmpty(@Nullable Collection<E> collection, @NotNull String message) {
+        Assertions.assertTrue(collection != null && collection.isEmpty(), message);
+    }
+
+    public static<E> void assertEmpty(@Nullable Collection<E> collection) {
+        Assertions.assertTrue(collection != null && collection.isEmpty());
+    }
+
+    public static<E> void assertNullOrEmpty(@Nullable Collection<E> collection) {
+        Assertions.assertTrue(collection == null || collection.isEmpty());
+    }
+
+    public static<E> void assertNullOrEmpty(@Nullable Collection<E> collection, @NotNull String message) {
+        Assertions.assertTrue(collection == null || collection.isEmpty());
+    }
 }

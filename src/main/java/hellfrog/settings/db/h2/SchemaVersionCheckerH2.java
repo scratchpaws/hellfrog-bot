@@ -200,6 +200,7 @@ class SchemaVersionCheckerH2 {
             }
             if (jsonLegacySettings.isHasServerPreferences()) {
                 ServerPreferencesDAO serverPreferencesDAO = mainDBController.getServerPreferencesDAO();
+                AutoPromoteRolesDAO autoPromoteRolesDAO = mainDBController.getAutoPromoteRolesDAO();
                 for (Map.Entry<Long, JSONServerPreferences> serverPref : jsonLegacySettings.getPrefByServer().entrySet()) {
                     long serverId = serverPref.getKey();
                     JSONServerPreferences jsonServerPreferences = serverPref.getValue();
@@ -224,6 +225,18 @@ class SchemaVersionCheckerH2 {
                     boolean isNewAclMode = jsonServerPreferences.getNewAclMode();
                     log.info("Server {}: found new ACL state: {}", serverId, isNewAclMode);
                     serverPreferencesDAO.setNewAclMode(serverId, isNewAclMode);
+
+                    boolean autoPromoteEnabled = jsonServerPreferences.getAutoPromoteEnabled()
+                            && jsonServerPreferences.getAutoPromoteRoleId() != null
+                            && jsonServerPreferences.getAutoPromoteRoleId() > 0L;
+                    if (autoPromoteEnabled) {
+                        long roleId = jsonServerPreferences.getAutoPromoteRoleId();
+                        long timeout = jsonServerPreferences.getAutoPromoteTimeout() != null
+                                ? jsonServerPreferences.getAutoPromoteTimeout() : 0L;
+                        log.info("Server {}: found enabled auto promote role with id {} and timeout {} sec.",
+                                serverId, roleId, timeout);
+                        autoPromoteRolesDAO.addConfig(serverId, roleId, timeout);
+                    }
 
                     boolean congratulationsEnabled = jsonServerPreferences.getCongratulationChannel() != null
                             && jsonServerPreferences.getCongratulationChannel() > 0L;
