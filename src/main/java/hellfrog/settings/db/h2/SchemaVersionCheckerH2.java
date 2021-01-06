@@ -493,8 +493,11 @@ class SchemaVersionCheckerH2 {
                                                         .matcher(userStats.getLastKnownName());
                                                 if (discriminateNameFinder.find()) {
                                                     String discriminationName = discriminateNameFinder.group();
+                                                    discriminationName = CommonUtils.cutLeftString(discriminationName, "(");
+                                                    discriminationName = CommonUtils.cutRightString(discriminationName, ")");
+                                                    discriminationName = discriminationName.strip();
                                                     String displayName = CommonUtils.cutRightString(userStats.getLastKnownName(),
-                                                            discriminationName);
+                                                            discriminateNameFinder.group()).strip();
                                                     log.info("Found last known name for user {}: {}. Convert to " +
                                                                     " display name: {}, discriminate name: {}", userId,
                                                             userStats.getLastKnownName(), displayName, discriminationName);
