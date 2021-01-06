@@ -382,12 +382,77 @@ create table names_cache
     update_date timestamp    not null default sysdate
 );
 
-comment on table names_cache is 'Discord entity names cache';
+comment on table names_cache is 'Discord entity names global cache';
 comment on column names_cache.entity_id is 'Discord entity ID';
-comment on column names_cache.entity_name is 'Discord entity display name';
+comment on column names_cache.entity_name is 'Discord entity display name. For users use discrimination name';
 comment on column names_cache.entity_type is 'Discord entity type name';
 comment on column names_cache.create_date is 'Record create date';
 comment on column names_cache.update_date is 'Record update date';
+
+-- hellfrog.settings.db.h2.EntityNameCacheDAOImpl
+-- hellfrog.settings.db.entity.ServerNameCache
+create table server_names_cache
+(
+    id bigint not null primary key,
+    server_id bigint not null,
+    entity_id bigint not null,
+    entity_name varchar(120) not null,
+    create_date timestamp    not null default sysdate,
+    update_date timestamp    not null default sysdate,
+    constraint uniq_server_name unique (server_id, entity_id)
+);
+
+comment on table server_names_cache is 'Discord servers entity display names cache';
+comment on column server_names_cache.id is 'Unique record ID';
+comment on column server_names_cache.server_id is 'Discord server ID';
+comment on column server_names_cache.entity_id is 'Discord entity ID';
+comment on column server_names_cache.entity_name is 'Discord entity display name';
+comment on column server_names_cache.create_date is 'Record create date';
+comment on column server_names_cache.update_date is 'Record update date';
+
+create sequence server_name_cache_idx start with 1 increment by 50;
+
+create table community_control_settings
+(
+    id bigint not null primary key,
+    server_id bigint not null,
+    assign_role_id bigint not null default 0,
+    threshold bigint not null default 0,
+    unicode_emoji varchar(12),
+    custom_emoji_id bigint not null default 0,
+    create_date timestamp not null default sysdate,
+    update_date timestamp not null default sysdate,
+    constraint uniq_community_control unique (server_id)
+);
+
+comment on table community_control_settings is 'Community users control settings';
+comment on column community_control_settings.id is 'Unique record ID';
+comment on column community_control_settings.server_id is 'Discord server ID';
+comment on column community_control_settings.assign_role_id is 'Role ID that obtained by exceeding the number of reactions';
+comment on column community_control_settings.threshold is 'The threshold at which the role is assigned';
+comment on column community_control_settings.unicode_emoji is 'Unicode emoji for which the role is assigned';
+comment on column community_control_settings.custom_emoji_id is 'Discord custom emoji ID for which the role is assigned';
+comment on column community_control_settings.create_date is 'Record create date';
+comment on column community_control_settings.update_date is 'Record update date';
+
+create sequence community_control_setting_idx start with 1 increment by 50;
+
+create table community_control_users
+(
+    id bigint not null primary key,
+    server_id bigint not null,
+    user_id bigint not null,
+    create_date timestamp not null default sysdate,
+    constraint uniq_community_control_user unique (server_id, user_id)
+);
+
+comment on table community_control_users is 'User for community control';
+comment on column community_control_users.id is 'Unique record ID';
+comment on column community_control_users.server_id is 'Discord server ID';
+comment on column community_control_users.user_id is 'Discord server member ID';
+comment on column community_control_users.create_date is 'Record create date';
+
+create sequence community_control_user_idx start with 1 increment by 50;
 
 -----------------------------
 -- Schema versions table init
