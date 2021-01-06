@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
+// hellfrog.settings.db.entity.TextChannelTotalStatistic
 public class JSONMessageStatistic {
 
     private static final TimeZone UTC = TimeZone.getTimeZone("UTC");

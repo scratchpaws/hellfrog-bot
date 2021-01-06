@@ -123,7 +123,13 @@ public class MainDBControllerH2
             throw new SQLException(err);
         }
         if (requiredMigration && type.equals(InstanceType.PROD)) {
-            versionCheckerH2.convertLegacy(this);
+            try {
+                versionCheckerH2.convertLegacy(this);
+            } catch (NullPointerException err) {
+                String errMsg = String.format("Legacy conversion error: %s", err.getMessage());
+                sqlLog.fatal(errMsg, err);
+                throw new SQLException(err);
+            }
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

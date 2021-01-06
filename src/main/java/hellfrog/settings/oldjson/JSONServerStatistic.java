@@ -9,7 +9,9 @@ public class JSONServerStatistic {
     private boolean collectNonDefaultSmileStats = false;
     // hellfrog.settings.db.entity.EmojiTotalStatistic
     private Map<Long, JSONSmileStatistic> nonDefaultSmileStats = Collections.emptyMap();
+    // ignored
     private Map<Long, JSONMessageStatistic> userMessagesStats = Collections.emptyMap();
+    // hellfrog.settings.db.entity.TextChannelTotalStatistic (only child statistics)
     private Map<Long, JSONMessageStatistic> textChatStats = Collections.emptyMap();
     // hellfrog.settings.db.ServerPreferencesDAO.getStatisticStartDate
     private long startDate = 0L;

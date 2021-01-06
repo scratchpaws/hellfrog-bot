@@ -17,12 +17,11 @@ import java.util.stream.Collectors;
 
 class SchemaVersionCheckerH2 {
 
-    private final String connectionURL;
-    private final String connectionUser;
-    private final String connectionPassword;
-
-    private final Logger log = LogManager.getLogger("Schema version checker");
-
+    public static final String GET_SCHEMA_TABLE_RECORDS_COUNT = """
+            SELECT
+            	count(1)
+            FROM
+            	SCHEMA_VERSIONS sv""";
     private static final String RESOURCES_DIRECTORY = "sql/h2/schema";
     private static final String CHECK_SCHEMA_TABLE_QUERY = """
             SELECT
@@ -32,18 +31,15 @@ class SchemaVersionCheckerH2 {
             WHERE
             	lower(t.table_schema) = 'public'
             	AND lower(t.table_name) = 'schema_versions'""";
-
-    public static final String GET_SCHEMA_TABLE_RECORDS_COUNT = """
-            SELECT
-            	count(1)
-            FROM
-            	SCHEMA_VERSIONS sv""";
-
     private static final String GET_LATEST_SCHEMA_QUERY = """
             SELECT
             	max(sv.VERSION)
             FROM
             	SCHEMA_VERSIONS sv""";
+    private final String connectionURL;
+    private final String connectionUser;
+    private final String connectionPassword;
+    private final Logger log = LogManager.getLogger("Schema version checker");
 
     SchemaVersionCheckerH2(@NotNull final String connectionURL,
                            @NotNull final String connectionUser,
@@ -458,32 +454,63 @@ class SchemaVersionCheckerH2 {
                             }
                         }
 
-                        Map<Long, JSONMessageStatistic> userMessagesStat = jsonServerStatistic.getUserMessagesStats();
-                        if (userMessagesStat != null && !userMessagesStat.isEmpty()) {
-                            log.info("Found user message statistic for server {}", serverId);
+                        Map<Long, JSONMessageStatistic> textChatStats = jsonServerStatistic.getTextChatStats();
+                        if (textChatStats != null && !textChatStats.isEmpty()) {
+                            for (Map.Entry<Long, JSONMessageStatistic> channelEntry : textChatStats.entrySet()) {
 
-                            for (Map.Entry<Long, JSONMessageStatistic> statisticEntry : userMessagesStat.entrySet()) {
+                                long textChannelId = channelEntry.getKey();
+                                JSONMessageStatistic oldChannelStat = channelEntry.getValue();
 
-                                long userId = statisticEntry.getKey();
-                                JSONMessageStatistic oldMessageStat = statisticEntry.getValue();
+                                Map<Long, JSONMessageStatistic> byUserStats = oldChannelStat.getChildStatistic();
+                                if (byUserStats != null && !byUserStats.isEmpty()) {
+                                    log.info("Found text channels message statistic for server {}", serverId);
 
-                                if (CommonUtils.isTrStringNotEmpty(oldMessageStat.getLastKnownName())) {
-                                    log.info("Found last known name \"{}\" for id {}", oldMessageStat.getLastKnownName(), userId);
-                                    nameCacheDAO.update(userId, oldMessageStat.getLastKnownName(), NameType.USER);
-                                }
+                                    if (CommonUtils.isTrStringNotEmpty(oldChannelStat.getLastKnownName())) {
+                                        log.info("Found last known name for text chat entry {}: \"{}\"",
+                                                textChannelId, oldChannelStat.getLastKnownName());
+                                        nameCacheDAO.update(textChannelId, oldChannelStat.getLastKnownName(), NameType.CHANNEL);
+                                    }
 
-                                long messagesCount = oldMessageStat.getCountOfMessages();
-                                long bytesCount = oldMessageStat.getCountOfBytes();
-                                long symbolsCount = oldMessageStat.getCountOfSymbols();
-                                AtomicLong lastMessageDateMs = oldMessageStat.getLastMessageDate();
-                                Instant lastMessageDate;
-                                if (lastMessageDateMs != null) {
-                                    long value = lastMessageDateMs.get();
-                                    Calendar result = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-                                    result.setTimeInMillis(value);
-                                    lastMessageDate = result.toInstant();
-                                } else {
-                                    lastMessageDate = Instant.EPOCH;
+                                    for (Map.Entry<Long, JSONMessageStatistic> byUserEntry : byUserStats.entrySet()) {
+
+                                        long userId = byUserEntry.getKey();
+                                        JSONMessageStatistic userStats = byUserEntry.getValue();
+
+                                        if (userStats != null) {
+                                            log.info("Found text channel message statistic for server: {}, " +
+                                                            "text chat: {}, user: {}",
+                                                    serverId, textChannelId, userId);
+
+                                            if (CommonUtils.isTrStringNotEmpty(userStats.getLastKnownName())
+                                                    && nameCacheDAO.find(userId).isEmpty()) {
+
+                                                log.info("Found last known name for user {}: {}", userId,
+                                                        userStats.getLastKnownName());
+                                                nameCacheDAO.update(userId, userStats.getLastKnownName(), NameType.USER);
+                                            }
+
+                                            long messagesCount = userStats.getCountOfMessages();
+                                            long bytesCount = userStats.getCountOfBytes();
+                                            long symbolsCount = userStats.getCountOfSymbols();
+                                            AtomicLong lastMessageDateMs = userStats.getLastMessageDate();
+                                            Instant lastMessageDate;
+                                            if (lastMessageDateMs != null) {
+                                                long value = lastMessageDateMs.get();
+                                                Calendar result = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                                                result.setTimeInMillis(value);
+                                                lastMessageDate = result.toInstant();
+                                            } else {
+                                                lastMessageDate = Instant.EPOCH;
+                                            }
+
+                                            log.info("Found statistic for server: {}, text chat: {}, user: {}; " +
+                                                            "messages count: {}, last message: {}, symbols count: {}, bytes count: {}",
+                                                    serverId, textChannelId, userId, messagesCount, lastMessageDate, symbolsCount, bytesCount);
+
+                                            totalStatisticDAO.insertChannelStats(serverId, textChannelId, userId,
+                                                    messagesCount, lastMessageDate, symbolsCount, bytesCount);
+                                        }
+                                    }
                                 }
                             }
                         }
