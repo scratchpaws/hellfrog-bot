@@ -46,6 +46,8 @@ public class MainDBControllerH2
     private final WtfAssignDAO wtfAssignDAO;
     private final VotesDAO votesDAO;
     private final EntityNameCacheDAO entityNameCacheDAO;
+    private final AutoPromoteRolesDAO autoPromoteRolesDAO;
+    private final RoleAssignDAO roleAssignDAO;
 
     private final String connectionURL;
     private final String connectionLogin;
@@ -116,6 +118,8 @@ public class MainDBControllerH2
             votesDAO = new VotesDAOImpl(autoSessionFactory);
             totalStatisticDAO = new TotalStatisticDAOImpl(autoSessionFactory);
             entityNameCacheDAO = new EntityNameCacheDAOImpl(autoSessionFactory);
+            autoPromoteRolesDAO = new AutoPromoteRolesDAOImpl(autoSessionFactory);
+            roleAssignDAO = new RoleAssignDAOImpl(autoSessionFactory);
 
         } catch (Exception err) {
             String errMsg = String.format("Unable to create session factory: %s", err.getMessage());
@@ -295,6 +299,16 @@ public class MainDBControllerH2
     @Override
     public EntityNameCacheDAO getEntityNameCacheDAO() {
         return entityNameCacheDAO;
+    }
+
+    @Override
+    public AutoPromoteRolesDAO getAutoPromoteRolesDAO() {
+        return autoPromoteRolesDAO;
+    }
+
+    @Override
+    public RoleAssignDAO getRoleAssignDAO() {
+        return roleAssignDAO;
     }
 
     @Override

@@ -45,6 +45,10 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
 
     public abstract EntityNameCacheDAO getEntityNameCacheDAO();
 
+    public abstract AutoPromoteRolesDAO getAutoPromoteRolesDAO();
+
+    public abstract RoleAssignDAO getRoleAssignDAO();
+
     public abstract byte[] generateDDL();
 
     @Override
