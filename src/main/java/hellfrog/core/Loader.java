@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Contract;
 
 import java.io.Console;
 import java.io.IOException;
+import java.util.Scanner;
 
 public class Loader {
 
@@ -21,12 +22,18 @@ public class Loader {
     public static void main(String... args) {
 
         if (args.length > 0) {
-            System.err.println("First cmdline value rewrite api key. Continue? [y/n]> ");
+            System.err.print("First cmdline value rewrite api key. Continue? [y/n]> ");
             Console console = System.console();
-            String answer = console.readLine();
+            String answer;
+            if (console != null) {
+                answer = console.readLine();
+            } else {
+                answer = new Scanner(System.in).nextLine();
+            }
             if (answer != null && answer.strip().equalsIgnoreCase("y")) {
                 try {
                     ApiKeyStorage.writeApiKey(args[0]);
+                    System.err.println("Saved");
                 } catch (IOException err) {
                     System.err.println(err.getMessage());
                     System.exit(2);
