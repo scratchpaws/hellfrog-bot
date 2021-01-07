@@ -1,6 +1,7 @@
 package hellfrog.settings.db;
 
 import hellfrog.TestUtils;
+import hellfrog.core.LogsStorage;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +51,9 @@ public class BotOwnersDAOTest {
                 Assertions.assertTrue(botOwnersDAO.isPresent(item));
             }
         }
+
+        Assertions.assertTrue(LogsStorage.isErrorsEmpty(), "Errors log must be empty");
+        Assertions.assertTrue(LogsStorage.isWarnsEmpty(), "Warning logs must be empty");
     }
 
     @Test
@@ -73,5 +77,8 @@ public class BotOwnersDAOTest {
                     .allMatch(botOwnersDAO::isPresent);
             Assertions.assertTrue(allPresent);
         }
+
+        Assertions.assertTrue(LogsStorage.isErrorsEmpty(), "Errors log must be empty");
+        Assertions.assertTrue(LogsStorage.isWarnsEmpty(), "Warning logs must be empty");
     }
 }

@@ -1,6 +1,7 @@
 package hellfrog.settings.db;
 
 import hellfrog.TestUtils;
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.entity.NameType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
@@ -37,6 +38,9 @@ public class EntityNameCacheDAOTest {
             testGlobalUpdate(firstUpdate, entityNameCacheDAO);
             testGlobalUpdate(secondUpdate, entityNameCacheDAO);
         }
+
+        Assertions.assertTrue(LogsStorage.isErrorsEmpty(), "Errors log must be empty");
+        Assertions.assertTrue(LogsStorage.isWarnsEmpty(), "Warning logs must be empty");
     }
 
     @Test
@@ -64,6 +68,9 @@ public class EntityNameCacheDAOTest {
             testServerUpdate(firstUpdate, entityNameCacheDAO);
             testServerUpdate(secondUpdate, entityNameCacheDAO);
         }
+
+        Assertions.assertTrue(LogsStorage.isErrorsEmpty(), "Errors log must be empty");
+        Assertions.assertTrue(LogsStorage.isWarnsEmpty(), "Warning logs must be empty");
     }
 
     private void testGlobalUpdate(@NotNull final List<NameEntity> updates,

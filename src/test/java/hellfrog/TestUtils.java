@@ -234,4 +234,12 @@ public class TestUtils {
     public static<E> void assertNullOrEmpty(@Nullable Collection<E> collection, @NotNull String message) {
         Assertions.assertTrue(collection == null || collection.isEmpty());
     }
+
+    public static<E> void assertNotEmpty(@Nullable Collection<E> collection, @NotNull String message) {
+        Assertions.assertTrue(collection != null && !collection.isEmpty(), message);
+    }
+
+    public static<E> void assertNotEmpty(@Nullable Collection<E> collection) {
+        Assertions.assertTrue(collection != null && !collection.isEmpty());
+    }
 }

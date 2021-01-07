@@ -1,6 +1,7 @@
 package hellfrog.settings.db;
 
 import hellfrog.TestUtils;
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.entity.WtfEntry;
 import hellfrog.settings.db.entity.WtfEntryAttach;
 import org.jetbrains.annotations.NotNull;
@@ -72,6 +73,9 @@ public class WtfAssignDAOTest {
                         });
                     });
         }
+
+        Assertions.assertTrue(LogsStorage.isErrorsEmpty(), "Errors log must be empty");
+        Assertions.assertTrue(LogsStorage.isWarnsEmpty(), "Warning logs must be empty");
     }
 
     private boolean checkEquals(@Nullable WtfEntry first, @Nullable WtfEntry second) {

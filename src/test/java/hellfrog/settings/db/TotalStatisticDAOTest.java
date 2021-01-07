@@ -3,6 +3,7 @@ package hellfrog.settings.db;
 import hellfrog.TestUtils;
 import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.entity.EmojiTotalStatistic;
 import hellfrog.settings.db.entity.TextChannelTotalStatistic;
 import org.eclipse.collections.api.iterator.BooleanIterator;
@@ -206,6 +207,9 @@ public class TotalStatisticDAOTest
                 }
             }
         }
+
+        Assertions.assertTrue(LogsStorage.isErrorsEmpty(), "Errors log must be empty");
+        Assertions.assertTrue(LogsStorage.isWarnsEmpty(), "Warning logs must be empty");
     }
 
     private static class TestServer {

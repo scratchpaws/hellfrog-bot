@@ -1,6 +1,7 @@
 package hellfrog.settings.db;
 
 import hellfrog.TestUtils;
+import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.entity.Vote;
 import hellfrog.settings.db.entity.VotePoint;
 import hellfrog.settings.db.entity.VoteRoleFilter;
@@ -143,6 +144,9 @@ public class VotesDAOTest {
                 }
             }
         }
+
+        Assertions.assertTrue(LogsStorage.isErrorsEmpty(), "Errors log must be empty");
+        Assertions.assertTrue(LogsStorage.isWarnsEmpty(), "Warning logs must be empty");
     }
 
     private void compareVotes(@Nullable Vote first, @Nullable Vote second) {

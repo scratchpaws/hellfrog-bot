@@ -2,6 +2,7 @@ package hellfrog.core;
 
 import hellfrog.common.CommonUtils;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -43,5 +44,15 @@ public class LogsStorage {
 
     static Queue<String> getErrorMessages() {
         return ERROR_MESSAGES;
+    }
+
+    @TestOnly
+    public static boolean isErrorsEmpty() {
+        return ERROR_MESSAGES.isEmpty();
+    }
+
+    @TestOnly
+    public static boolean isWarnsEmpty() {
+        return WARN_MESSAGES.isEmpty();
     }
 }

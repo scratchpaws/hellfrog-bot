@@ -1,6 +1,7 @@
 package hellfrog.settings.db;
 
 import hellfrog.TestUtils;
+import hellfrog.core.LogsStorage;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -165,6 +166,9 @@ public class RightsDAOTest {
                                 .isEmpty());
                     }));
         }
+
+        Assertions.assertTrue(LogsStorage.isErrorsEmpty(), "Errors log must be empty");
+        Assertions.assertTrue(LogsStorage.isWarnsEmpty(), "Warning logs must be empty");
     }
 
     private static class TestServer {
