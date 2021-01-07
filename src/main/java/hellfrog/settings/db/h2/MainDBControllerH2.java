@@ -4,6 +4,7 @@ import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.CommonUtils;
 import hellfrog.core.LogsStorage;
 import hellfrog.settings.db.*;
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.MetadataSources;
@@ -20,21 +21,19 @@ import java.nio.file.Path;
 import java.sql.*;
 import java.util.Calendar;
 import java.util.EnumSet;
+import java.util.List;
 
 public class MainDBControllerH2
         extends MainDBController {
-
-    private final StandardServiceRegistry registry;
-    private final Metadata metadata;
-    private final SessionFactory sessionFactory;
-    private boolean closed = false;
 
     private static final String SETTINGS_DIR_NAME = "settings";
     private static final String PROD_DB_FILE_NAME = "hellfrog_main";
     private static final String TEST_DB_FILE_NAME = "hellfrog_test";
     private static final String BACKUP_DB_FILE_NAME = "hellfrog_backup";
     private static final String DB_EXTENSION = ".mv.db";
-
+    private final StandardServiceRegistry registry;
+    private final Metadata metadata;
+    private final SessionFactory sessionFactory;
     private final BotOwnersDAO botOwnersDAO;
     private final CommonPreferencesDAO commonPreferencesDAO;
     private final ServerPreferencesDAO serverPreferencesDAO;
@@ -49,10 +48,10 @@ public class MainDBControllerH2
     private final AutoPromoteRolesDAO autoPromoteRolesDAO;
     private final RoleAssignDAO roleAssignDAO;
     private final CommunityControlDAO communityControlDAO;
-
     private final String connectionURL;
     private final String connectionLogin;
     private final String connectionPassword;
+    private boolean closed = false;
 
     public MainDBControllerH2(@Nullable InstanceType type) throws IOException, SQLException {
         super(type);
@@ -154,19 +153,6 @@ public class MainDBControllerH2
         Files.deleteIfExists(pathToDb);
     }
 
-    public void generateDDL(String fileName) throws Exception {
-        if (metadata != null) {
-            SchemaExport schemaExport = new SchemaExport();
-            schemaExport.setDelimiter(";");
-            schemaExport.setFormat(true);
-            schemaExport.setOutputFile(fileName);
-            EnumSet<TargetType> targers = EnumSet.of(TargetType.SCRIPT);
-            schemaExport.execute(targers, SchemaExport.Action.CREATE, metadata);
-        } else {
-            throw new RuntimeException("Session factory is closed");
-        }
-    }
-
     @Override
     public byte[] generateDDL() {
         if (metadata != null) {
@@ -226,7 +212,7 @@ public class MainDBControllerH2
                             }
                         }
                         result.append('\n');
-                        result.append("-".repeat(Math.max(0, result.length())));
+                        result.append("-" .repeat(Math.max(0, result.length())));
                         result.append('\n');
                         while (resultSet.next()) {
                             for (int i = 1; i <= metaData.getColumnCount(); i++) {
@@ -246,6 +232,36 @@ public class MainDBControllerH2
         }
 
         return result.toString();
+    }
+
+    @Override
+    public String executeRawJPQL(@Nullable String queryText) {
+        if (CommonUtils.isTrStringEmpty(queryText)) {
+            return "";
+        }
+        final AutoSessionFactory autoSessionFactory = new AutoSessionFactory(sessionFactory);
+        try (AutoSession session = autoSessionFactory.openSession()) {
+            queryText = queryText.strip();
+            if (StringUtils.startsWithIgnoreCase(queryText, "update")
+                    || StringUtils.startsWithIgnoreCase(queryText, "insert")
+                    || StringUtils.startsWithIgnoreCase(queryText, "delete")) {
+                int count = session.createQuery(queryText)
+                        .executeUpdate();
+                return "Updated " + count + " rows.";
+            } else {
+                StringBuilder output = new StringBuilder();
+                List<?> result = session.createQuery(queryText).list();
+                for (int i = 0; i < result.size(); i++) {
+                    output.append(result.get(i));
+                    if (i < (result.size() - 1)) {
+                        output.append('\n');
+                    }
+                }
+                return output.toString();
+            }
+        } catch (Exception err) {
+            return err.getMessage();
+        }
     }
 
     @Override

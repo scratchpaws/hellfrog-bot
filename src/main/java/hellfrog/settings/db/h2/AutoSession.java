@@ -6,7 +6,6 @@ import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.query.Query;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.persistence.criteria.CriteriaBuilder;

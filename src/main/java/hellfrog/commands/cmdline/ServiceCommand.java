@@ -101,11 +101,16 @@ public class ServiceCommand
             .desc("Generate DDL for current instance")
             .build();
 
+    private final Option executeJPQL = Option.builder("j")
+            .longOpt("jpql")
+            .desc("Execute JPQL query")
+            .build();
+
     public ServiceCommand() {
         super(PREF, DESCRIPTIONS);
 
         super.addCmdlineOption(stopBot, memInfo, botDate, runGc, runtimeShell, lastUsage, secureTransfer,
-                executeQuery, getDDL);
+                executeQuery, getDDL, executeJPQL);
 
         super.disableUpdateLastCommandUsage();
     }
@@ -161,9 +166,11 @@ public class ServiceCommand
         boolean secureTransfer = cmdline.hasOption(this.secureTransfer.getOpt());
         boolean executeQuery = cmdline.hasOption(this.executeQuery.getOpt());
         boolean generateDDL = cmdline.hasOption(this.getDDL.getOpt());
+        boolean executeJPQL = cmdline.hasOption(this.executeJPQL.getOpt());
         String transferChat = cmdline.getOptionValue(this.secureTransfer.getOpt(), "");
 
-        if (stopAction ^ memInfo ^ getDate ^ runGc ^ runtimeShell ^ lastUsageAction ^ secureTransfer ^ executeQuery ^ generateDDL) {
+        if (stopAction ^ memInfo ^ getDate ^ runGc ^ runtimeShell ^ lastUsageAction ^ secureTransfer
+                ^ executeQuery ^ generateDDL ^ executeJPQL) {
 
             if (stopAction) {
                 doStopAction(event);
@@ -230,47 +237,12 @@ public class ServiceCommand
                 }
             }
 
-            if (secureTransfer) {
-                MessageUtils.deleteMessageIfCan(event.getMessage());
-                event.getServer().ifPresent(s ->
-                        ServerSideResolver.resolveChannel(s, transferChat).ifPresentOrElse(ch -> {
-                            settingsController.setServerTransfer(s.getId());
-                            settingsController.setServerTextChatTransfer(ch.getId());
-                            settingsController.saveCommonPreferences();
-                            new MessageBuilder()
-                                    .setEmbed(new EmbedBuilder()
-                                            .setDescription("Enabled two-phase transfer from bot private" +
-                                                    " to text channel " + ch.getMentionTag())
-                                            .setFooter("This message will be removed after 3 sec.")
-                                            .setTimestampToNow())
-                                    .send(channel).thenAccept(msg1 -> {
-                                try {
-                                    Thread.sleep(3_000L);
-                                } catch (InterruptedException ignore) {
-                                }
-                                msg1.delete();
-                            });
-                        }, () -> {
-                            settingsController.setServerTransfer(null);
-                            settingsController.setServerTextChatTransfer(null);
-                            settingsController.saveCommonPreferences();
-                            new MessageBuilder()
-                                    .setEmbed(new EmbedBuilder()
-                                            .setDescription("Two-phase transfer disabled")
-                                            .setFooter("This message will be removed after 3 sec.")
-                                            .setTimestampToNow())
-                                    .send(getMessageTargetByRights(event)).thenAccept(msg1 -> {
-                                try {
-                                    Thread.sleep(3_000L);
-                                } catch (InterruptedException ignore) {
-                                }
-                                msg1.delete();
-                            });
-                        }));
-            }
-
             if (executeQuery) {
                 doExecuteQuery(anotherLines, event);
+            }
+
+            if (executeJPQL) {
+                doExecuteJPQL(anotherLines, event);
             }
 
             if (generateDDL) {
@@ -368,6 +340,60 @@ public class ServiceCommand
                         .getDiscordApi()).flatMap(api ->
                         api.getTextChannelById(channelId)).ifPresent(channel -> {
                     String result = SettingsController.getInstance().getMainDBController().executeRawQuery(queryTest);
+                    MessageUtils.sendLongMessage(result, channel);
+                }));
+    }
+
+    private void doExecuteJPQL(@NotNull ArrayList<String> anotherLines,
+                               @NotNull MessageCreateEvent event) {
+        BroadCast.getLogger()
+                .addUnsafeUsageCE("run JPQL query", event)
+                .send();
+
+        Optional<String> mayBeQuery = anotherLines.stream()
+                .reduce(CommonUtils::reduceNewLine);
+
+        mayBeQuery.ifPresentOrElse(query -> {
+            final String command = query.replaceAll("`{3}", "");
+            executeJPQLAction(command, event.getChannel().getId());
+        }, () -> {
+            List<MessageAttachment> attachmentList = event.getMessage()
+                    .getAttachments();
+            if (attachmentList.size() > 0) {
+                attachmentList.forEach((attachment) -> {
+                    try {
+                        byte[] attach = attachment.downloadAsByteArray()
+                                .join();
+                        String buff;
+                        StringBuilder execScript = new StringBuilder();
+                        try (BufferedReader textReader = new BufferedReader(
+                                new InputStreamReader(new ByteArrayInputStream(attach), StandardCharsets.UTF_8))) {
+                            while ((buff = textReader.readLine()) != null) {
+                                execScript.append(buff)
+                                        .append('\n');
+                            }
+                        }
+                        executeJPQLAction(execScript.toString(), event.getChannel().getId());
+                    } catch (Exception err) {
+                        new MessageBuilder()
+                                .append("Exception reached while attachment downloading:", MessageDecoration.BOLD)
+                                .appendNewLine()
+                                .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
+                                .send(event.getChannel());
+                    }
+                });
+            } else {
+                showErrorMessage("Query text required", event);
+            }
+        });
+    }
+
+    private void executeJPQLAction(@NotNull final String queryText, final long channelId) {
+        CompletableFuture.runAsync(() ->
+                Optional.ofNullable(SettingsController.getInstance()
+                        .getDiscordApi()).flatMap(api ->
+                        api.getTextChannelById(channelId)).ifPresent(channel -> {
+                    String result = SettingsController.getInstance().getMainDBController().executeRawJPQL(queryText);
                     MessageUtils.sendLongMessage(result, channel);
                 }));
     }

@@ -66,7 +66,6 @@ public class EventsListener
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
     private final MessageStats messageStats = new MessageStats();
-    private final TwoPhaseTransfer twoPhaseTransfer = new TwoPhaseTransfer();
     private final CommunityControlReaction communityControlReaction = new CommunityControlReaction();
     private static final Logger log = LogManager.getLogger(EventsListener.class.getSimpleName());
     private static final Logger cmdlog = LogManager.getLogger("Commands debug");
@@ -121,7 +120,6 @@ public class EventsListener
                 .forEach(r -> r.onMessageCreate(event));
 
         if (isPlainMessage) {
-            twoPhaseTransfer.transferAction(event);
             if (event.getServer().isPresent()) {
                 SettingsController.getInstance()
                         .getCongratulationsController()

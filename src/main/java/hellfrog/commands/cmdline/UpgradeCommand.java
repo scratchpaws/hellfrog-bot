@@ -3,7 +3,6 @@ package hellfrog.commands.cmdline;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.SavedAttachment;
-import hellfrog.core.TwoPhaseTransfer;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.TextChannel;
@@ -55,13 +54,8 @@ public class UpgradeCommand
                 .desc("Delete jar file library for name")
                 .build();
 
-        Option twoPhaseFile = Option.builder("t")
-                .longOpt("two")
-                .desc("Upload and replace two phase transfer mixer lines file")
-                .build();
-
         disableUpdateLastCommandUsage();
-        addCmdlineOption(mainJar, showLibraries, updateLibrary, deleteLibrary, twoPhaseFile);
+        addCmdlineOption(mainJar, showLibraries, updateLibrary, deleteLibrary);
     }
 
     @Override
@@ -90,13 +84,10 @@ public class UpgradeCommand
         boolean showLibrariesAction = cmdline.hasOption('s');
         boolean updateLibraryJarAction = cmdline.hasOption('l');
         boolean deleteLibraryJarAction = cmdline.hasOption('d');
-        boolean updateTwoPhaseFileAction = cmdline.hasOption('t');
 
-        if (showLibrariesAction && (updateMainJarAction || updateLibraryJarAction || deleteLibraryJarAction
-                || updateTwoPhaseFileAction)) {
+        if (showLibrariesAction && (updateMainJarAction || updateLibraryJarAction || deleteLibraryJarAction)) {
             showErrorMessage("Cannot specify different modes of the command at the same time.", event);
-        } else if (!(updateMainJarAction || showLibrariesAction || updateLibraryJarAction || deleteLibraryJarAction
-                || updateTwoPhaseFileAction)) {
+        } else if (!(updateMainJarAction || showLibrariesAction || updateLibraryJarAction || deleteLibraryJarAction)) {
             showErrorMessage("Action required.", event);
         } else if (updateMainJarAction) {
             doUpdateMainJar(event);
@@ -104,8 +95,6 @@ public class UpgradeCommand
             doShowLibraries(event);
         } else if (updateLibraryJarAction) {
             doUploadLibrary(event);
-        } else if (updateTwoPhaseFileAction) {
-            upgradeTwoPhaseFile(event);
         } else {
             doDeleteLibrary(cmdline, event);
         }
@@ -302,28 +291,5 @@ public class UpgradeCommand
             return libName + " (not a jar file)";
         }
         return libName;
-    }
-
-    private void upgradeTwoPhaseFile(@NotNull MessageCreateEvent event) {
-        BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger()
-                .addUnsafeUsageCE("upgrade two phase mix file", event);
-        try {
-            if (event.getMessageAttachments().isEmpty()) {
-                showErrorMessage("Two phase file is empty", event);
-                return;
-            }
-
-            event.getMessageAttachments().forEach(ma -> {
-                try (SavedAttachment savedAttachment = new SavedAttachment(ma)) {
-                    savedAttachment.moveTo(TwoPhaseTransfer.getPathToPhrasesFile());
-                    TwoPhaseTransfer.replaceLined();
-                    messagesLogger.addInfoMessage("Success replaced");
-                } catch (IOException err) {
-                    messagesLogger.addErrorMessage("Unable to save attachment: " + err.getMessage());
-                }
-            });
-        } finally {
-            messagesLogger.send();
-        }
     }
 }

@@ -23,6 +23,8 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
 
     public abstract String executeRawQuery(@Nullable String rawQuery);
 
+    public abstract String executeRawJPQL(@Nullable String queryText);
+
     public abstract CommonPreferencesDAO getCommonPreferencesDAO();
 
     public abstract BotOwnersDAO getBotOwnersDAO();
