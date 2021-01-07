@@ -3,14 +3,16 @@ package hellfrog.core;
 import hellfrog.commands.cmdline.BotCommand;
 import hellfrog.commands.scenes.Scenario;
 import hellfrog.reacts.MsgCreateReaction;
+import hellfrog.settings.ApiKeyStorage;
 import hellfrog.settings.SettingsController;
-import hellfrog.settings.db.InstanceType;
-import hellfrog.settings.db.h2.MainDBControllerH2;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.activity.ActivityType;
 import org.jetbrains.annotations.Contract;
+
+import java.io.Console;
+import java.io.IOException;
 
 public class Loader {
 
@@ -19,10 +21,16 @@ public class Loader {
     public static void main(String... args) {
 
         if (args.length > 0) {
-            try (MainDBControllerH2 dbControllerH2 = new MainDBControllerH2(InstanceType.TEST)) {
-                dbControllerH2.generateDDL(args[0]);
-            } catch (Exception err) {
-                err.printStackTrace();
+            System.err.println("First cmdline value rewrite api key. Continue? [y/n]> ");
+            Console console = System.console();
+            String answer = console.readLine();
+            if (answer != null && answer.strip().equalsIgnoreCase("y")) {
+                try {
+                    ApiKeyStorage.writeApiKey(args[0]);
+                } catch (IOException err) {
+                    System.err.println(err.getMessage());
+                    System.exit(2);
+                }
             }
             System.exit(0);
         }

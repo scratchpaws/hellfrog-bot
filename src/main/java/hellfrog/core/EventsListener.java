@@ -61,7 +61,7 @@ public class EventsListener
         ServerMemberBanListener, ServerMemberUnbanListener, CommonConstants,
         RoleChangePermissionsListener, ServerChannelInviteCreateListener, ServerChannelInviteDeleteListener {
 
-    private static final String VERSION_STRING = "2020-10-26";
+    private static final String VERSION_STRING = "2021-01-07";
 
     private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
