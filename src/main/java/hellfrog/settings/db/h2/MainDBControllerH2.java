@@ -48,6 +48,7 @@ public class MainDBControllerH2
     private final EntityNameCacheDAO entityNameCacheDAO;
     private final AutoPromoteRolesDAO autoPromoteRolesDAO;
     private final RoleAssignDAO roleAssignDAO;
+    private final CommunityControlDAO communityControlDAO;
 
     private final String connectionURL;
     private final String connectionLogin;
@@ -120,6 +121,7 @@ public class MainDBControllerH2
             entityNameCacheDAO = new EntityNameCacheDAOImpl(autoSessionFactory);
             autoPromoteRolesDAO = new AutoPromoteRolesDAOImpl(autoSessionFactory);
             roleAssignDAO = new RoleAssignDAOImpl(autoSessionFactory);
+            communityControlDAO = new CommunityControlDAOImpl(autoSessionFactory);
 
         } catch (Exception err) {
             String errMsg = String.format("Unable to create session factory: %s", err.getMessage());
@@ -129,7 +131,7 @@ public class MainDBControllerH2
         if (requiredMigration && type.equals(InstanceType.PROD)) {
             try {
                 versionCheckerH2.convertLegacy(this);
-            } catch (NullPointerException err) {
+            } catch (Exception err) {
                 String errMsg = String.format("Legacy conversion error: %s", err.getMessage());
                 sqlLog.fatal(errMsg, err);
                 throw new SQLException(err);
@@ -309,6 +311,11 @@ public class MainDBControllerH2
     @Override
     public RoleAssignDAO getRoleAssignDAO() {
         return roleAssignDAO;
+    }
+
+    @Override
+    public CommunityControlDAO getCommunityControlDAO() {
+        return communityControlDAO;
     }
 
     @Override

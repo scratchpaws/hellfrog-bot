@@ -102,6 +102,15 @@
         <Logger name="Entity cache" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
+        <Logger name="Auto promote roles" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Role assign queue" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
+        <Logger name="Community control DB" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
         <Logger name="com.optimaize" level="info" additivity="false">
             <AppenderRef ref="plainLogger"/>
         </Logger>

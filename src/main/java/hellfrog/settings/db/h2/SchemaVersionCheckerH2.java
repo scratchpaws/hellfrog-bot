@@ -2,6 +2,7 @@ package hellfrog.settings.db.h2;
 
 import hellfrog.common.CommonUtils;
 import hellfrog.common.ResourcesLoader;
+import hellfrog.settings.ApiKeyStorage;
 import hellfrog.settings.db.*;
 import hellfrog.settings.db.entity.*;
 import hellfrog.settings.oldjson.*;
@@ -9,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.sql.*;
 import java.time.Instant;
 import java.util.*;
@@ -166,18 +168,21 @@ class SchemaVersionCheckerH2 {
         }
     }
 
-    void convertLegacy(@NotNull final MainDBController mainDBController) {
+    void convertLegacy(@NotNull final MainDBController mainDBController) throws IOException {
         JSONLegacySettings jsonLegacySettings = new JSONLegacySettings();
         if (jsonLegacySettings.isHasCommonPreferences() || jsonLegacySettings.isHasServerPreferences()
                 || jsonLegacySettings.isHasServerStatistics()) {
             log.info("Attempt to legacy JSON settings conversion");
             if (jsonLegacySettings.isHasCommonPreferences()) {
+
                 JSONCommonPreferences oldCommonPreferences = jsonLegacySettings.getJsonCommonPreferences();
                 CommonPreferencesDAO newCommonPreferences = mainDBController.getCommonPreferencesDAO();
                 BotOwnersDAO botOwnersDAO = mainDBController.getBotOwnersDAO();
+
                 if (CommonUtils.isTrStringNotEmpty(oldCommonPreferences.getApiKey())) {
                     log.info("Common preferences: found API key: {}", oldCommonPreferences.getApiKey());
                     newCommonPreferences.setApiKey(oldCommonPreferences.getApiKey());
+                    ApiKeyStorage.writeApiKey(oldCommonPreferences.getApiKey());
                 }
                 if (CommonUtils.isTrStringNotEmpty(oldCommonPreferences.getCommonBotPrefix())) {
                     log.info("Common preferences: found global bot prefix: {}",
@@ -199,8 +204,11 @@ class SchemaVersionCheckerH2 {
                 }
             }
             if (jsonLegacySettings.isHasServerPreferences()) {
+
                 ServerPreferencesDAO serverPreferencesDAO = mainDBController.getServerPreferencesDAO();
                 AutoPromoteRolesDAO autoPromoteRolesDAO = mainDBController.getAutoPromoteRolesDAO();
+                CommunityControlDAO communityControlDAO = mainDBController.getCommunityControlDAO();
+
                 for (Map.Entry<Long, JSONServerPreferences> serverPref : jsonLegacySettings.getPrefByServer().entrySet()) {
                     long serverId = serverPref.getKey();
                     JSONServerPreferences jsonServerPreferences = serverPref.getValue();
@@ -236,6 +244,44 @@ class SchemaVersionCheckerH2 {
                         log.info("Server {}: found enabled auto promote role with id {} and timeout {} sec.",
                                 serverId, roleId, timeout);
                         autoPromoteRolesDAO.addConfig(serverId, roleId, timeout);
+                    }
+
+                    String unicodeCommunityEmoji = jsonServerPreferences.getCommunityControlEmoji();
+                    long communityControlEmojiId = jsonServerPreferences.getCommunityControlCustomEmojiId() != null
+                            ? jsonServerPreferences.getCommunityControlCustomEmojiId()
+                            : 0L;
+                    long communityControlRoleId = jsonServerPreferences.getCommunityControlRoleId() != null
+                            ? jsonServerPreferences.getCommunityControlRoleId()
+                            : 0L;
+                    long communityControlThreshold = jsonServerPreferences.getCommunityControlThreshold() != null
+                            ? jsonServerPreferences.getCommunityControlThreshold()
+                            : 0L;
+                    List<Long> communityControlUsers = jsonServerPreferences.getCommunityControlUsers();
+                    boolean hasCommunityControl = CommonUtils.isTrStringNotEmpty(unicodeCommunityEmoji)
+                            || communityControlEmojiId > 0L
+                            || communityControlRoleId > 0L
+                            || communityControlThreshold > 0L
+                            || (communityControlUsers != null && !communityControlUsers.isEmpty());
+
+                    if (hasCommunityControl) {
+                        CommunityControlSettings controlSettings = new CommunityControlSettings();
+                        controlSettings.setServerId(serverId);
+                        controlSettings.setRoleId(communityControlRoleId);
+                        controlSettings.setUnicodeEmoji(unicodeCommunityEmoji);
+                        controlSettings.setCustomEmojiId(communityControlEmojiId);
+                        controlSettings.setThreshold(communityControlThreshold);
+                        log.info("Found community control settings for server {}, converted to: {}",
+                                serverId, controlSettings.toString());
+                        communityControlDAO.setSettings(controlSettings);
+
+                        if (communityControlUsers != null && !communityControlUsers.isEmpty()) {
+                            String list = communityControlUsers.stream()
+                                    .map(String::valueOf)
+                                    .reduce(CommonUtils::reduceConcat)
+                                    .orElse("(empty)");
+                            log.info("Found community control users for server {}: {}", serverId, list);
+                            communityControlUsers.forEach(userId -> communityControlDAO.addUser(serverId, userId));
+                        }
                     }
 
                     boolean congratulationsEnabled = jsonServerPreferences.getCongratulationChannel() != null

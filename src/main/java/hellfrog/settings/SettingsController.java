@@ -30,6 +30,8 @@ public class SettingsController {
     private static final Logger log = LogManager.getLogger("Settings controller");
     private final Path SETTINGS_PATH = Paths.get("./settings/");
 
+    private final String apiKey;
+
     private final String COMMON_SETTINGS_FILE_NAME = "common.json";
     private final Path COMMON_SETTINGS = SETTINGS_PATH.resolve(COMMON_SETTINGS_FILE_NAME);
     private final String SERVER_SETTINGS_FILES_SUFFIX = "_server.json";
@@ -57,15 +59,29 @@ public class SettingsController {
     private static final SettingsController instance = new SettingsController();
 
     private SettingsController() {
+
         try {
             mainDBController = MainDBController.getInstance(InstanceType.PROD);
         } catch (Exception err) {
-            // todo: will be enable after migration from json configs to db config
-            //log.fatal("Terminated", err);
-            //System.exit(2);
+            // todo: Transition warnings. In the future, errors in starting the database will lead to the crash of the application.
+            String errMsg = String.format("Unable to start %s database: %s", InstanceType.PROD, err.getMessage());
+            log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
         }
+
+        String _apiKey = "";
+        try {
+            _apiKey = ApiKeyStorage.readApiKey();
+        } catch (IOException err) {
+            // todo: todo: Transition warnings. In the future, errors in reading the file with the API key will result in application crash
+            log.error(err.getMessage(), err);
+            LogsStorage.addErrorMessage(err.getMessage());
+        }
+        apiKey = _apiKey;
+
         loadCommonSettings();
         loadServersSettings();
+
         httpClientsPool = new HttpClientsPool();
         voteController = new VoteController();
         invitesController = new InvitesController();

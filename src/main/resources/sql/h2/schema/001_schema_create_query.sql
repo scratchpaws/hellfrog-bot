@@ -332,6 +332,8 @@ comment on column text_channel_total_stats.update_date is 'Record update date';
 
 create sequence text_channel_total_stat_idx start with 1 increment by 50;
 
+-- hellfrog.settings.db.h2.AutoPromoteRolesDAOImpl
+-- hellfrog.settings.db.entity.AutoPromoteConfig
 create table auto_promote_configs
 (
     id          bigint    not null primary key,
@@ -351,6 +353,8 @@ comment on column auto_promote_configs.create_date is 'Record create date';
 
 create sequence auto_promote_config_idx start with 1 increment by 50;
 
+-- hellfrog.settings.db.h2.RoleAssignDAOImpl
+-- hellfrog.settings.db.entity.RoleAssign
 create table role_assign_queue
 (
     id          bigint    not null primary key,
@@ -412,6 +416,8 @@ comment on column server_names_cache.update_date is 'Record update date';
 
 create sequence server_name_cache_idx start with 1 increment by 50;
 
+-- hellfrog.settings.db.h2.CommunityControlDAOImpl
+-- hellfrog.settings.db.entity.CommunityControlSettings
 create table community_control_settings
 (
     id bigint not null primary key,
@@ -437,6 +443,8 @@ comment on column community_control_settings.update_date is 'Record update date'
 
 create sequence community_control_setting_idx start with 1 increment by 50;
 
+-- hellfrog.settings.db.h2.CommunityControlDAOImpl
+-- hellfrog.settings.db.entity.CommunityControlUser
 create table community_control_users
 (
     id bigint not null primary key,
@@ -445,6 +453,8 @@ create table community_control_users
     create_date timestamp not null default sysdate,
     constraint uniq_community_control_user unique (server_id, user_id)
 );
+
+create index community_control_users_srv_idx on community_control_users (server_id);
 
 comment on table community_control_users is 'User for community control';
 comment on column community_control_users.id is 'Unique record ID';

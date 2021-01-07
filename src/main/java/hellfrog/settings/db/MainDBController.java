@@ -49,6 +49,8 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
 
     public abstract RoleAssignDAO getRoleAssignDAO();
 
+    public abstract CommunityControlDAO getCommunityControlDAO();
+
     public abstract byte[] generateDDL();
 
     @Override
