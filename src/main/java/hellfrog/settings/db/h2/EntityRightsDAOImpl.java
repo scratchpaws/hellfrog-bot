@@ -24,6 +24,7 @@ abstract class EntityRightsDAOImpl<T extends EntityRight> {
     private final Class<T> managedClass;
     private final TriFunction<Long, String, Long, T> builder; // server id, command prefix, entity id
     private final String entityField;
+    private final String getAllAllowedQuery;
 
     EntityRightsDAOImpl(@NotNull final AutoSessionFactory sessionFactory,
                         @NotNull final String loggerName,
@@ -36,6 +37,9 @@ abstract class EntityRightsDAOImpl<T extends EntityRight> {
         this.managedClass = managedClass;
         this.builder = builder;
         this.entityField = entityField;
+
+        this.getAllAllowedQuery = "from " + managedClass.getSimpleName() + " e where e.serverId = :serverId " +
+                "and e.commandPrefix = :commandPrefix";
     }
 
     public List<Long> getAllAllowed(long serverId, @NotNull String commandPrefix) {
@@ -44,8 +48,7 @@ abstract class EntityRightsDAOImpl<T extends EntityRight> {
         }
 
         try (AutoSession session = sessionFactory.openSession()) {
-            List<T> allowed = session.createQuery("from " + managedClass.getSimpleName() + " e where e.serverId = :serverId " +
-                    "and e.commandPrefix = :commandPrefix", managedClass)
+            List<T> allowed = session.createQuery(getAllAllowedQuery, managedClass)
                     .setParameter("serverId", serverId)
                     .setParameter("commandPrefix", commandPrefix)
                     .list();
