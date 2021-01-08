@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.*;
-import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -29,7 +28,6 @@ public class MainDBControllerH2
     private static final String SETTINGS_DIR_NAME = "settings";
     private static final String PROD_DB_FILE_NAME = "hellfrog_main";
     private static final String TEST_DB_FILE_NAME = "hellfrog_test";
-    private static final String BACKUP_DB_FILE_NAME = "hellfrog_backup";
     private static final String DB_EXTENSION = ".mv.db";
     private final StandardServiceRegistry registry;
     private final Metadata metadata;
@@ -51,6 +49,7 @@ public class MainDBControllerH2
     private final String connectionURL;
     private final String connectionLogin;
     private final String connectionPassword;
+    private final DatabaseBackupH2 databaseBackupH2;
     private boolean closed = false;
 
     public MainDBControllerH2(@Nullable InstanceType type) throws IOException, SQLException {
@@ -61,11 +60,9 @@ public class MainDBControllerH2
         }
         Path codeSourcePath = CodeSourceUtils.getCodeSourceParent();
         Path settingsPath = codeSourcePath.resolve(SETTINGS_DIR_NAME);
-        String currentDateTime = String.format("_%tF_%<tH-%<tM-%<tS", Calendar.getInstance());
         Path pathToDb = switch (type) {
             case PROD -> settingsPath.resolve(PROD_DB_FILE_NAME);
             case TEST -> settingsPath.resolve(TEST_DB_FILE_NAME);
-            case BACKUP -> settingsPath.resolve(BACKUP_DB_FILE_NAME + currentDateTime);
         };
         String JDBC_PREFIX = "jdbc:h2:";
         this.connectionURL = JDBC_PREFIX + pathToDb.toString();
@@ -79,6 +76,7 @@ public class MainDBControllerH2
             mainLog.fatal("Unable to create settings directory: " + err);
             throw err;
         }
+        this.databaseBackupH2 = new DatabaseBackupH2(connectionURL, connectionLogin, connectionPassword, codeSourcePath);
         SchemaVersionCheckerH2 versionCheckerH2 = new SchemaVersionCheckerH2(this.connectionURL, this.connectionLogin, this.connectionPassword);
         final boolean requiredMigration = versionCheckerH2.checkSchema();
         try {
@@ -332,6 +330,11 @@ public class MainDBControllerH2
     @Override
     public CommunityControlDAO getCommunityControlDAO() {
         return communityControlDAO;
+    }
+
+    @Override
+    public void createBackup() {
+        databaseBackupH2.backupAction();
     }
 
     @Override

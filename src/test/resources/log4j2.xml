@@ -111,6 +111,9 @@
         <Logger name="Community control DB" level="debug" additivity="false">
             <AppenderRef ref="sqlLogger"/>
         </Logger>
+        <Logger name="DB backup" level="debug" additivity="false">
+            <AppenderRef ref="sqlLogger"/>
+        </Logger>
         <Logger name="com.optimaize" level="info" additivity="false">
             <AppenderRef ref="plainLogger"/>
         </Logger>

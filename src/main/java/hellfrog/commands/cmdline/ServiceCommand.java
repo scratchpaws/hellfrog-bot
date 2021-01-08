@@ -106,11 +106,16 @@ public class ServiceCommand
             .desc("Execute JPQL query")
             .build();
 
+    private final Option createBackup = Option.builder("b")
+            .longOpt("backup")
+            .desc("Create DB backup")
+            .build();
+
     public ServiceCommand() {
         super(PREF, DESCRIPTIONS);
 
         super.addCmdlineOption(stopBot, memInfo, botDate, runGc, runtimeShell, lastUsage, secureTransfer,
-                executeQuery, getDDL, executeJPQL);
+                executeQuery, getDDL, executeJPQL, createBackup);
 
         super.disableUpdateLastCommandUsage();
     }
@@ -167,10 +172,10 @@ public class ServiceCommand
         boolean executeQuery = cmdline.hasOption(this.executeQuery.getOpt());
         boolean generateDDL = cmdline.hasOption(this.getDDL.getOpt());
         boolean executeJPQL = cmdline.hasOption(this.executeJPQL.getOpt());
-        String transferChat = cmdline.getOptionValue(this.secureTransfer.getOpt(), "");
+        boolean createBackup = cmdline.hasOption(this.createBackup.getOpt());
 
         if (stopAction ^ memInfo ^ getDate ^ runGc ^ runtimeShell ^ lastUsageAction ^ secureTransfer
-                ^ executeQuery ^ generateDDL ^ executeJPQL) {
+                ^ executeQuery ^ generateDDL ^ executeJPQL ^ createBackup) {
 
             if (stopAction) {
                 doStopAction(event);
@@ -251,6 +256,10 @@ public class ServiceCommand
                         .flatMap(User::getPrivateChannel)
                         .ifPresent(this::generateDDL);
             }
+
+            if (createBackup) {
+                settingsController.getMainDBController().createBackup();
+            }
         } else {
             showErrorMessage("Only one service command may be execute", event);
         }
@@ -260,6 +269,7 @@ public class ServiceCommand
 
         SettingsController settingsController = SettingsController.getInstance();
 
+        settingsController.getAutoBackupService().stop();
         settingsController.getHttpClientsPool().stop();
         settingsController.getVoteController().stop();
         settingsController.getCongratulationsController().stop();

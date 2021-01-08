@@ -55,6 +55,8 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
 
     public abstract byte[] generateDDL();
 
+    public abstract void createBackup();
+
     @Override
     public abstract void close();
 

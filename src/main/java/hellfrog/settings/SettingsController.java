@@ -39,11 +39,13 @@ public class SettingsController {
 
     private final ConcurrentHashMap<Long, ServerPreferences> prefByServer = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, ServerStatistic> statByServer = new ConcurrentHashMap<>();
+
     private final ReentrantLock serverPrefCreateLock = new ReentrantLock();
     private final ReentrantLock serverPrefSaveLock = new ReentrantLock();
     private final ReentrantLock commonPrefSaveLock = new ReentrantLock();
     private final ReentrantLock serverStatCreateLock = new ReentrantLock();
     private final ReentrantLock serverStatSaveLock = new ReentrantLock();
+
     private final VoteController voteController;
     private final InvitesController invitesController;
     private final HttpClientsPool httpClientsPool;
@@ -51,6 +53,8 @@ public class SettingsController {
     private final SessionsCheckTask sessionsCheckTask;
     private final CongratulationsController congratulationsController;
     private final ServiceLogsNotificator serviceLogsNotificator;
+    private final AutoBackupService autoBackupService;
+
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
     private volatile Instant lastCommandUsage = null;
@@ -89,6 +93,7 @@ public class SettingsController {
         sessionsCheckTask = new SessionsCheckTask();
         congratulationsController = new CongratulationsController();
         serviceLogsNotificator = new ServiceLogsNotificator();
+        autoBackupService = new AutoBackupService();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
                 SettingsController.getInstance().mainDBController.close()));
@@ -457,5 +462,9 @@ public class SettingsController {
 
     public ServiceLogsNotificator getServiceLogsNotificator() {
         return serviceLogsNotificator;
+    }
+
+    public AutoBackupService getAutoBackupService() {
+        return autoBackupService;
     }
 }
