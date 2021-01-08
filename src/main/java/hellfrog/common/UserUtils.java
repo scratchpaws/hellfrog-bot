@@ -7,12 +7,19 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.util.EntityUtils;
 import org.javacord.api.entity.Icon;
+import org.javacord.api.entity.channel.ServerTextChannel;
+import org.javacord.api.entity.message.MessageBuilder;
+import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
+import org.javacord.api.entity.permission.Role;
 import org.jetbrains.annotations.NotNull;
 
+import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Instant;
 
 public final class UserUtils {
 
@@ -67,5 +74,29 @@ public final class UserUtils {
         } finally {
             SettingsController.getInstance().getHttpClientsPool().returnClient(client);
         }
+    }
+
+    public static void displayRoleAssign(@NotNull final Server server,
+                                         @NotNull final ServerTextChannel channel,
+                                         @NotNull final Role role,
+                                         @NotNull final User member) {
+        Instant currentStamp = Instant.now();
+        UserCachedData userCachedData = new UserCachedData(member, server);
+        String userName = userCachedData.getDisplayUserName()
+                + " (" + member.getDiscriminatedName() + ")";
+        final int newlineBreak = 20;
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+                .setColor(Color.BLUE)
+                .setTimestamp(currentStamp)
+                .addField("User",
+                        CommonUtils.addLinebreaks(userName, newlineBreak), true)
+                .addField("Assigned role",
+                        CommonUtils.addLinebreaks(role.getName(), newlineBreak), true);
+        if (userCachedData.isHasAvatar()) {
+            userCachedData.setThumbnail(embedBuilder);
+        }
+        new MessageBuilder()
+                .setEmbed(embedBuilder)
+                .send(channel);
     }
 }

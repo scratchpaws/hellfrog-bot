@@ -277,6 +277,7 @@ public class ServiceCommand
         settingsController.getAutoSaveSettingsTask().stop();
         settingsController.getSessionsCheckTask().stop();
         settingsController.getServiceLogsNotificator().stop();
+        settingsController.getAutoPromoteService().stop();
         settingsController.saveCommonPreferences();
         settingsController.getServerListWithConfig()
                 .forEach(settingsController::saveServerSideParameters);

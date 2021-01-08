@@ -26,7 +26,7 @@ public class AutoPromoteRolesDAOTest {
                 List<AutoPromoteConfig> all = autoPromoteRolesDAO.loadAllConfigs(serverEntity.serverId);
                 TestUtils.assertEmpty(all, "Initial value must be empty");
                 serverEntity.initialConfigs.parallelStream().forEach(initialValue -> {
-                    autoPromoteRolesDAO.addConfig(serverEntity.serverId, initialValue.roleId, initialValue.timeout);
+                    autoPromoteRolesDAO.addUpdateConfig(serverEntity.serverId, initialValue.roleId, initialValue.timeout);
                     List<AutoPromoteConfig> savedList = autoPromoteRolesDAO.loadAllConfigs(serverEntity.serverId);
                     boolean found = false;
                     for (AutoPromoteConfig config : savedList) {

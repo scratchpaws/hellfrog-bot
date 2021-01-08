@@ -55,7 +55,7 @@ class AutoPromoteRolesDAOImpl
     }
 
     @Override
-    public void addConfig(final long serverId, final long roleId, final long timeoutSeconds) {
+    public void addUpdateConfig(final long serverId, final long roleId, final long timeoutSeconds) {
         try (AutoSession session = sessionFactory.openSession()) {
             AutoPromoteConfig config = session.createQuery(GET_CONFIG_QUERY, AutoPromoteConfig.class)
                     .setParameter("serverId", serverId)

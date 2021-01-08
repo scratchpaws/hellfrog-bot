@@ -2,6 +2,7 @@ package hellfrog.reacts;
 
 import hellfrog.common.CommonUtils;
 import hellfrog.common.UserCachedData;
+import hellfrog.common.UserUtils;
 import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
 import org.apache.logging.log4j.LogManager;
@@ -102,25 +103,8 @@ public class CommunityControlReaction {
         if (preferences.isJoinLeaveDisplay() && preferences.getJoinLeaveChannel() > 0) {
             Optional<ServerTextChannel> mayBeChannel =
                     server.getTextChannelById(preferences.getJoinLeaveChannel());
-            mayBeChannel.ifPresent(c -> {
-                Instant currentStamp = Instant.now();
-                UserCachedData userCachedData = new UserCachedData(member, server);
-                String userName = userCachedData.getDisplayUserName()
-                        + " (" + member.getDiscriminatedName() + ")";
-                final int newlineBreak = 20;
-                EmbedBuilder embedBuilder = new EmbedBuilder()
-                        .setColor(Color.BLUE)
-                        .setTimestamp(currentStamp)
-                        .addField("User",
-                                CommonUtils.addLinebreaks(userName, newlineBreak), true)
-                        .addField("Assigned role",
-                                CommonUtils.addLinebreaks(role.getName(), newlineBreak), true);
-                if (userCachedData.isHasAvatar()) {
-                    userCachedData.setThumbnail(embedBuilder);
-                }
-                new MessageBuilder()
-                        .setEmbed(embedBuilder)
-                        .send(c);
+            mayBeChannel.ifPresent(serverTextChannel -> {
+                UserUtils.displayRoleAssign(server, serverTextChannel, role, member);
             });
         }
     }

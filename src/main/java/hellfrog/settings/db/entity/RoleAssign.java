@@ -5,7 +5,9 @@ import java.sql.Timestamp;
 import java.time.Instant;
 
 @Entity
-@Table(name = "role_assign_queue")
+@Table(name = "role_assign_queue", indexes = {
+        @Index(name = "role_assign_queue_servers", columnList = "server_id")
+})
 public class RoleAssign {
 
     private long id;

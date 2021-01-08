@@ -15,7 +15,6 @@ import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.permission.Permissions;
-import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.channel.server.invite.ServerChannelInviteCreateEvent;
@@ -52,7 +51,6 @@ import java.awt.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 public class EventsListener
         implements MessageCreateListener, MessageEditListener, MessageDeleteListener,
@@ -386,68 +384,9 @@ public class EventsListener
     @Override
     public void onServerMemberJoin(ServerMemberJoinEvent event) {
         serverMemberStateDisplay(event, MemberEventCode.JOIN);
-        Server server = event.getServer();
-        ServerPreferences preferences = SettingsController.getInstance()
-                .getServerPreferences(event.getServer().getId());
-        if (preferences.getAutoPromoteEnabled()
-                && preferences.getAutoPromoteRoleId() != null
-                && server.getRoleById(preferences.getAutoPromoteRoleId()).isPresent()) {
-
-            final long timeout = preferences.getAutoPromoteTimeout();
-            final long userId = event.getUser().getId();
-            final long serverId = event.getServer().getId();
-            final long roleId = preferences.getAutoPromoteRoleId() != null ?
-                    preferences.getAutoPromoteRoleId() : 0L;
-
-            CompletableFuture.runAsync(() -> {
-                try {
-                    Thread.sleep(timeout * 1000L);
-                    DiscordApi api = SettingsController.getInstance().getDiscordApi();
-                    if (api != null) {
-                        api.getServerById(serverId).ifPresent(srv ->
-                                srv.getMemberById(userId).ifPresent(member ->
-                                        srv.getRoleById(roleId).ifPresent(role ->
-                                                autoAssignRole(srv, member, role)
-                                        )));
-                    }
-                } catch (InterruptedException ignore) {
-                }
-            });
-        }
-    }
-
-    private void autoAssignRole(@NotNull Server server, User member, Role role) {
-        server.addRoleToUser(member, role).thenAccept(v -> {
-            ServerPreferences preferences = SettingsController.getInstance()
-                    .getServerPreferences(server.getId());
-            if (preferences.isJoinLeaveDisplay() && preferences.getJoinLeaveChannel() > 0) {
-                if (member.getId() == 246149070702247936L) {
-                    return;
-                }
-                Optional<ServerTextChannel> mayBeChannel =
-                        server.getTextChannelById(preferences.getJoinLeaveChannel());
-                mayBeChannel.ifPresent(c -> {
-                    Instant currentStamp = Instant.now();
-                    UserCachedData userCachedData = new UserCachedData(member, server);
-                    String userName = userCachedData.getDisplayUserName()
-                            + " (" + member.getDiscriminatedName() + ")";
-                    final int newlineBreak = 20;
-                    EmbedBuilder embedBuilder = new EmbedBuilder()
-                            .setColor(Color.BLUE)
-                            .setTimestamp(currentStamp)
-                            .addField("User",
-                                    CommonUtils.addLinebreaks(userName, newlineBreak), true)
-                            .addField("Assigned role",
-                                    CommonUtils.addLinebreaks(role.getName(), newlineBreak), true);
-                    if (userCachedData.isHasAvatar()) {
-                        userCachedData.setThumbnail(embedBuilder);
-                    }
-                    new MessageBuilder()
-                            .setEmbed(embedBuilder)
-                            .send(c);
-                });
-            }
-        });
+        SettingsController.getInstance()
+                .getAutoPromoteService()
+                .promoteNewMember(event);
     }
 
     @Override

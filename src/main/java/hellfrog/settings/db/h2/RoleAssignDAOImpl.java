@@ -23,6 +23,7 @@ class RoleAssignDAOImpl
             + "where a.serverId = :serverId and a.userId = :userId";
     private static final String GET_EXPIRED_QUEUE_QUERY = "from " + RoleAssign.class.getSimpleName() + " a "
             + "where a.serverId = :serverId and a.assignDate <= :assignDate";
+    private static final String GET_SERVERS_LIST_QUERY = "select distinct a.serverId from " + RoleAssign.class.getSimpleName() + " a";
 
     private final AutoSessionFactory sessionFactory;
     private final Logger log = LogManager.getLogger("Role assign queue");
@@ -113,6 +114,33 @@ class RoleAssignDAOImpl
         } catch (Exception err) {
             String errMsg = String.format("Unable to load and delete timeout reached " +
                     "role assigns queue for server id %d: %s", serverId, err.getMessage());
+            log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    @NotNull
+    @UnmodifiableView
+    public List<Long> getQueueServerList() {
+        try (AutoSession session = sessionFactory.openSession()) {
+            List<Long> serverIds = session.createQuery(GET_SERVERS_LIST_QUERY, Long.class)
+                    .list();
+            if (serverIds != null && !serverIds.isEmpty()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Found {} role assigns server ids", serverIds.size());
+                }
+                return Collections.unmodifiableList(serverIds);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("No role assign server ids found");
+                }
+                return Collections.emptyList();
+            }
+        } catch (Exception err) {
+            String errMsg = String.format("Unable to load server ids from role assign queue: %s",
+                    err.getMessage());
             log.error(errMsg, err);
             LogsStorage.addErrorMessage(errMsg);
             return Collections.emptyList();

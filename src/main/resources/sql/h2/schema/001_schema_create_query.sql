@@ -365,6 +365,8 @@ create table role_assign_queue
     create_date timestamp not null default sysdate
 );
 
+create index role_assign_queue_servers on role_assign_queue(server_id);
+
 comment on table role_assign_queue is 'A queue of assigned roles for server members';
 comment on column role_assign_queue.id is 'Unique record ID';
 comment on column role_assign_queue.server_id is 'Discord server ID';

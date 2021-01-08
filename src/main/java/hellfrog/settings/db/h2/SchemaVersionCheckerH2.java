@@ -243,7 +243,7 @@ class SchemaVersionCheckerH2 {
                                 ? jsonServerPreferences.getAutoPromoteTimeout() : 0L;
                         log.info("Server {}: found enabled auto promote role with id {} and timeout {} sec.",
                                 serverId, roleId, timeout);
-                        autoPromoteRolesDAO.addConfig(serverId, roleId, timeout);
+                        autoPromoteRolesDAO.addUpdateConfig(serverId, roleId, timeout);
                     }
 
                     String unicodeCommunityEmoji = jsonServerPreferences.getCommunityControlEmoji();

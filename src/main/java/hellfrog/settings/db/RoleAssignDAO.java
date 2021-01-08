@@ -21,6 +21,10 @@ public interface RoleAssignDAO {
     @NotNull
     List<RoleAssign> getTimeoutReached(final long serverId, @NotNull final Instant time);
 
+    @NotNull
+    @UnmodifiableView
+    List<Long> getQueueServerList();
+
     @UnmodifiableView
     @NotNull
     List<RoleAssign> getTimeoutReached(final long serverId);

@@ -55,6 +55,8 @@ public class SettingsController {
     private final ServiceLogsNotificator serviceLogsNotificator;
     private final AutoBackupService autoBackupService;
 
+    private final AutoPromoteService autoPromoteService;
+
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
     private volatile Instant lastCommandUsage = null;
@@ -94,6 +96,10 @@ public class SettingsController {
         congratulationsController = new CongratulationsController();
         serviceLogsNotificator = new ServiceLogsNotificator();
         autoBackupService = new AutoBackupService();
+
+        autoPromoteService = new AutoPromoteService(mainDBController.getAutoPromoteRolesDAO(),
+                mainDBController.getRoleAssignDAO(),
+                mainDBController.getServerPreferencesDAO());
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
                 SettingsController.getInstance().mainDBController.close()));
@@ -493,5 +499,9 @@ public class SettingsController {
 
     public AutoBackupService getAutoBackupService() {
         return autoBackupService;
+    }
+
+    public AutoPromoteService getAutoPromoteService() {
+        return autoPromoteService;
     }
 }

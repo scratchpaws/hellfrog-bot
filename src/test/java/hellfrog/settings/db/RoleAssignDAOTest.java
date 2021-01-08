@@ -27,6 +27,9 @@ public class RoleAssignDAOTest {
         try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             RoleAssignDAO roleAssignDAO = mainDBController.getRoleAssignDAO();
 
+            List<Long> servers = roleAssignDAO.getQueueServerList();
+            TestUtils.assertEmpty(servers, "Initial queue must be empty");
+
             TestUtils.randomDiscordEntitiesIds(5, 10).parallelStream().forEach(serverId -> {
                 List<RoleAssign> queue = roleAssignDAO.getQueueFor(serverId);
                 TestUtils.assertEmpty(queue, "Initial queue must be empty");
@@ -75,6 +78,12 @@ public class RoleAssignDAOTest {
                 List<RoleAssign> emptyAfterExpired = roleAssignDAO.getTimeoutReached(testServer.serverId, testServer.dateTime);
                 // Queue after extracting expired records. Future role assignments should persist
                 List<RoleAssign> queueAfterExpired = roleAssignDAO.getQueueFor(testServer.serverId);
+                // All servers with assign items. Must contain this test server id
+                List<Long> serverIds = roleAssignDAO.getQueueServerList();
+
+                TestUtils.assertContains(serverIds, testServer.serverId, "Queue must contain items with server id "
+                        + testServer.serverId + ", but items:\n"
+                        + serverIds.stream().map(String::valueOf).reduce(CommonUtils::reduceNewLine).orElse("(empty)"));
 
                 String debugQueue = formatQueue(queue);
                 String debugExpiredQueue = formatQueue(expired);
