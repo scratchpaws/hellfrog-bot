@@ -124,7 +124,7 @@ class VotesDAOImpl
 
         Timestamp now = Timestamp.from(Instant.now());
 
-        if (vote.getFinishTime() != null && !vote.isHasTimer()) {
+        if (vote.getFinishTime() != null && vote.isHasTimer()) {
             vote.setHasTimer(true);
         }
 
