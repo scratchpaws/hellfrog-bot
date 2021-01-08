@@ -11,6 +11,7 @@ import java.util.Objects;
 /**
  * Пункт в голосовании
  */
+@Deprecated
 public class VotePoint {
 
     private long id;
@@ -18,34 +19,42 @@ public class VotePoint {
     private Long customEmoji;
     private String pointText;
 
+    @Deprecated
     public long getId() {
         return id;
     }
 
+    @Deprecated
     public void setId(long id) {
         this.id = id;
     }
 
+    @Deprecated
     public String getEmoji() {
         return emoji;
     }
 
+    @Deprecated
     public void setEmoji(String emoji) {
         this.emoji = emoji;
     }
 
+    @Deprecated
     public Long getCustomEmoji() {
         return customEmoji;
     }
 
+    @Deprecated
     public void setCustomEmoji(Long customEmoji) {
         this.customEmoji = customEmoji;
     }
 
+    @Deprecated
     public String getPointText() {
         return pointText;
     }
 
+    @Deprecated
     public void setPointText(String pointText) {
         this.pointText = pointText;
     }
@@ -76,6 +85,7 @@ public class VotePoint {
                 '}';
     }
 
+    @Deprecated
     @JsonIgnore
     public String buildVoteString(Map<Long, KnownCustomEmoji> emojiCache) {
         StringBuilder voteString = new StringBuilder();
@@ -91,6 +101,7 @@ public class VotePoint {
         return voteString.toString();
     }
 
+    @Deprecated
     public boolean equalsEmoji(Emoji external) {
         if (external == null) return false;
         if (external.isUnicodeEmoji() && external.asUnicodeEmoji().isPresent()) {
@@ -106,11 +117,13 @@ public class VotePoint {
         return false;
     }
 
+    @Deprecated
     @JsonIgnore
     public boolean isUnicodeVP() {
         return !CommonUtils.isTrStringEmpty(emoji);
     }
 
+    @Deprecated
     @JsonIgnore
     public boolean isCustomEmojiVP() {
         return customEmoji != null && customEmoji > 0;

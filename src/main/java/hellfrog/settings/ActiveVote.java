@@ -7,6 +7,7 @@ import java.util.Objects;
 /**
  * Активное голосование
  */
+@Deprecated
 public class ActiveVote
         implements Serializable {
 
@@ -22,90 +23,112 @@ public class ActiveVote
     private Boolean withDefaultPoint;
     private Long winThreshold;
 
+    @Deprecated
     public short getId() {
         return id;
     }
 
+    @Deprecated
     public void setId(short id) {
         this.id = id;
     }
 
+    @Deprecated
     public boolean isHasTimer() {
         return hasTimer;
     }
 
+    @Deprecated
     public void setHasTimer(boolean hasTimer) {
         this.hasTimer = hasTimer;
     }
 
+    @Deprecated
     public long getEndDate() {
         return endDate;
     }
 
+    @Deprecated
     public void setEndDate(long endDate) {
         this.endDate = endDate;
     }
 
+    @Deprecated
     public List<Long> getRolesFilter() {
         return rolesFilter;
     }
 
+    @Deprecated
     public void setRolesFilter(List<Long> rolesFilter) {
         this.rolesFilter = rolesFilter;
     }
 
+    @Deprecated
     public Long getTextChatId() {
         return textChatId;
     }
 
+    @Deprecated
     public void setTextChatId(Long textChatId) {
         this.textChatId = textChatId;
     }
 
+    @Deprecated
     public Long getMessageId() {
         return messageId;
     }
 
+    @Deprecated
     public void setMessageId(Long messageId) {
         this.messageId = messageId;
     }
 
+    @Deprecated
     public List<VotePoint> getVotePoints() {
         return votePoints;
     }
 
+    @Deprecated
     public void setVotePoints(List<VotePoint> votePoints) {
         this.votePoints = votePoints;
     }
 
+    @Deprecated
     public String getReadableVoteText() {
         return readableVoteText;
     }
 
+    @Deprecated
     public void setReadableVoteText(String readableVoteText) {
         this.readableVoteText = readableVoteText;
     }
 
+    @Deprecated
     public boolean isExceptionalVote() {
         return exceptionalVote != null && exceptionalVote;
     }
 
+    @Deprecated
     public void setExceptionalVote(Boolean exceptionalVote) {
         this.exceptionalVote = exceptionalVote != null ? exceptionalVote : false;
     }
 
+    @Deprecated
     public boolean isWithDefaultPoint() {
         return withDefaultPoint != null && withDefaultPoint;
     }
 
+    @Deprecated
     public void setWithDefaultPoint(boolean withDefaultPoint) {
         this.withDefaultPoint = withDefaultPoint;
     }
 
+    @Deprecated
     public long getWinThreshold() {
         return this.winThreshold != null ? this.winThreshold : -1L;
     }
 
+    @Deprecated
     public void setWinThreshold(long winThreshold) {
         this.winThreshold = winThreshold;
     }

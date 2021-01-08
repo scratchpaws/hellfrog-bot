@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
+@Deprecated
 public class MessageStatistic {
 
     private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
@@ -25,38 +26,47 @@ public class MessageStatistic {
     private volatile String lastKnownName = "";
     private volatile ConcurrentHashMap<Long, MessageStatistic> childStatistic = null;
 
+    @Deprecated
     public AtomicLong getMessagesCount() {
         return messagesCount;
     }
 
+    @Deprecated
     public void setMessagesCount(AtomicLong messagesCount) {
         this.messagesCount = messagesCount;
     }
 
+    @Deprecated
     public AtomicLong getLastMessageDate() {
         return lastMessageDate;
     }
 
+    @Deprecated
     public void setLastMessageDate(AtomicLong lastMessageDate) {
         this.lastMessageDate = lastMessageDate;
     }
 
+    @Deprecated
     public AtomicLong getTotalSymbolsCount() {
         return totalSymbolsCount;
     }
 
+    @Deprecated
     public void setTotalSymbolsCount(AtomicLong totalSymbolsCount) {
         this.totalSymbolsCount = totalSymbolsCount;
     }
 
+    @Deprecated
     public AtomicLong getTotalBytesCount() {
         return totalBytesCount;
     }
 
+    @Deprecated
     public void setTotalBytesCount(AtomicLong totalBytesCount) {
         this.totalBytesCount = totalBytesCount;
     }
 
+    @Deprecated
     @JsonIgnore
     public long getCountOfMessages() {
         if (messagesCount != null)
@@ -64,6 +74,7 @@ public class MessageStatistic {
         return 0L;
     }
 
+    @Deprecated
     @JsonIgnore
     public long getCountOfSymbols() {
         if (totalSymbolsCount != null) {
@@ -73,6 +84,7 @@ public class MessageStatistic {
         return 0L;
     }
 
+    @Deprecated
     @JsonIgnore
     public long getCountOfBytes() {
         if (totalBytesCount != null) {
@@ -82,6 +94,7 @@ public class MessageStatistic {
         return 0L;
     }
 
+    @Deprecated
     @JsonIgnore
     public long getSummaryCount() {
         long messages = this.getCountOfMessages(); // при нуле сообщений не учитываем остальное
@@ -90,11 +103,13 @@ public class MessageStatistic {
         return messages * symbols * bytes;
     }
 
+    @Deprecated
     @JsonIgnore
     private long getOneIfZero(long value) {
         return value > 0 ? value : 1L;
     }
 
+    @Deprecated
     @JsonIgnore
     public String getLastDate(@NotNull TimeZone timeZone) {
         if (lastMessageDate != null && lastMessageDate.get() > 0L) {
@@ -107,11 +122,13 @@ public class MessageStatistic {
         return "";
     }
 
+    @Deprecated
     @JsonIgnore
     public String getLastDate() {
         return getLastDate(UTC);
     }
 
+    @Deprecated
     public void increment(int messageLength, long bytesCount) {
         updateLastMessage();
         messagesCount.incrementAndGet();
@@ -119,6 +136,7 @@ public class MessageStatistic {
         totalBytesCount.addAndGet(bytesCount);
     }
 
+    @Deprecated
     public void incrementWithLastDate(Instant lastDate, int messageLength, long bytesCount) {
         messagesCount.incrementAndGet();
         totalSymbolsCount.addAndGet(messageLength);
@@ -126,6 +144,7 @@ public class MessageStatistic {
         lastMessageDate.set(CommonUtils.getLatestDate(lastDate, lastMessageDate.get()));
     }
 
+    @Deprecated
     public void decrement(int messageLength, long bytesCount) {
         if (messagesCount.get() > 0L) {
             messagesCount.decrementAndGet();
@@ -138,23 +157,28 @@ public class MessageStatistic {
         }
     }
 
+    @Deprecated
     private void updateLastMessage() {
         Calendar value = Calendar.getInstance(UTC);
         lastMessageDate.set(value.getTimeInMillis());
     }
 
+    @Deprecated
     public long getEntityId() {
         return entityId;
     }
 
+    @Deprecated
     public void setEntityId(long entityId) {
         this.entityId = entityId;
     }
 
+    @Deprecated
     public String getLastKnownName() {
         return lastKnownName;
     }
 
+    @Deprecated
     public void setLastKnownName(String lastKnownName) {
         this.lastKnownName = lastKnownName;
     }
@@ -176,14 +200,17 @@ public class MessageStatistic {
         return Objects.hash(messagesCount, lastMessageDate, entityId, lastKnownName, childStatistic);
     }
 
+    @Deprecated
     public ConcurrentHashMap<Long, MessageStatistic> getChildStatistic() {
         return childStatistic;
     }
 
+    @Deprecated
     public void setChildStatistic(ConcurrentHashMap<Long, MessageStatistic> childStatistic) {
         this.childStatistic = childStatistic;
     }
 
+    @Deprecated
     @JsonIgnore
     public MessageStatistic getChildItemStatistic(long itemId) {
         if (childStatistic == null) {

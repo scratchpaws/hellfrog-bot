@@ -104,6 +104,7 @@ public class SettingsController {
         return instance;
     }
 
+    @Deprecated
     private void loadCommonSettings() {
         ObjectMapper objectMapper = buildMapper();
 
@@ -152,6 +153,7 @@ public class SettingsController {
         }
     }
 
+    @Deprecated
     private void loadServersSettings() {
         ObjectMapper objectMapper = buildMapper();
         DirectoryStream.Filter<Path> onlyServerConfigs = entity ->
@@ -239,57 +241,69 @@ public class SettingsController {
         throw new RuntimeException("Bot stopped");
     }
 
+    @Deprecated
     public String getGlobalCommonPrefix() {
         return this.commonPreferences.getCommonBotPrefix();
     }
 
+    @Deprecated
     public void setGlobalCommonPrefix(String globalCommonPrefix) {
         this.commonPreferences.setCommonBotPrefix(globalCommonPrefix);
         saveCommonPreferences();
     }
 
+    @Deprecated
     public boolean addGlobalBotOwner(long userId) {
         boolean result = this.commonPreferences.addGlobalBotOwner(userId);
         saveCommonPreferences();
         return result;
     }
 
+    @Deprecated
     public boolean delGlobalBotOwner(long userId) {
         boolean result = this.commonPreferences.delGlobalBotOwner(userId);
         saveCommonPreferences();
         return result;
     }
 
+    @Deprecated
     public boolean isGlobalBotOwner(long userId) {
         return commonPreferences.getGlobalBotOwners().contains(userId);
     }
 
+    @Deprecated
     public List<Long> getGlobalBotOwners() {
         return this.commonPreferences.getGlobalBotOwners();
     }
 
+    @Deprecated
     public String getBotName() {
         return this.commonPreferences.getBotName();
     }
 
+    @Deprecated
     public void setBotName(String botName) {
         this.commonPreferences.setBotName(botName);
         saveCommonPreferences();
     }
 
+    @Deprecated
     public String getApiKey() {
         return this.commonPreferences.getApiKey();
     }
 
+    @Deprecated
     public String getBotPrefix(long serverId) {
         return getServerPreferences(serverId).getBotPrefix();
     }
 
+    @Deprecated
     public void setBotPrefix(long serverId, String botPrefix) {
         getServerPreferences(serverId).setBotPrefix(botPrefix);
         saveServerSideParameters(serverId);
     }
 
+    @Deprecated
     public ServerPreferences getServerPreferences(long serverId) {
         if (!prefByServer.containsKey(serverId)) {
             serverPrefCreateLock.lock();
@@ -306,6 +320,7 @@ public class SettingsController {
         return prefByServer.get(serverId);
     }
 
+    @Deprecated
     public ServerStatistic getServerStatistic(long serverId) {
         if (!statByServer.containsKey(serverId)) {
             serverStatCreateLock.lock();
@@ -321,14 +336,17 @@ public class SettingsController {
         return statByServer.get(serverId);
     }
 
+    @Deprecated
     public List<Long> getServerListWithConfig() {
         return new ArrayList<>(prefByServer.keySet());
     }
 
+    @Deprecated
     public List<Long> getServerListWithStatistic() {
         return new ArrayList<>(prefByServer.keySet());
     }
 
+    @Deprecated
     public void saveServerSideParameters(long serverId) {
         String fileName = serverId + SERVER_SETTINGS_FILES_SUFFIX;
         ServerPreferences toSave = getServerPreferences(serverId);
@@ -340,6 +358,7 @@ public class SettingsController {
         }
     }
 
+    @Deprecated
     public void saveServerSideStatistic(long serverId) {
         String fileName = serverId + SERVER_STATISTICS_FILES_SUFFIX;
         ServerStatistic toSave = getServerStatistic(serverId);
@@ -351,6 +370,7 @@ public class SettingsController {
         }
     }
 
+    @Deprecated
     public void saveCommonPreferences() {
         commonPrefSaveLock.lock();
         try {
@@ -360,6 +380,7 @@ public class SettingsController {
         }
     }
 
+    @Deprecated
     private void saveWithReplace(@NotNull Object value,
                                  @NotNull String fileName) {
         String tempFileName = fileName + ".tmp";
@@ -412,10 +433,12 @@ public class SettingsController {
         this.discordApi = discordApi;
     }
 
+    @Deprecated
     public boolean isEnableRemoteDebug() {
         return commonPreferences.isEnableRemoteDebug();
     }
 
+    @Deprecated
     public void setEnableRemoteDebug(boolean enableRemoteDebug) {
         commonPreferences.setEnableRemoteDebug(enableRemoteDebug);
     }
@@ -428,18 +451,22 @@ public class SettingsController {
         return this.lastCommandUsage;
     }
 
+    @Deprecated
     public Long getServerTransfer() {
         return commonPreferences.getServerTransfer();
     }
 
+    @Deprecated
     public void setServerTransfer(Long serverTransfer) {
         commonPreferences.setServerTransfer(serverTransfer);
     }
 
+    @Deprecated
     public Long getServerTextChatTransfer() {
         return commonPreferences.getServerTextChatTransfer();
     }
 
+    @Deprecated
     public void setServerTextChatTransfer(Long serverTextChatTransfer) {
         commonPreferences.setServerTextChatTransfer(serverTextChatTransfer);
     }

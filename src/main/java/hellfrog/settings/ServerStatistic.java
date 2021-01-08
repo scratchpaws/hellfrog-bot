@@ -16,6 +16,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+@Deprecated
 public class ServerStatistic {
 
     @JsonIgnore
@@ -30,6 +31,7 @@ public class ServerStatistic {
     private volatile ConcurrentHashMap<Long, MessageStatistic> textChatStats = new ConcurrentHashMap<>();
     private volatile Long startDate = 0L;
 
+    @Deprecated
     @JsonIgnore
     public static void appendResultStats(@NotNull MessageBuilder msg, @NotNull TreeMap<Long, List<String>> stats,
                                          int innerLevel) {
@@ -42,46 +44,57 @@ public class ServerStatistic {
                 }));
     }
 
+    @Deprecated
     public Long getStartDate() {
         return startDate != null ? startDate : 0L;
     }
 
+    @Deprecated
     public void setStartDate(Long startDate) {
         this.startDate = startDate != null ? startDate : 0L;
     }
 
+    @Deprecated
     public boolean isCollectNonDefaultSmileStats() {
         return collectNonDefaultSmileStats != null && collectNonDefaultSmileStats;
     }
 
+    @Deprecated
     public void setCollectNonDefaultSmileStats(boolean collectNonDefaultSmileStats) {
         this.collectNonDefaultSmileStats = collectNonDefaultSmileStats;
     }
 
+    @Deprecated
     public ConcurrentHashMap<Long, SmileStatistic> getNonDefaultSmileStats() {
         return nonDefaultSmileStats;
     }
 
+    @Deprecated
     public void setNonDefaultSmileStats(ConcurrentHashMap<Long, SmileStatistic> nonDefaultSmileStats) {
         this.nonDefaultSmileStats = nonDefaultSmileStats;
     }
 
+    @Deprecated
     public ConcurrentHashMap<Long, MessageStatistic> getUserMessagesStats() {
         return userMessagesStats;
     }
 
+    @Deprecated
     public void setUserMessagesStats(ConcurrentHashMap<Long, MessageStatistic> userMessagesStats) {
         this.userMessagesStats = userMessagesStats;
     }
 
+    @Deprecated
     public ConcurrentHashMap<Long, MessageStatistic> getTextChatStats() {
         return textChatStats;
     }
 
+    @Deprecated
     public void setTextChatStats(ConcurrentHashMap<Long, MessageStatistic> textChatStats) {
         this.textChatStats = textChatStats;
     }
 
+    @Deprecated
     @JsonIgnore
     public SmileStatistic getSmileStatistic(long emojiId) {
         if (nonDefaultSmileStats.containsKey(emojiId)) {
@@ -100,6 +113,7 @@ public class ServerStatistic {
         }
     }
 
+    @Deprecated
     @JsonIgnore
     public MessageStatistic getUserMessageStatistic(User user) {
         return getMessageStats(userMessagesStats,
@@ -107,6 +121,7 @@ public class ServerStatistic {
                 createUserStatLock);
     }
 
+    @Deprecated
     @JsonIgnore
     public MessageStatistic getTextChatStatistic(ServerTextChannel textChannel) {
         return getMessageStats(textChatStats,
@@ -114,6 +129,7 @@ public class ServerStatistic {
                 createTextChatStatLock);
     }
 
+    @Deprecated
     @JsonIgnore
     private MessageStatistic getMessageStats(ConcurrentHashMap<Long, MessageStatistic> statsMap,
                                              long entityId, String entityName,
@@ -136,6 +152,7 @@ public class ServerStatistic {
         }
     }
 
+    @Deprecated
     public void clear() {
         if (nonDefaultSmileStats != null)
             nonDefaultSmileStats.clear();
@@ -145,17 +162,20 @@ public class ServerStatistic {
             textChatStats.clear();
     }
 
+    @Deprecated
     @JsonIgnore
     public TreeMap<Long, List<String>> buildUserStats(List<User> userList) {
         return buildStatLines(userMessagesStats, userList, null, 1);
     }
 
+    @Deprecated
     @JsonIgnore
     public TreeMap<Long, List<String>> buildTextChatStats(List<ServerTextChannel> channelList,
                                                           List<User> userList) {
         return buildStatLines(textChatStats, userList, channelList, 1);
     }
 
+    @Deprecated
     @JsonIgnore
     private TreeMap<Long, List<String>> buildStatLines(@Nullable ConcurrentHashMap<Long, MessageStatistic> statMap,
                                                        @NotNull List<User> userList, @Nullable List<ServerTextChannel> channelList,

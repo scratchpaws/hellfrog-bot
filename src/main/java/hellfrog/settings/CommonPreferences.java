@@ -7,6 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Общие настройки бота
  */
+@Deprecated
 public class CommonPreferences
         implements Serializable {
 
@@ -42,70 +43,86 @@ public class CommonPreferences
      *
      * @return
      */
+    @Deprecated
     public String getCommonBotPrefix() {
         return commonBotPrefix;
     }
 
+    @Deprecated
     public void setCommonBotPrefix(String commonBotPrefix) {
         this.commonBotPrefix = commonBotPrefix;
     }
 
+    @Deprecated
     public String getBotName() {
         return botName;
     }
 
+    @Deprecated
     public void setBotName(String botName) {
         this.botName = botName;
     }
 
+    @Deprecated
     public List<Long> getGlobalBotOwners() {
         return globalBotOwners;
     }
 
+    @Deprecated
     public void setGlobalBotOwners(List<Long> globalBotOwners) {
         this.globalBotOwners = new CopyOnWriteArrayList<>(globalBotOwners);
     }
 
+    @Deprecated
     public boolean addGlobalBotOwner(long id) {
         if (id < 0 || globalBotOwners.contains(id)) return false;
         globalBotOwners.add(id);
         return true;
     }
 
+    @Deprecated
     public boolean delGlobalBotOwner(long id) {
         if (id < 0 || !globalBotOwners.contains(id)) return false;
         globalBotOwners.remove(id);
         return true;
     }
 
+    @Deprecated
     public String getApiKey() {
         return apiKey;
     }
 
+    @Deprecated
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
     }
 
+    @Deprecated
     public boolean isEnableRemoteDebug() {
         return enableRemoteDebug != null && enableRemoteDebug;
     }
 
+    @Deprecated
     public void setEnableRemoteDebug(boolean enableRemoteDebug) {
         this.enableRemoteDebug = enableRemoteDebug;
     }
 
+    @Deprecated
     public Long getServerTransfer() {
         return serverTransfer;
     }
 
+    @Deprecated
     public void setServerTransfer(Long serverTransfer) {
         this.serverTransfer = serverTransfer;
     }
 
+    @Deprecated
     public Long getServerTextChatTransfer() {
         return serverTextChatTransfer;
     }
 
+    @Deprecated
     public void setServerTextChatTransfer(Long serverTextChatTransfer) {
         this.serverTextChatTransfer = serverTextChatTransfer;
     }
