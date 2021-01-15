@@ -28,11 +28,14 @@ class CommunityControlDAOImpl
             + "where u.serverId = :serverId";
     private static final String GET_COMMUNITY_CONTROL_USER_QUERY = "from " + CommunityControlUser.class.getSimpleName() + " u "
             + "where u.serverId = :serverId and u.userId = :userId";
+    private static final String CHECK_COMMUNITY_CONTROL_USER_QUERY = "select count(u) from " + CommunityControlUser.class.getSimpleName() + " u "
+            + "where u.serverId = :serverId and u.userId = :userId";
 
     CommunityControlDAOImpl(@NotNull AutoSessionFactory sessionFactory) {
         this.sessionFactory = sessionFactory;
     }
 
+    @Override
     @NotNull
     public Optional<CommunityControlSettings> getSettings(final long serverId) {
         try (AutoSession session = sessionFactory.openSession()) {
@@ -48,6 +51,7 @@ class CommunityControlDAOImpl
         }
     }
 
+    @Override
     public void setSettings(@NotNull final CommunityControlSettings settings) {
         try (AutoSession session = sessionFactory.openSession()) {
             CommunityControlSettings stored = session.createQuery(GET_SETTINGS_QUERY, CommunityControlSettings.class)
@@ -72,6 +76,7 @@ class CommunityControlDAOImpl
         }
     }
 
+    @Override
     @NotNull
     @UnmodifiableView
     public List<Long> getUsers(final long serverId) {
@@ -99,28 +104,34 @@ class CommunityControlDAOImpl
         }
     }
 
-    public void addUser(final long serverId, final long userId) {
-        try (AutoSession session = sessionFactory.openSession()) {
-            CommunityControlUser user = session.createQuery(GET_COMMUNITY_CONTROL_USER_QUERY, CommunityControlUser.class)
-                    .setParameter("serverId", serverId)
-                    .setParameter("userId", userId)
-                    .uniqueResult();
-            if (user == null) {
-                user = new CommunityControlUser();
-                user.setServerId(serverId);
-                user.setUserId(userId);
-                user.setCreateDate(Timestamp.from(Instant.now()));
-                session.save(user);
+    @Override
+    public boolean addUser(final long serverId, final long userId) {
+        if (!isControlUser(serverId, userId)) {
+            try (AutoSession session = sessionFactory.openSession()) {
+                CommunityControlUser user = session.createQuery(GET_COMMUNITY_CONTROL_USER_QUERY, CommunityControlUser.class)
+                        .setParameter("serverId", serverId)
+                        .setParameter("userId", userId)
+                        .uniqueResult();
+                if (user == null) {
+                    user = new CommunityControlUser();
+                    user.setServerId(serverId);
+                    user.setUserId(userId);
+                    user.setCreateDate(Timestamp.from(Instant.now()));
+                    session.save(user);
+                    return true;
+                }
+            } catch (Exception err) {
+                String errMsg = String.format("Unable to add user to community control users list, server id %d, user id %d: %s",
+                        serverId, userId, err.getMessage());
+                log.error(errMsg, err);
+                LogsStorage.addErrorMessage(errMsg);
             }
-        } catch (Exception err) {
-            String errMsg = String.format("Unable to add user to community control users list, server id %d, user id %d: %s",
-                    serverId, userId, err.getMessage());
-            log.error(errMsg, err);
-            LogsStorage.addErrorMessage(errMsg);
         }
+        return false;
     }
 
-    public void removeUser(final long serverId, final long userId) {
+    @Override
+    public boolean removeUser(final long serverId, final long userId) {
         try (AutoSession session = sessionFactory.openSession()) {
             CommunityControlUser user = session.createQuery(GET_COMMUNITY_CONTROL_USER_QUERY, CommunityControlUser.class)
                     .setParameter("serverId", serverId)
@@ -128,6 +139,7 @@ class CommunityControlDAOImpl
                     .uniqueResult();
             if (user != null) {
                 session.remove(user);
+                return true;
             }
         } catch (Exception err) {
             String errMsg = String.format("Unable to remove user from community control users list, server id %d, user id %d: %s",
@@ -135,5 +147,23 @@ class CommunityControlDAOImpl
             log.error(errMsg, err);
             LogsStorage.addErrorMessage(errMsg);
         }
+        return false;
+    }
+
+    @Override
+    public boolean isControlUser(final long serverId, final long userId) {
+        try (AutoSession session = sessionFactory.openSession()) {
+            long count = session.createQuery(CHECK_COMMUNITY_CONTROL_USER_QUERY, Long.class)
+                    .setParameter("serverId", serverId)
+                    .setParameter("userId", userId)
+                    .uniqueResult();
+            return count > 0L;
+        } catch (Exception err) {
+            String errMsg = String.format("Unable check that user with id %d from community control users list by server id %d: %s",
+                    userId, serverId, err.getMessage());
+            log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
+        }
+        return false;
     }
 }

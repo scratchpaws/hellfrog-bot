@@ -2,8 +2,8 @@ package hellfrog.commands.cmdline;
 
 import hellfrog.common.CommonUtils;
 import hellfrog.core.ServerSideResolver;
-import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
+import hellfrog.settings.db.ServerPreferencesDAO;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.DiscordApi;
@@ -71,12 +71,10 @@ public class CongratulationCommand
                                                    ArrayList<String> anotherLines) {
 
         final SettingsController settingsController = SettingsController.getInstance();
-        final ServerPreferences serverPreferences = settingsController.getServerPreferences(server.getId());
+        final ServerPreferencesDAO serverPreferencesDAO = settingsController.getMainDBController().getServerPreferencesDAO();
         final DiscordApi api = settingsController.getDiscordApi();
 
-        if (cmdline.hasOption(status.getOpt())) {
-            displayStatus(serverPreferences, server, api, channel);
-        } else {
+        if (!cmdline.hasOption(status.getOpt())) {
 
             boolean setupChannel = false;
             ServerTextChannel congratulationChannel = null;
@@ -126,34 +124,32 @@ public class CongratulationCommand
 
             if (setupChannel) {
                 long channelId = congratulationChannel != null ? congratulationChannel.getId() : 0L;
-                serverPreferences.setCongratulationChannel(channelId);
+                serverPreferencesDAO.setCongratulationChannel(server.getId(), channelId);
             }
 
             if (setupTimezone) {
                 String zoneId = timeZone != null ? timeZone.getID() : "";
-                serverPreferences.setTimezone(zoneId);
+                serverPreferencesDAO.setCongratulationTimeZone(server.getId(), zoneId);
             }
-
-            settingsController.saveServerSideParameters(server.getId());
-
-            displayStatus(serverPreferences, server, api, channel);
         }
+
+        displayStatus(serverPreferencesDAO, server, api, channel);
     }
 
-    private void displayStatus(@NotNull final ServerPreferences serverPreferences,
+    private void displayStatus(@NotNull final ServerPreferencesDAO serverPreferencesDAO,
                                @NotNull final Server server,
                                @NotNull final DiscordApi api,
                                @NotNull final TextChannel channel) {
 
         String congratulationStatus = "Congratulations disabled.";
-        Long congratulationChannelId = serverPreferences.getCongratulationChannel();
-        if (congratulationChannelId != null && congratulationChannelId > 0L) {
+        long congratulationChannelId = serverPreferencesDAO.getCongratulationChannel(server.getId());
+        if (congratulationChannelId > 0L) {
             congratulationStatus = server.getTextChannelById(congratulationChannelId)
                     .map(ch -> "Congratulations enabled on channel " + ch.getMentionTag() + ".")
                     .orElse("Congratulations disabled.");
         }
         String timezoneStatus = "Timezone: CET";
-        String timezoneId = serverPreferences.getTimezone();
+        String timezoneId = serverPreferencesDAO.getCongratulationTimeZone(server.getId());
         if (CommonUtils.isTrStringNotEmpty(timezoneId)) {
             try {
                 TimeZone timeZone = TimeZone.getTimeZone(timezoneId);

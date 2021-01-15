@@ -2,21 +2,22 @@ package hellfrog.commands.cmdline;
 
 import com.vdurmont.emoji.EmojiParser;
 import hellfrog.common.CommonUtils;
-import hellfrog.common.MessageUtils;
+import hellfrog.common.LongEmbedMessage;
 import hellfrog.core.ServerSideResolver;
-import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
+import hellfrog.settings.db.CommunityControlDAO;
+import hellfrog.settings.db.entity.CommunityControlSettings;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
-import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,42 +30,42 @@ public class CornControlCommand
     private static final String PREFIX = "corn";
     private static final String DESCRIPTION = "Community users control";
 
-    private static final Option ADD_OPTION = Option.builder("a")
+    private final Option ADD_OPTION = Option.builder("a")
             .longOpt("add")
             .hasArgs()
             .argName("user")
             .desc("Add user for community control")
             .build();
 
-    private static final Option DEL_OPTION = Option.builder("d")
+    private final Option DEL_OPTION = Option.builder("d")
             .longOpt("delete")
             .hasArgs()
             .argName("user")
             .desc("Remove user from community control")
             .build();
 
-    private static final Option ROLE_OPTION = Option.builder("r")
+    private final Option ROLE_OPTION = Option.builder("r")
             .longOpt("role")
             .hasArg()
             .argName("role")
             .desc("Role that obtained by exceeding the number of reactions")
             .build();
 
-    private static final Option THRESHOLD_OPTION = Option.builder("t")
+    private final Option THRESHOLD_OPTION = Option.builder("t")
             .longOpt("threshold")
             .hasArg()
             .argName("number of reacts")
             .desc("The threshold at which the role is assigned")
             .build();
 
-    private static final Option EMOJI_OPTION = Option.builder("e")
+    private final Option EMOJI_OPTION = Option.builder("e")
             .longOpt("emoji")
             .hasArg()
             .argName("emoji of reacts")
             .desc("Emoji for which the role is assigned")
             .build();
 
-    private static final Option SHOW_OPTION = Option.builder("s")
+    private final Option SHOW_OPTION = Option.builder("s")
             .desc("Show current settings")
             .build();
 
@@ -119,9 +120,6 @@ public class CornControlCommand
             showErrorMessage("Unable to use show and charge options at same time", event);
             return;
         }
-
-        ServerPreferences serverPreferences =
-                SettingsController.getInstance().getServerPreferences(server.getId());
 
         List<User> usersToAdd = Collections.emptyList();
         if (addAction && !rawUsersToAdd.isEmpty()) {
@@ -196,103 +194,119 @@ public class CornControlCommand
             return;
         }
 
-        MessageBuilder resultMessage = new MessageBuilder();
+        final LongEmbedMessage message = new LongEmbedMessage();
+        final CommunityControlDAO controlDAO = SettingsController.getInstance()
+                .getMainDBController()
+                .getCommunityControlDAO();
 
         if (!showMode) {
+
             usersToAdd.stream()
-                    .filter(u -> serverPreferences.getCommunityControlUsers().add(u.getId()))
-                    .map(server::getDisplayName)
+                    .filter(u -> controlDAO.addUser(server.getId(), u.getId()))
+                    .map(User::getMentionTag)
                     .reduce((s1, s2) -> s1 + ", " + s2)
-                    .ifPresent(added -> resultMessage.append("Added users to community control: ")
+                    .ifPresent(added -> message.append("Added users to community control: ")
                             .append(added)
                             .appendNewLine());
 
             usersToDelete.stream()
-                    .filter(u -> serverPreferences.getCommunityControlUsers().remove(u.getId()))
-                    .map(server::getDisplayName)
+                    .filter(u -> controlDAO.removeUser(server.getId(), u.getId()))
+                    .map(User::getMentionTag)
                     .reduce((s1, s2) -> s1 + ", " + s2)
-                    .ifPresent(added -> resultMessage.append("Removed users to community control: ")
+                    .ifPresent(added -> message.append("Removed users to community control: ")
                             .append(added)
                             .appendNewLine());
 
+            CommunityControlSettings controlSettings = controlDAO.getSettings(server.getId())
+                    .orElse(new CommunityControlSettings());
+            controlSettings.setServerId(server.getId());
+
             if (thresholdChange && threshold > 0L) {
-                resultMessage.append("Reactions threshold changed to ")
+                message.append("Reactions threshold changed to ")
                         .append(threshold)
                         .append(" counts.")
                         .appendNewLine();
-                serverPreferences.setCommunityControlThreshold(threshold);
+                controlSettings.setThreshold(threshold);
             }
 
             role.ifPresent(r -> {
-                serverPreferences.setCommunityControlRoleId(r.getId());
-                resultMessage.append("Set role: ")
-                        .append("@").append(r.getName())
-                        .appendNewLine();
+                controlSettings.setRoleId(r.getId());
+                message.append("Set role: ")
+                        .append(r)
+                        .append('\n');
             });
 
             customEmoji.ifPresent(ke -> {
-                serverPreferences.setCommunityControlCustomEmojiId(ke.getId());
-                serverPreferences.setCommunityControlEmoji(null);
-                resultMessage.append("Set emoji: ")
+                controlSettings.setCustomEmojiId(ke.getId());
+                controlSettings.setUnicodeEmoji(null);
+                message.append("Set emoji: ")
                         .append(ke)
                         .appendNewLine();
             });
 
             stringEmoji.ifPresent(e -> {
-                serverPreferences.setCommunityControlCustomEmojiId(0L);
-                serverPreferences.setCommunityControlEmoji(e);
-                resultMessage.append("Set emoji: ")
+                controlSettings.setUnicodeEmoji(e);
+                controlSettings.setCustomEmojiId(0L);
+                message.append("Set emoji: ")
                         .append(e)
                         .appendNewLine();
             });
 
-            SettingsController.getInstance()
-                    .saveServerSideParameters(server.getId());
+            controlDAO.setSettings(controlSettings);
         }
 
-        addShowData(server, serverPreferences, resultMessage);
-        MessageUtils.sendLongMessage(resultMessage, channel);
+        addShowData(server, message);
+
+        message.setColor(Color.CYAN)
+                .setTitle("Community control")
+                .setTimestampToNow()
+                .send(channel);
     }
 
-    private void addShowData(Server server, ServerPreferences serverPreferences, MessageBuilder resultMessage) {
-        List<String> communityControlUsers = serverPreferences.getCommunityControlUsers().stream()
+    private void addShowData(final Server server, final LongEmbedMessage message) {
+
+        final CommunityControlDAO controlDAO = SettingsController.getInstance()
+                .getMainDBController()
+                .getCommunityControlDAO();
+        final CommunityControlSettings settings = controlDAO.getSettings(server.getId()).orElse(new CommunityControlSettings());
+        List<String> communityControlUsers = controlDAO.getUsers(server.getId()).stream()
                 .map(server::getMemberById)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .filter(u -> !u.isBot())
-                .map(server::getDisplayName)
+                .map(User::getMentionTag)
                 .collect(Collectors.toUnmodifiableList());
         Optional<String> controlUsersAsString = communityControlUsers.stream()
                 .reduce((s1, s2) -> s1 + ", " + s2);
-        Optional<Role> controlRole = server.getRoleById(serverPreferences.getCommunityControlRoleId());
-        Optional<KnownCustomEmoji> customEmoji = server.getCustomEmojiById(
-                serverPreferences.getCommunityControlCustomEmojiId());
-        Optional<String> stringEmoji = Optional.ofNullable(serverPreferences.getCommunityControlEmoji());
-        boolean active = serverPreferences.getCommunityControlThreshold() > 0L
-                && serverPreferences.getCommunityControlThreshold() <= communityControlUsers.size()
+        Optional<Role> controlRole = server.getRoleById(settings.getRoleId());
+        Optional<KnownCustomEmoji> customEmoji = server.getCustomEmojiById(settings.getCustomEmojiId());
+        Optional<String> stringEmoji = Optional.ofNullable(settings.getUnicodeEmoji());
+        boolean active = settings.getThreshold() > 0L
+                && settings.getThreshold() < communityControlUsers.size()
                 && (customEmoji.isPresent() || stringEmoji.isPresent())
                 && controlRole.isPresent();
-        resultMessage.append("Community control status:", MessageDecoration.BOLD)
+        message.append("Community control status:", MessageDecoration.BOLD)
                 .append(" ")
                 .append(active ? "enabled" : "disabled", MessageDecoration.CODE_SIMPLE)
                 .appendNewLine();
         controlUsersAsString.ifPresent(users ->
-                resultMessage.append("Users list: ")
+                message.append("Users list: ")
                         .append(users)
                         .appendNewLine());
-        if (serverPreferences.getCommunityControlThreshold() > 0L) {
-            resultMessage.append("Reactions threshold: ")
-                    .append(serverPreferences.getCommunityControlThreshold())
+        if (settings.getThreshold() > 0L) {
+            message.append("Reactions threshold: ")
+                    .append(settings.getThreshold())
                     .append(" counts.")
                     .appendNewLine();
         }
-        controlRole.ifPresent(r -> resultMessage.append("Role: ")
-                .append("@").append(r.getName())
+        controlRole.ifPresent(r -> message.append("Role: ")
+                .append(r)
                 .appendNewLine());
-        customEmoji.ifPresent(e -> resultMessage.append("Emoji: ")
-                .append(e).appendNewLine());
-        stringEmoji.ifPresent(e -> resultMessage.append("Emoji: ")
-                .append(e).appendNewLine());
+        customEmoji.ifPresent(e -> message.append("Emoji: ")
+                .append(e)
+                .appendNewLine());
+        stringEmoji.ifPresent(e -> message.append("Emoji: ")
+                .append(e)
+                .appendNewLine());
     }
 
     /**

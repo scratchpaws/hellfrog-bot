@@ -67,10 +67,20 @@ public class CommunityControlDAOTest {
                 List<Long> mustBeEmpty = communityControlDAO.getUsers(testServer.serverId);
                 TestUtils.assertEmpty(mustBeEmpty, "Community control users must be empty");
 
-                testServer.controlUsers.forEach(userId -> communityControlDAO.addUser(testServer.serverId, userId));
+                testServer.controlUsers.forEach(userId -> {
+                    boolean added = communityControlDAO.addUser(testServer.serverId, userId);
+                    Assertions.assertTrue(added, "User must be add");
+                    boolean present = communityControlDAO.isControlUser(testServer.serverId, userId);
+                    Assertions.assertTrue(present, "User must be present");
+                });
                 List<Long> addedList = communityControlDAO.getUsers(testServer.serverId);
 
-                testServer.toDelete.forEach(userId -> communityControlDAO.removeUser(testServer.serverId, userId));
+                testServer.toDelete.forEach(userId -> {
+                    boolean removed = communityControlDAO.removeUser(testServer.serverId, userId);
+                    Assertions.assertTrue(removed, "User must be remove");
+                    boolean present = communityControlDAO.isControlUser(testServer.serverId, userId);
+                    Assertions.assertFalse(present, "User must NOT be present");
+                });
                 List<Long> afterRemoveList = communityControlDAO.getUsers(testServer.serverId);
 
                 String debugAddedList = printUsers(addedList);

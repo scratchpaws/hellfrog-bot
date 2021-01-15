@@ -105,7 +105,7 @@ public class AutoPromoteService
                             return;
                         }
                         server.getTextChannelById(joinLeaveChannelId).ifPresent(serverTextChannel ->
-                                UserUtils.displayRoleAssign(server, serverTextChannel, role, member));
+                                UserUtils.assignRoleAndDisplay(server, serverTextChannel, role, member));
                     }
                 });
     }

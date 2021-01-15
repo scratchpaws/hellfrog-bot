@@ -76,10 +76,10 @@ public final class UserUtils {
         }
     }
 
-    public static void displayRoleAssign(@NotNull final Server server,
-                                         @NotNull final ServerTextChannel channel,
-                                         @NotNull final Role role,
-                                         @NotNull final User member) {
+    public static void assignRoleAndDisplay(@NotNull final Server server,
+                                            @NotNull final ServerTextChannel channel,
+                                            @NotNull final Role role,
+                                            @NotNull final User member) {
         Instant currentStamp = Instant.now();
         UserCachedData userCachedData = new UserCachedData(member, server);
         String userName = userCachedData.getDisplayUserName()

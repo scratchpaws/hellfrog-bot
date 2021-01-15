@@ -36,29 +36,29 @@ public class AutoPromoteCommand
             Re-adding a configuration with an existing role will change the current role assignment timeout.
             Roles deleted on the server will be removed from the configurations automatically.""";
 
-    private static final Option ROLE_OPTION = Option.builder("r")
+    private final Option ROLE_OPTION = Option.builder("r")
             .hasArg()
             .argName("role")
             .desc("Role name, tag or id")
             .build();
 
-    private static final Option TIMEOUT_OPTION = Option.builder("t")
+    private final Option TIMEOUT_OPTION = Option.builder("t")
             .hasArg()
             .argName("seconds")
             .desc("Timeout before role will be assign")
             .build();
 
-    private static final Option SHOW_OPTION = Option.builder("s")
+    private final Option SHOW_OPTION = Option.builder("s")
             .longOpt("show")
             .desc("Show current status info")
             .build();
 
-    private static final Option ADD_OPTION = Option.builder("a")
+    private final Option ADD_OPTION = Option.builder("a")
             .desc("Add (or update) auto assign role configuration")
             .longOpt("add")
             .build();
 
-    private static final Option DEL_OPTION = Option.builder("d")
+    private final Option DEL_OPTION = Option.builder("d")
             .desc("Delete auto assign role configuration")
             .longOpt("del")
             .build();

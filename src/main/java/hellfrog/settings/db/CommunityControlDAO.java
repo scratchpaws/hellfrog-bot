@@ -17,7 +17,9 @@ public interface CommunityControlDAO {
     @NotNull
     @UnmodifiableView List<Long> getUsers(final long serverId);
 
-    void addUser(final long serverId, final long userId);
+    boolean addUser(final long serverId, final long userId);
 
-    void removeUser(final long serverId, final long userId);
+    boolean removeUser(final long serverId, final long userId);
+
+    boolean isControlUser(final long serverId, final long userId);
 }

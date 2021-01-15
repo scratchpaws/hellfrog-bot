@@ -24,7 +24,7 @@ import java.util.Optional;
  * Основные функции команд бота
  */
 public abstract class BotCommand
-    extends ACLCommand {
+        extends ACLCommand {
 
     private static final int HELP_USAGE_WIDTH = 512;
     private static final List<BotCommand> ALL_COMMANDS =
@@ -62,10 +62,13 @@ public abstract class BotCommand
     private String generateHelpUsage() {
         HelpFormatter formatter = new HelpFormatter();
 
+        final String botPrefix = SettingsController.getInstance()
+                .getMainDBController()
+                .getCommonPreferencesDAO()
+                .getBotPrefix();
         StringWriter stringWriter = new StringWriter();
-        SettingsController settingsController = SettingsController.getInstance();
         try (PrintWriter printWriter = new PrintWriter(stringWriter, true)) {
-            formatter.printHelp(printWriter, HELP_USAGE_WIDTH, settingsController.getGlobalCommonPrefix() + " " +
+            formatter.printHelp(printWriter, HELP_USAGE_WIDTH, botPrefix + " " +
                             getPrefix(),
                     getCommandDescription(),
                     control, 1, 1, footer, true);
