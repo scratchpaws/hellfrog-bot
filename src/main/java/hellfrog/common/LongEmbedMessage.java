@@ -150,10 +150,6 @@ public class LongEmbedMessage
         return this;
     }
 
-    public CompletableFuture<Message> send(MessageCreateEvent event) {
-        return send(event.getChannel());
-    }
-
     public CompletableFuture<Message> send(Messageable target) {
 
         final CompletableFuture<Message> future = new CompletableFuture<>();

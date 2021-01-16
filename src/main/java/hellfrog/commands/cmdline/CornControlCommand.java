@@ -194,7 +194,7 @@ public class CornControlCommand
             return;
         }
 
-        final LongEmbedMessage message = new LongEmbedMessage();
+        final LongEmbedMessage message = LongEmbedMessage.withTitleInfoStyle("Community control");
         final CommunityControlDAO controlDAO = SettingsController.getInstance()
                 .getMainDBController()
                 .getCommunityControlDAO();
@@ -257,10 +257,7 @@ public class CornControlCommand
 
         addShowData(server, message);
 
-        message.setColor(Color.CYAN)
-                .setTitle("Community control")
-                .setTimestampToNow()
-                .send(channel);
+        super.showMessage(message, event);
     }
 
     private void addShowData(final Server server, final LongEmbedMessage message) {

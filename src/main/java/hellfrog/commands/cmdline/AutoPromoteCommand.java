@@ -1,8 +1,9 @@
 package hellfrog.commands.cmdline;
 
 import hellfrog.common.CommonUtils;
-import hellfrog.core.ServerSideResolver;
+import hellfrog.common.LongEmbedMessage;
 import hellfrog.core.AutoPromoteService;
+import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import hellfrog.settings.db.entity.AutoPromoteConfig;
 import org.apache.commons.cli.CommandLine;
@@ -178,33 +179,30 @@ public class AutoPromoteCommand
                             @NotNull final MessageCreateEvent event,
                             @NotNull final Server server) {
 
-        StringBuilder result = new StringBuilder();
-        result.append("Auto promote roles for all new users join is ")
+        LongEmbedMessage message = LongEmbedMessage.withTitleInfoStyle("Auto promote roles settings")
+                .append("Auto promote roles for all new users join is ")
                 .append(configList.isEmpty() ? "**disabled**" : "**enabled**");
 
         if (!configList.isEmpty()) {
-            result.append("\nConfigurations:\n");
+            message.append("\nConfigurations:\n");
             int count = 0;
             for (AutoPromoteConfig config : configList) {
                 Optional<Role> mayBeRole = server.getRoleById(config.getRoleId());
                 if (mayBeRole.isPresent()) {
                     count++;
-                    result.append(count).append(". ").append(mayBeRole.get().getMentionTag())
+                    message.append(count).append(". ").append(mayBeRole.get())
                             .append(", ");
                     if (config.getTimeout() > 0L) {
-                        result.append("assign timeout: ").append(config.getTimeout()).append(" sec.");
+                        message.append("assign timeout: ").append(config.getTimeout()).append(" sec.");
                     } else {
-                        result.append("assign immediately.");
+                        message.append("assign immediately.");
                     }
-                    result.append('\n');
+                    message.appendNewLine();
                 }
             }
         }
 
-        List<String> messages = CommonUtils.splitEqually(result.toString(), 2000);
-        for (String text : messages) {
-            showInfoMessage(text, event);
-        }
+        super.showMessage(message, event);
     }
 
     private void addUpdateAction(@NotNull final AutoPromoteService autoPromoteService,
@@ -214,7 +212,8 @@ public class AutoPromoteCommand
                                  @NotNull final Role role,
                                  final long timeout) {
 
-        StringBuilder message = new StringBuilder();
+        LongEmbedMessage message = LongEmbedMessage.withTitleInfoStyle("Auto promote roles settings");
+
         boolean modify = configList.stream()
                 .anyMatch(config -> config.getRoleId() == role.getId());
         if (modify) {
@@ -223,7 +222,7 @@ public class AutoPromoteCommand
             message.append("Added ");
         }
         message.append("auto promote role configuration:\n")
-                .append(role.getMentionTag()).append(", ");
+                .append(role).append(", ");
 
         if (timeout > 0L) {
             message.append("assign timeout: ").append(timeout).append(" sec.");
@@ -233,7 +232,7 @@ public class AutoPromoteCommand
 
         autoPromoteService.addUpdateConfiguration(server, role, timeout);
 
-        super.showInfoMessage(message.toString(), event);
+        super.showMessage(message, event);
     }
 
     private void removeAction(@NotNull final AutoPromoteService autoPromoteService,
@@ -246,8 +245,9 @@ public class AutoPromoteCommand
                 .filter(config -> config.getRoleId() == role.getId())
                 .findFirst()
                 .ifPresentOrElse(config -> {
-                    StringBuilder message = new StringBuilder("Removed configuration:\n")
-                            .append(role.getMentionTag()).append(", ");
+                    LongEmbedMessage message = LongEmbedMessage.withTitleInfoStyle("Auto promote roles settings")
+                            .append("Removed configuration:\n")
+                            .append(role).append(", ");
                     if (config.getTimeout() > 0L) {
                         message.append("assign timeout: ").append(config.getTimeout()).append(" sec.");
                     } else {
@@ -255,7 +255,7 @@ public class AutoPromoteCommand
                     }
                     autoPromoteService.removeConfiguration(server, role);
 
-                    super.showInfoMessage(message.toString(), event);
+                    super.showMessage(message, event);
                 }, () -> super.showErrorMessage("No changes: no configuration found for role " + role.getMentionTag(), event));
     }
 }

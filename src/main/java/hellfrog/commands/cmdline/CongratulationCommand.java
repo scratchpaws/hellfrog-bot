@@ -6,16 +6,12 @@ import hellfrog.settings.SettingsController;
 import hellfrog.settings.db.ServerPreferencesDAO;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
-import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.MessageBuilder;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Optional;
@@ -72,7 +68,6 @@ public class CongratulationCommand
 
         final SettingsController settingsController = SettingsController.getInstance();
         final ServerPreferencesDAO serverPreferencesDAO = settingsController.getMainDBController().getServerPreferencesDAO();
-        final DiscordApi api = settingsController.getDiscordApi();
 
         if (!cmdline.hasOption(status.getOpt())) {
 
@@ -133,13 +128,12 @@ public class CongratulationCommand
             }
         }
 
-        displayStatus(serverPreferencesDAO, server, api, channel);
+        displayStatus(serverPreferencesDAO, server, event);
     }
 
     private void displayStatus(@NotNull final ServerPreferencesDAO serverPreferencesDAO,
                                @NotNull final Server server,
-                               @NotNull final DiscordApi api,
-                               @NotNull final TextChannel channel) {
+                               @NotNull final MessageCreateEvent event) {
 
         String congratulationStatus = "Congratulations disabled.";
         long congratulationChannelId = serverPreferencesDAO.getCongratulationChannel(server.getId());
@@ -157,15 +151,8 @@ public class CongratulationCommand
             } catch (Exception ignore) {
             }
         }
-        String resultMessage = congratulationStatus + '\n' + timezoneStatus;
-        new MessageBuilder()
-                .setEmbed(new EmbedBuilder()
-                        .setColor(Color.CYAN)
-                        .setAuthor(api.getYourself())
-                        .setTimestampToNow()
-                        .setTitle("Congratulation settings")
-                        .setDescription(resultMessage))
-                .send(channel);
+        String resultMessage = "Congratulation settings:\n" + congratulationStatus + '\n' + timezoneStatus;
+        super.showInfoMessage(resultMessage, event);
     }
 
     @Override
