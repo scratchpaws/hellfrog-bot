@@ -251,6 +251,7 @@ public class CornControlCommand
                         .append(e)
                         .appendNewLine();
             });
+            message.appendNewLine();
 
             controlDAO.setSettings(controlSettings);
         }
@@ -281,7 +282,7 @@ public class CornControlCommand
                 && settings.getThreshold() < communityControlUsers.size()
                 && (customEmoji.isPresent() || stringEmoji.isPresent())
                 && controlRole.isPresent();
-        message.append("Community control status:", MessageDecoration.BOLD)
+        message.append("Current community control status:", MessageDecoration.BOLD)
                 .append(" ")
                 .append(active ? "enabled" : "disabled", MessageDecoration.CODE_SIMPLE)
                 .appendNewLine();
