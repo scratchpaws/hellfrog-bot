@@ -13,6 +13,7 @@ import org.jetbrains.annotations.UnmodifiableView;
 import java.awt.*;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -72,6 +73,20 @@ public class LongEmbedMessage
         if (decoration != null) {
             messageBuffer.append(decoration.getSuffix());
         }
+        return this;
+    }
+
+    public LongEmbedMessage append(LongEmbedMessage another) {
+        if (another == null) {
+            messageBuffer.append((Object)null);
+        } else {
+            messageBuffer.append(another.messageBuffer);
+        }
+        return this;
+    }
+
+    public LongEmbedMessage appendf(String format, Object... args) {
+        messageBuffer.append(new Formatter().format(format, args).toString());
         return this;
     }
 

@@ -4,8 +4,6 @@ import hellfrog.settings.SettingsController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
-import org.javacord.api.entity.message.MessageBuilder;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.reaction.SingleReactionEvent;
@@ -13,8 +11,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 public class BroadCast
         implements CommonConstants {
@@ -26,7 +24,7 @@ public class BroadCast
     private static final Color ERROR_COLOR = Color.RED;
     private static final Color UNKNOWN_COLOR = Color.BLACK;
 
-    public static void sendServiceMessage(final String broadcastMessage, final Color messageColor) {
+    private static void sendServiceMessage(@NotNull final LongEmbedMessage broadcastMessage) {
         Optional<DiscordApi> mayBeApi = Optional.ofNullable(SettingsController.getInstance().getDiscordApi());
         final long serviceChannelId = SettingsController.getInstance()
                 .getMainDBController()
@@ -39,36 +37,36 @@ public class BroadCast
                                     && textChannel.canYouReadMessageHistory()
                                     && textChannel.canYouEmbedLinks()) {
                                 try {
-                                    new MessageBuilder()
-                                            .setEmbed(new EmbedBuilder()
-                                                    .setDescription(broadcastMessage)
-                                                    .setColor(messageColor))
-                                            .send(textChannel)
-                                            .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
+                                    broadcastMessage.send(textChannel).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
                                 } catch (Exception throwable) {
-                                    String errMessage = "Unable to send message to channel "
-                                            + serviceChannelId + ": " + throwable.getMessage();
-                                    log.error(errMessage, throwable);
-                                    sendMessageToAllOwners(broadcastMessage, messageColor);
-                                    sendMessageToAllOwners(errMessage, ERROR_COLOR);
+                                    LongEmbedMessage errMessage = new LongEmbedMessage()
+                                            .setErrorStyle()
+                                            .appendf("Unable to send message to channel %d: %s",
+                                                    serviceChannelId, throwable.getMessage());
+                                    log.error(errMessage.toString(), throwable);
+                                    sendMessageToAllOwners(broadcastMessage);
+                                    sendMessageToAllOwners(errMessage);
                                 }
                             } else {
-                                String errMessage = "There are no rights to send messages to the channel "
-                                        + serviceChannelId;
-                                sendMessageToAllOwners(broadcastMessage, messageColor);
-                                sendMessageToAllOwners(errMessage, ERROR_COLOR);
+                                LongEmbedMessage errMessage = new LongEmbedMessage()
+                                        .setErrorStyle()
+                                        .appendf("There are no rights to send messages to the channel %d", serviceChannelId);
+                                sendMessageToAllOwners(broadcastMessage);
+                                sendMessageToAllOwners(errMessage);
                             }
                         }, () -> {
-                            String errMessage = "Unable to resolve text channel " + serviceChannelId;
-                            sendMessageToAllOwners(broadcastMessage, messageColor);
-                            sendMessageToAllOwners(errMessage, ERROR_COLOR);
+                            LongEmbedMessage errMessage = new LongEmbedMessage()
+                                    .setErrorStyle()
+                                    .appendf("Unable to resolve text channel %d", serviceChannelId);
+                            sendMessageToAllOwners(broadcastMessage);
+                            sendMessageToAllOwners(errMessage);
                         })
                 , () -> log.fatal("Discord API is null. Unable to send service message \"{}\"",
                         broadcastMessage)
         );
     }
 
-    private static void sendMessageToAllOwners(String broadcastMessage, Color messageColor) {
+    private static void sendMessageToAllOwners(@NotNull final LongEmbedMessage broadcastMessage) {
         SettingsController settingsController = SettingsController.getInstance();
         List<Long> toNotify = new ArrayList<>();
         DiscordApi discordApi = settingsController.getDiscordApi();
@@ -80,14 +78,8 @@ public class BroadCast
 
         toNotify.forEach(ownerId -> {
             try {
-                User user = discordApi.getUserById(ownerId).join();
-                new MessageBuilder()
-                        .setEmbed(new EmbedBuilder()
-                                .setColor(messageColor)
-                                .setDescription(broadcastMessage)
-                                .setTimestampToNow())
-                        .send(user)
-                        .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
+                User user = discordApi.getUserById(ownerId).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
+                broadcastMessage.send(user).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
             } catch (Exception err) {
                 log.fatal("Unable to send broadcast message \"" + broadcastMessage +
                         "\": " + err.getMessage(), err);
@@ -104,7 +96,7 @@ public class BroadCast
         private MessagesLogger() {
         }
 
-        private final StringBuilder messagesLine = new StringBuilder();
+        private final LongEmbedMessage resultMessage = new LongEmbedMessage();
 
         private static final int SEVERITY_INFO = 0;
         private static final int SEVERITY_WARN = 1;
@@ -115,7 +107,7 @@ public class BroadCast
         private void addMessage(@NotNull String logLevel, @NotNull CharSequence message) {
             Calendar currentDate = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
             String msg = String.format("[%tF %<tT] <%s> <%s>\n", currentDate, logLevel, message);
-            messagesLine.append(msg);
+            resultMessage.append(msg);
         }
 
         public MessagesLogger addInfoMessage(@Nullable CharSequence message) {
@@ -165,21 +157,20 @@ public class BroadCast
         }
 
         public void send() {
-            List<String> messages = CommonUtils.splitEqually(messagesLine.toString(), 2000);
             Color messageColor = switch (severity) {
                 case SEVERITY_INFO -> INFO_COLOR;
                 case SEVERITY_WARN -> WARN_COLOR;
                 case SEVERITY_ERROR -> ERROR_COLOR;
                 default -> UNKNOWN_COLOR;
             };
-            for (String line : messages) {
-                BroadCast.sendServiceMessage(line, messageColor);
-            }
+            resultMessage.setColor(messageColor);
+            BroadCast.sendServiceMessage(resultMessage);
         }
 
         public MessagesLogger add(@Nullable MessagesLogger another) {
             if (another != null) {
-                messagesLine.append(another.messagesLine);
+                resultMessage.append(another.resultMessage);
+                this.severity = Math.max(this.severity, another.severity);
             }
             return this;
         }
