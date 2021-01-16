@@ -100,7 +100,7 @@ public class CommunityControlReaction
                 .map(Optional::get)
                 .collect(Collectors.toUnmodifiableList());
 
-        if (communityControlUsers.size() > controlSettings.getThreshold()) {
+        if (communityControlUsers.size() < controlSettings.getThreshold()) {
             return;
         }
 

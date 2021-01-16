@@ -29,7 +29,9 @@ import org.javacord.api.entity.user.User;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
+import java.awt.*;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -37,6 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.ZipEntry;
@@ -492,5 +495,47 @@ public class Bd
                 .map(server -> "{Name: " + server.getName() + "; ID: " + server.getId() + "}")
                 .reduce(CommonUtils::reduceConcat)
                 .orElse("(none)");
+    }
+
+    @NotNull
+    @MethodInfo("Read local text file and send to channel by id, for text purposes only")
+    public static String tldr(final String fileName, final long channelId) {
+        Optional<TextChannel> channel = SettingsController.getInstance()
+                .getDiscordApi()
+                .getTextChannelById(channelId);
+        if (channel.isEmpty()) {
+            return "Channel not found";
+        }
+        Path filePath = Path.of(fileName);
+        if (Files.exists(filePath) && Files.isRegularFile(filePath)) {
+            LongEmbedMessage lem = new LongEmbedMessage();
+            try (BufferedReader reader = Files.newBufferedReader(filePath, StandardCharsets.UTF_8)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    lem.append(line).appendNewLine();
+                }
+            } catch (IOException err) {
+                return String.format("Unable to read \"%s\": %s", filePath, err.getMessage());
+            }
+            lem.setTimestampToNow();
+            lem.setTitle(fileName);
+            lem.setColor(Color.GRAY);
+            lem.send(channel.get())
+                    .thenAccept(message ->
+                            new MessageBuilder()
+                                    .append("Last message has id: ")
+                                    .append(message.getId())
+                                    .send(channel.get()))
+                    .exceptionally(err -> {
+                        new MessageBuilder()
+                                .append("Unable to send messages: ")
+                                .append(err.getMessage())
+                                .send(channel.get());
+                        return null;
+                    });
+            return "Begin sending...";
+        } else {
+            return "File \"" + filePath + "\" does not exists of not a file";
+        }
     }
 }
