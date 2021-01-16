@@ -1,28 +1,39 @@
 package hellfrog.common;
 
+import hellfrog.settings.SettingsController;
 import org.javacord.api.entity.Mentionable;
-import org.javacord.api.entity.message.Message;
-import org.javacord.api.entity.message.MessageBuilder;
-import org.javacord.api.entity.message.MessageDecoration;
-import org.javacord.api.entity.message.Messageable;
+import org.javacord.api.entity.message.*;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.user.User;
+import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnmodifiableView;
 
-import java.awt.Color;
+import java.awt.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class LongEmbedMessage
-        implements CommonConstants {
+        implements CommonConstants, Cloneable {
 
     private final StringBuilder messageBuffer = new StringBuilder();
     private Instant timestamp = null;
     private Color color = null;
+
     private String title = null;
+
+    private String authorName = null;
+    private String authorUrl = null;
+    private String authorIconUrl = null;
+
+    public static LongEmbedMessage withTitleInfoStyle(@NotNull final String title) {
+        return new LongEmbedMessage()
+                .setInfoStyle()
+                .setTitle(title);
+    }
 
     public LongEmbedMessage append(String str) {
         messageBuffer.append(str);
@@ -79,9 +90,53 @@ public class LongEmbedMessage
         return this;
     }
 
+    public LongEmbedMessage setInfoStyle() {
+        this.color = Color.CYAN;
+        this.setStyleAttributes();
+        return this;
+    }
+
+    public LongEmbedMessage setErrorStyle() {
+        this.color = Color.RED;
+        this.setStyleAttributes();
+        return this;
+    }
+
+    private void setStyleAttributes() {
+        this.setTimestampToNow();
+        User yourself = SettingsController.getInstance().getDiscordApi().getYourself();
+        this.setAuthor(yourself);
+    }
+
+    public LongEmbedMessage setAuthor(@NotNull final String authorName,
+                                      @Nullable final String authorUrl,
+                                      @Nullable final String authorIconUrl) {
+        this.authorName = authorName;
+        this.authorUrl = authorUrl;
+        this.authorIconUrl = authorIconUrl;
+        return this;
+    }
+
+    public LongEmbedMessage setAuthor(@NotNull final User author) {
+        this.setAuthor(author.getName(), null, author.getAvatar().getUrl().toString());
+        return this;
+    }
+
+    public LongEmbedMessage setAuthor(@NotNull final MessageAuthor author) {
+        this.authorName = author.getDisplayName();
+        this.authorUrl = null;
+        this.authorIconUrl = author.getAvatar().getUrl().toString();
+        return this;
+    }
+
+
     public LongEmbedMessage setTitle(String title) {
         this.title = title;
         return this;
+    }
+
+    public CompletableFuture<Message> send(MessageCreateEvent event) {
+        return send(event.getChannel());
     }
 
     public CompletableFuture<Message> send(Messageable target) {
@@ -132,6 +187,9 @@ public class LongEmbedMessage
             if (title != null) {
                 firstEmbed.setTitle(title);
             }
+            if (!CommonUtils.isTrStringNotEmpty(authorName)) {
+                firstEmbed.setAuthor(authorName, authorUrl, authorIconUrl);
+            }
 
             sendMessageChain(future, null, target, messageBuilders, 0);
         });
@@ -165,6 +223,24 @@ public class LongEmbedMessage
             return List.of(messageBuffer.toString());
         } else {
             return CommonUtils.splitPreserveWords(messageBuffer.toString(), 2000);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return messageBuffer.toString();
+    }
+
+    @Override
+    public LongEmbedMessage clone() {
+        try {
+            return (LongEmbedMessage) super.clone();
+        } catch (Exception ignore) {
+            LongEmbedMessage result = new LongEmbedMessage();
+            result.messageBuffer.append(messageBuffer);
+            result.timestamp = timestamp;
+            result.color = color;
+            return result;
         }
     }
 }

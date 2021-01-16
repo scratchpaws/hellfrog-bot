@@ -2,6 +2,7 @@ package hellfrog.commands;
 
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
+import hellfrog.common.LongEmbedMessage;
 import hellfrog.common.MessageUtils;
 import hellfrog.core.AccessControlCheck;
 import hellfrog.core.RateLimiter;
@@ -11,9 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.Messageable;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
@@ -24,7 +23,6 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.awt.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -32,15 +30,6 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class ACLCommand {
 
-    protected static final int ERROR_MESSAGE = 0;
-    protected static final int INFO_MESSAGE = 1;
-    private final String prefix;
-    private final String description;
-    private boolean strictByChannels = false;
-    private boolean onlyServerCommand = false;
-    private boolean updateLastUsage = true;
-    private boolean expertCommand = false;
-    protected final Logger log = LogManager.getLogger(this.getClass().getSimpleName());
     public static final List<Long> CURRENT_SERVER_WITH_ACL_BUG = List.of(
             780560871100252171L,
             381461592300322821L,
@@ -53,7 +42,14 @@ public abstract class ACLCommand {
             427210944247234564L,
             550256321149141002L
     );
+    protected final Logger log = LogManager.getLogger(this.getClass().getSimpleName());
+    private final String prefix;
+    private final String description;
     private final List<Long> notStrictByChannelServers = new CopyOnWriteArrayList<>();
+    private boolean strictByChannels = false;
+    private boolean onlyServerCommand = false;
+    private boolean updateLastUsage = true;
+    private boolean expertCommand = false;
 
     protected ACLCommand(@NotNull String prefix, @NotNull String description) {
         if (CommonUtils.isTrStringEmpty(prefix))
@@ -146,63 +142,80 @@ public abstract class ACLCommand {
                 .asUser().orElse(event.getApi().getOwner().join());
     }
 
-    public void showAccessDeniedGlobalMessage(MessageCreateEvent event) {
+    protected void showAccessDeniedGlobalMessage(MessageCreateEvent event) {
         showErrorMessage("Only bot owners can do it.", event);
     }
 
-    public void showAccessDeniedServerMessage(MessageCreateEvent event) {
+    protected void showAccessDeniedServerMessage(MessageCreateEvent event) {
         showErrorMessage("Only allowed users and roles can do it.", event);
     }
 
-    public void showAccessDeniedServerMessage(SingleReactionEvent event) {
+    protected void showAccessDeniedServerMessage(SingleReactionEvent event) {
         showErrorMessage("Only allowed users and roles can do it.", event);
     }
 
-    public void showErrorMessage(String textMessage, MessageCreateEvent event) {
-        resolveMessageEmbedByRights(textMessage, event, ERROR_MESSAGE);
+    protected void showErrorMessage(String textMessage, MessageCreateEvent event) {
+        LongEmbedMessage message = new LongEmbedMessage()
+                .setErrorStyle()
+                .append(textMessage);
+        showMessage(message, event);
     }
 
     public void showErrorMessage(String textMessage, SingleReactionEvent event) {
-        resolveMessageEmbedByRights(textMessage, event, ERROR_MESSAGE);
+        LongEmbedMessage message = new LongEmbedMessage()
+                .setErrorStyle()
+                .append(textMessage);
+        showMessage(message, event);
     }
 
     protected void showInfoMessage(String textMessage, MessageCreateEvent event) {
-        resolveMessageEmbedByRights(textMessage, event, INFO_MESSAGE);
+        LongEmbedMessage message = new LongEmbedMessage()
+                .setInfoStyle()
+                .append(textMessage);
+        showMessage(message, event);
     }
 
-    private void resolveMessageEmbedByRights(@NotNull String textMessage,
-                                             @NotNull MessageCreateEvent event,
-                                             int type) {
+    protected void showMessage(@NotNull LongEmbedMessage message, @NotNull MessageCreateEvent event) {
+        resolveMessageEmbedByRights(message, event);
+    }
+
+    protected void showMessage(@NotNull LongEmbedMessage message, @NotNull SingleReactionEvent event) {
+        resolveMessageEmbedByRights(message, event);
+    }
+
+    private void resolveMessageEmbedByRights(@NotNull final LongEmbedMessage message,
+                                             @NotNull final MessageCreateEvent event) {
         event.getMessageAuthor().asUser().ifPresentOrElse(user ->
-                        resolveMessageEmbedByRights(textMessage, event, user, type),
+                        resolveMessageEmbedByRights(message, event, user),
                 () -> log.warn("Receive message from {}", event.getMessageAuthor()));
     }
 
-    private void resolveMessageEmbedByRights(@NotNull String textMessage,
-                                             @NotNull SingleReactionEvent event,
-                                             int type) {
-        event.getUser().ifPresent(user -> resolveMessageEmbedByRights(textMessage, event, user, type));
+    private void resolveMessageEmbedByRights(@NotNull final LongEmbedMessage message,
+                                             @NotNull final SingleReactionEvent event) {
+        event.getUser().ifPresent(user -> resolveMessageEmbedByRights(message, event, user));
     }
 
-    private void resolveMessageEmbedByRights(@NotNull String textMessage,
-                                             @NotNull MessageEvent event,
-                                             @NotNull User user,
-                                             int type) {
-        event.getServer().ifPresentOrElse(server ->
-                        event.getServerTextChannel().ifPresentOrElse(serverTextChannel -> {
-                            boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, user, server, serverTextChannel, isStrictOnServer(server));
-                            boolean canWriteToChannel = serverTextChannel.canYouWrite();
-                            if (hasRights && canWriteToChannel) {
-                                showEmbedMessage(textMessage, serverTextChannel, user, type);
-                            } else {
-                                showEmbedMessage(textMessage, user, null, type);
-                            }
-                        }, () -> showEmbedMessage(textMessage, user, null, type)),
-                () -> showEmbedMessage(textMessage, user, null, type));
+    private void resolveMessageEmbedByRights(@NotNull final LongEmbedMessage message,
+                                             @NotNull final MessageEvent event,
+                                             @NotNull final User user) {
+
+        event.getServer().ifPresentOrElse(server -> event.getServerTextChannel().ifPresentOrElse(serverTextChannel -> {
+
+                    boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, user, server, serverTextChannel, isStrictOnServer(server));
+                    boolean canWriteToChannel = serverTextChannel.canYouWrite();
+                    if (hasRights && canWriteToChannel) {
+                        showEmbedMessage(message, serverTextChannel, user);
+                    } else {
+                        showEmbedMessage(message, user, null);
+                    }
+
+                }, () -> showEmbedMessage(message, user, null)),
+
+                () -> showEmbedMessage(message, user, null));
     }
 
     @Contract("null -> false")
-    private boolean canShowMessageByRights(MessageCreateEvent event) {
+    private boolean canShowMessageByRights(@Nullable final MessageCreateEvent event) {
         if (event == null)
             return false;
         if (event.isServerMessage())
@@ -222,7 +235,10 @@ public abstract class ACLCommand {
         }
     }
 
-    private void showEmbedMessage(String textMessage, Messageable target, @Nullable User alternatePrivateTarget, int type) {
+    private void showEmbedMessage(@NotNull final LongEmbedMessage message,
+                                  @NotNull final Messageable target,
+                                  @Nullable User alternatePrivateTarget) {
+
         boolean isTargetLimited = false;
         if (target instanceof User) {
             isTargetLimited = RateLimiter.notifyIsLimited(((User) target).getId());
@@ -230,30 +246,21 @@ public abstract class ACLCommand {
         if (isTargetLimited) {
             return;
         }
-        Color messageColor = switch (type) {
-            case ERROR_MESSAGE -> Color.RED;
-            case INFO_MESSAGE -> Color.CYAN;
-            default -> Color.BLACK;
-        };
-        User yourself = SettingsController.getInstance().getDiscordApi().getYourself();
+
         try {
-            new MessageBuilder()
-                    .setEmbed(new EmbedBuilder()
-                            .setColor(messageColor)
-                            .setDescription(textMessage)
-                            .setTimestampToNow()
-                            //.setFooter(type == ERROR_MESSAGE ? "This message will automatically delete in 20 seconds." : null)
-                            .setAuthor(yourself))
-                    .send(target).get(10_000L, TimeUnit.SECONDS);
+            message.send(target)
+                    .get(10_000L, TimeUnit.SECONDS);
         } catch (Exception err) {
             if (target instanceof TextChannel && alternatePrivateTarget != null) {
                 if (err.getCause() instanceof MissingPermissionsException) {
-                    showEmbedMessage("Unable sent message to text channel! Missing permission!",
-                            alternatePrivateTarget, null, ERROR_MESSAGE);
+                    LongEmbedMessage errMessage = new LongEmbedMessage()
+                            .setErrorStyle()
+                            .append("Unable sent message to text channel! Missing permission!");
+                    showEmbedMessage(errMessage, alternatePrivateTarget, null);
                 } else {
                     log.error("Unable to send the message: " + err.getMessage(), err);
                 }
-                showEmbedMessage(textMessage, alternatePrivateTarget, null, type);
+                showEmbedMessage(message, alternatePrivateTarget, null);
             }
         }
     }
