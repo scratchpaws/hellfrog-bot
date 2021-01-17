@@ -115,12 +115,14 @@ public class MessageUtils
         }
     }
 
+    @Deprecated
     public static void sendLongMessage(@Nullable MessageBuilder messageBuilder, @Nullable Messageable messageable) {
         if (messageBuilder == null)
             return;
         sendLongMessage(messageBuilder.getStringBuilder().toString(), messageable);
     }
 
+    @Deprecated
     public static void sendLongMessage(@Nullable String longMessage, @Nullable Messageable messageable) {
         if (CommonUtils.isTrStringEmpty(longMessage) || messageable == null)
             return;
@@ -179,6 +181,7 @@ public class MessageUtils
     }
 
     @NotNull
+    @Deprecated
     public static String escapeSpecialSymbols(@Nullable String value) {
         if (CommonUtils.isTrStringEmpty(value)) return "";
         return value.replace("\\", "\\\\")

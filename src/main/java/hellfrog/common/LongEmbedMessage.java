@@ -1,9 +1,11 @@
 package hellfrog.common;
 
+import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import org.javacord.api.entity.Mentionable;
 import org.javacord.api.entity.message.*;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -14,6 +16,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class LongEmbedMessage
@@ -89,6 +92,19 @@ public class LongEmbedMessage
     public LongEmbedMessage appendf(String format, Object... args) {
         messageBuffer.append(new Formatter().format(format, args).toString());
         return this;
+    }
+
+    public LongEmbedMessage appendReadable(String str, Optional<Server> mayBeServer) {
+        messageBuffer.append(ServerSideResolver.getReadableContent(str, mayBeServer));
+        return this;
+    }
+
+    public LongEmbedMessage appendReadable(String str) {
+        return appendReadable(str, Optional.empty());
+    }
+
+    public LongEmbedMessage appendReadable(String str, Server server) {
+        return appendReadable(str, Optional.ofNullable(server));
     }
 
     public LongEmbedMessage setTimestamp(@NotNull final Instant timestamp) {
