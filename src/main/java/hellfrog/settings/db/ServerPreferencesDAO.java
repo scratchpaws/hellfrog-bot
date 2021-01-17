@@ -13,26 +13,27 @@ public interface ServerPreferencesDAO {
     Instant NAN_DATE_TIME = Instant.EPOCH;
 
     String PREFIX_DEFAULT = ">>";
-    boolean JOIN_LEAVE_DISPLAY_DEFAULT = false;
-    long JOIN_LEAVE_CHANNEL_ID_DEFAULT = 0L;
+    boolean DISPLAY_EVENT_LOG_DEFAULT = false;
+    long EVENT_LOG_CHANNEL_ID_DEFAULT = 0L;
     boolean NEW_ACL_MODE_DEFAULT = true;
     boolean CONGRATULATIONS_ENABLED_DEFAULT = false;
     long CONGRATULATIONS_CHANNEL_DEFAULT = 0L;
     String CONGRATULATIONS_TIMEZONE_DEFAULT = TimeZone.getTimeZone("UTC").getID();
     Instant STATISTIC_START_DATE_DEFAULT = NAN_DATE_TIME;
     boolean STATISTIC_ENABLED_DEFAULT = false;
+    boolean ACL_FIX_REQUIRED_DEFAULT = false;
 
     String getPrefix(long serverId);
 
     String setPrefix(long serverId, @NotNull String newPrefix);
 
-    boolean isJoinLeaveDisplay(long serverId);
+    boolean isDisplayEventLog(long serverId);
 
-    boolean setJoinLeaveDisplay(long serverId, boolean newState);
+    boolean setDisplayEventLog(long serverId, boolean newState);
 
-    long getJoinLeaveChannel(long serverId);
+    long getEventLogChannel(long serverId);
 
-    long setJoinLeaveChannel(long serverId, long newChannelId);
+    long setEventLogChannel(long serverId, long newChannelId);
 
     boolean isNewAclMode(long serverId);
 
@@ -57,4 +58,8 @@ public interface ServerPreferencesDAO {
     Instant getStatisticStartDate(long serverId);
 
     Instant setStatisticStartDate(long serverId, @NotNull final Instant startDate);
+
+    boolean isAclFixRequired(long serverId);
+
+    boolean setAclFixRequired(long serverId, boolean required);
 }

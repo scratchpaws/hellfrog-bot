@@ -1,19 +1,19 @@
 package hellfrog.commands.cmdline;
 
-import hellfrog.commands.scenes.Scenario;
+import com.vdurmont.emoji.EmojiParser;
+import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
+import hellfrog.common.LongEmbedMessage;
+import hellfrog.core.AccessControlCheck;
+import hellfrog.core.NameCacheService;
 import hellfrog.core.ServerSideResolver;
-import hellfrog.reacts.MsgCreateReaction;
-import hellfrog.settings.CommandRights;
-import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
+import hellfrog.settings.db.*;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
-import org.javacord.api.entity.channel.ChannelCategory;
-import org.javacord.api.entity.channel.ServerChannel;
-import org.javacord.api.entity.channel.ServerTextChannel;
-import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.MessageBuilder;
+import org.javacord.api.entity.DiscordEntity;
+import org.javacord.api.entity.Mentionable;
+import org.javacord.api.entity.channel.*;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
@@ -21,11 +21,7 @@ import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.*;
 
 public class RightsCommand
         extends BotCommand {
@@ -39,71 +35,72 @@ public class RightsCommand
             "(such as: vote) also may require permission to manage channel, " +
             "designated for a poll.";
 
+    private static final String SPEAKER_EMOJI = EmojiParser.parseToUnicode(":loud_sound:");
+    private static final String CATEGORY_EMOJI = "`v`";
+
+    private final Option userOption = Option.builder("u")
+            .longOpt("user")
+            .hasArgs()
+            .valueSeparator(',')
+            .argName("User")
+            .desc("Select user for rights control")
+            .build();
+
+    private final Option roleOption = Option.builder("r")
+            .longOpt("role")
+            .hasArgs()
+            .valueSeparator(',')
+            .argName("Role")
+            .desc("Select role for rights control")
+            .build();
+
+    private final Option commandOption = Option.builder("c")
+            .longOpt("command")
+            .hasArgs()
+            .valueSeparator(',')
+            .argName("Bot command")
+            .desc("Select bot command for rights control (required)")
+            .build();
+
+    private final Option allowOption = Option.builder("a")
+            .longOpt("allow")
+            .desc("Allow it command for this roles or users")
+            .build();
+
+    private final Option disallowOption = Option.builder("d")
+            .longOpt("deny")
+            .desc("Deny it command for this roles or users")
+            .build();
+
+    private final Option showAllowOption = Option.builder("s")
+            .longOpt("show")
+            .desc("Show roles and users that allow to execute this command (default action)")
+            .build();
+
+    private final Option channelOption = Option.builder("t")
+            .longOpt("channel")
+            .hasArgs()
+            .optionalArg(true)
+            .argName("Channel")
+            .desc("Select text channel for rights control. If not arguments - use this text channel.")
+            .build();
+
+    private final Option aclModeSwitchOption = Option.builder("m")
+            .longOpt("mode")
+            .hasArg()
+            .optionalArg(true)
+            .argName("[old|new]")
+            .desc("Switch access control mode for commands that has restrictions by channel" +
+                    " - old and new. Old mode strongly required permissions for manage channel " +
+                    "and strongly allowed role/user list. New mode strongly required permissions " +
+                    "only for manage channel, allowed role/user list is optional. Default action is " +
+                    "show current mode. Default mode is old.")
+            .build();
+
     public RightsCommand() {
         super(PREF, DESCRIPTION);
-
-        Option userOption = Option.builder("u")
-                .longOpt("user")
-                .hasArgs()
-                .valueSeparator(',')
-                .argName("User")
-                .desc("Select user for rights control")
-                .build();
-
-        Option roleOption = Option.builder("r")
-                .longOpt("role")
-                .hasArgs()
-                .valueSeparator(',')
-                .argName("Role")
-                .desc("Select role for rights control")
-                .build();
-
-        Option commandOption = Option.builder("c")
-                .longOpt("command")
-                .hasArgs()
-                .valueSeparator(',')
-                .argName("Bot command")
-                .desc("Select bot command for rights control (required)")
-                .build();
-
-        Option allowOption = Option.builder("a")
-                .longOpt("allow")
-                .desc("Allow it command for this roles or users")
-                .build();
-
-        Option disallowOption = Option.builder("d")
-                .longOpt("deny")
-                .desc("Deny it command for this roles or users")
-                .build();
-
-        Option showAllowOption = Option.builder("s")
-                .longOpt("show")
-                .desc("Show roles and users that allow to execute this command (default action)")
-                .build();
-
-        Option channelOption = Option.builder("t")
-                .longOpt("channel")
-                .hasArgs()
-                .optionalArg(true)
-                .argName("Channel")
-                .desc("Select text channel for rights control. If not arguments - use this text channel.")
-                .build();
-
-        Option aclModeSwitchOption = Option.builder("m")
-                .longOpt("mode")
-                .hasArg()
-                .optionalArg(true)
-                .argName("[old|new]")
-                .desc("Switch access control mode for commands that has restrictions by channel" +
-                        " - old and new. Old mode strongly required permissions for manage channel " +
-                        "and strongly allowed role/user list. New mode strongly required permissions " +
-                        "only for manage channel, allowed role/user list is optional. Default action is " +
-                        "show current mode. Default mode is old.")
-                .build();
-
         addCmdlineOption(userOption, roleOption, commandOption, allowOption, disallowOption, showAllowOption,
                 channelOption, aclModeSwitchOption);
-
         super.enableOnlyServerCommandStrict();
         super.setFooter(FOOTER);
         super.setCommandAsExpert();
@@ -124,25 +121,27 @@ public class RightsCommand
                                                    TextChannel channel, MessageCreateEvent event,
                                                    ArrayList<String> anotherLines) {
 
-        SettingsController settingsController = SettingsController.getInstance();
+        if (!canExecuteServerCommand(event, server)) {
+            showAccessDeniedServerMessage(event);
+            return;
+        }
 
-        boolean aclSwitchMode = cmdline.hasOption('m');
-        String aclSwitchModeValue = cmdline.getOptionValue('m', "").toLowerCase();
+        AccessControlCheck.checkAndFixAcl(server);
+
+        boolean aclSwitchMode = cmdline.hasOption(aclModeSwitchOption.getOpt());
+        String aclSwitchModeValue = cmdline.getOptionValue(aclModeSwitchOption.getOpt(), "").toLowerCase();
 
         if (aclSwitchMode) {
-            ServerPreferences serverPreferences = settingsController.getServerPreferences(server.getId());
+            ServerPreferencesDAO serverPreferencesDAO = SettingsController.getInstance()
+                    .getMainDBController().getServerPreferencesDAO();
             if (CommonUtils.isTrStringEmpty(aclSwitchModeValue)) {
-                String message = "Current access control mode is " + (serverPreferences.getNewAclMode() ?
-                        "new" : "old") + '.';
+                String message = "Current access control mode is " + (serverPreferencesDAO.isNewAclMode(server.getId())
+                        ? "new" : "old") + '.';
                 showInfoMessage(message, event);
             } else {
-                if (!canExecuteServerCommand(event, server)) {
-                    showAccessDeniedServerMessage(event);
-                    return;
-                }
                 switch (aclSwitchModeValue) {
-                    case "old" -> serverPreferences.setNewAclMode(false);
-                    case "new" -> serverPreferences.setNewAclMode(true);
+                    case "old" -> serverPreferencesDAO.setNewAclMode(server.getId(), false);
+                    case "new" -> serverPreferencesDAO.setNewAclMode(server.getId(), true);
                     default -> {
                         showErrorMessage("Unknown mode. Must be \"old\" or \"new\" or " +
                                 "empty for display current mode", event);
@@ -150,44 +149,36 @@ public class RightsCommand
                     }
                 }
 
-                settingsController.saveServerSideParameters(server.getId());
-
-                String message = "Access control switched to " + (serverPreferences.getNewAclMode() ?
+                String message = "Access control switched to " + (serverPreferencesDAO.isNewAclMode(server.getId()) ?
                         "new" : "old") + " mode.";
                 showInfoMessage(message, event);
             }
-
             return;
         }
 
-        if (!cmdline.hasOption('c')) {
+        if (!cmdline.hasOption(commandOption.getOpt())) {
             showErrorMessage("You have not specified a command for configuring rights.", event);
             return;
         }
 
-        String[] commands = cmdline.getOptionValues('c');
+        String[] commands = cmdline.getOptionValues(commandOption.getOpt());
         for (int i = 0; i < commands.length; i++)
             commands[i] = commands[i].toLowerCase();
 
         String unknownCommandsString = Arrays.stream(commands)
-                .filter(command -> MsgCreateReaction.all().stream()
-                        .filter(MsgCreateReaction::isAccessControl)
-                        .noneMatch(msgCreateReaction -> msgCreateReaction.getCommandPrefix().equals(command)) &&
-                        BotCommand.all().stream()
-                                .noneMatch(botCommand -> botCommand.getPrefix().equals(command)) &&
-                        Scenario.all().stream()
-                                .noneMatch(scenario -> scenario.canExecute(command))
-                ).reduce(CommonUtils::reduceConcat)
+                .filter(command -> !AccessControlCheck.getAllCommandPrefix().contains(command))
+                .map(command -> ServerSideResolver.getReadableContent(command, Optional.of(server)))
+                .reduce(CommonUtils::reduceConcat)
                 .orElse("");
 
-        if (!CommonUtils.isTrStringEmpty(unknownCommandsString)) {
+        if (CommonUtils.isTrStringNotEmpty(unknownCommandsString)) {
             showErrorMessage("These commands are not recognized: " + unknownCommandsString, event);
             return;
         }
 
-        boolean allowMode = cmdline.hasOption('a');
-        boolean disallowMode = cmdline.hasOption('d');
-        boolean showMode = cmdline.hasOption('s');
+        boolean allowMode = cmdline.hasOption(allowOption.getOpt());
+        boolean disallowMode = cmdline.hasOption(disallowOption.getOpt());
+        boolean showMode = cmdline.hasOption(showAllowOption.getOpt());
 
         if (allowMode && disallowMode) {
             showErrorMessage("Cannot specify allow and deny parameters at the same time", event);
@@ -204,14 +195,14 @@ public class RightsCommand
                 showAccessDeniedServerMessage(event);
                 return;
             }
-            boolean userModify = cmdline.hasOption('u');
-            List<String> usersList = CommonUtils.nullableArrayToNonNullList(cmdline.getOptionValues('u'));
+            boolean userModify = cmdline.hasOption(userOption.getOpt());
+            List<String> usersList = CommonUtils.nullableArrayToNonNullList(cmdline.getOptionValues(userOption.getOpt()));
 
-            boolean rolesModify = cmdline.hasOption('r');
-            List<String> rolesList = CommonUtils.nullableArrayToNonNullList(cmdline.getOptionValues('r'));
+            boolean rolesModify = cmdline.hasOption(roleOption.getOpt());
+            List<String> rolesList = CommonUtils.nullableArrayToNonNullList(cmdline.getOptionValues(roleOption.getOpt()));
 
-            boolean channelsModify = cmdline.hasOption('t');
-            List<String> channelsList = CommonUtils.nullableArrayToNonNullList(cmdline.getOptionValues('t'));
+            boolean channelsModify = cmdline.hasOption(channelOption.getOpt());
+            List<String> channelsList = CommonUtils.nullableArrayToNonNullList(cmdline.getOptionValues(channelOption.getOpt()));
             boolean modifyThisChannel = channelsList.isEmpty();
 
             if (!userModify && !rolesModify && !channelsModify && !modifyThisChannel) {
@@ -231,14 +222,14 @@ public class RightsCommand
                 parsedRoles = ServerSideResolver.resolveRolesList(server, rolesList);
             }
             if (channelsModify) {
-                parsedChannels = ServerSideResolver.resolveTextChannelsAndCategoriesList(server, channelsList);
+                parsedChannels = ServerSideResolver.resolveAnyServerChannelList(server, channelsList);
                 if (modifyThisChannel && (channel instanceof ServerTextChannel)) {
                     ServerTextChannel itsChannel = (ServerTextChannel) channel;
                     parsedChannels.getFound().add(itsChannel);
                 }
             }
 
-            MessageBuilder resultMessage = new MessageBuilder();
+            LongEmbedMessage resultMessage = LongEmbedMessage.withTitleInfoStyle("Command rights");
 
             if (parsedUsers.hasNotFound())
                 resultMessage.append("This users cannot be resolve: ")
@@ -255,59 +246,43 @@ public class RightsCommand
                         .append(parsedChannels.getNotFoundStringList())
                         .appendNewLine();
 
-            List<CommandRights> commandRightsList = Arrays.stream(commands)
-                    .map(cmd -> settingsController.getServerPreferences(server.getId())
-                            .getRightsForCommand(cmd))
-                    .collect(Collectors.toList());
-
-            List<User> usersChanged = new ArrayList<>(parsedUsers.getFound().size());
+            List<User> usersChanged = new ArrayList<>();
             List<User> usersNoChanged = new ArrayList<>();
 
-            List<Role> rolesChanged = new ArrayList<>(parsedRoles.getFound().size());
+            List<Role> rolesChanged = new ArrayList<>();
             List<Role> rolesNoChanged = new ArrayList<>();
 
-            List<ServerChannel> channelsChanged = new ArrayList<>(parsedChannels.getFound().size());
+            List<ServerChannel> channelsChanged = new ArrayList<>();
             List<ServerChannel> channelsNoChanged = new ArrayList<>();
 
-            for (User user : parsedUsers.getFound()) {
-                commandRightsList.stream().map((commandRights) -> allowMode ?
-                        commandRights.addAllowUser(user.getId()) :
-                        commandRights.delAllowUser(user.getId())).forEachOrdered((result) -> {
-                    if (result) {
-                        usersChanged.add(user);
+            List<ChannelCategory> categoriesChanges = new ArrayList<>();
+            List<ChannelCategory> categoriesNoChanges = new ArrayList<>();
+
+            MainDBController mainDBController = SettingsController.getInstance().getMainDBController();
+            UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
+            RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
+            ChannelRightsDAO channelRightsDAO = mainDBController.getChannelRightsDAO();
+            ChannelCategoryRightsDAO categoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
+
+            for (String command : commands) {
+                for (User user : parsedUsers.getFound()) {
+                    modifyRights(allowMode, userRightsDAO, server, user, command, usersChanged, usersNoChanged);
+                }
+
+                for (Role role : parsedRoles.getFound()) {
+                    modifyRights(allowMode, roleRightsDAO, server, role, command, rolesChanged, rolesNoChanged);
+                }
+
+                for (ServerChannel rChannel : parsedChannels.getFound()) {
+                    if (rChannel instanceof ChannelCategory) {
+                        modifyRights(allowMode, categoryRightsDAO, server, (ChannelCategory) rChannel, command, categoriesChanges, categoriesNoChanges);
                     } else {
-                        usersNoChanged.add(user);
+                        modifyRights(allowMode, channelRightsDAO, server, rChannel, command, channelsChanged, channelsNoChanged);
                     }
-                });
+                }
             }
 
-            for (Role role : parsedRoles.getFound()) {
-                commandRightsList.stream().map((commandRights) -> allowMode ?
-                        commandRights.addAllowRole(role.getId()) :
-                        commandRights.delAllowRole(role.getId())).forEachOrdered((result) -> {
-                    if (result) {
-                        rolesChanged.add(role);
-                    } else {
-                        rolesNoChanged.add(role);
-                    }
-                });
-            }
-
-            for (ServerChannel rChannel : parsedChannels.getFound()) {
-                commandRightsList.stream().map((commandRights) -> allowMode ?
-                        commandRights.addAllowChannel(rChannel.getId()) :
-                        commandRights.delAllowChannel(rChannel.getId())).forEachOrdered((result) -> {
-                    if (result) {
-                        channelsChanged.add(rChannel);
-                    } else {
-                        channelsNoChanged.add(rChannel);
-                    }
-                });
-            }
-
-            settingsController.saveServerSideParameters(server.getId());
-
-            if (usersChanged.size() > 0 || rolesChanged.size() > 0 || channelsChanged.size() > 0) {
+            if (!usersChanged.isEmpty() || !rolesChanged.isEmpty() || !channelsChanged.isEmpty() || !categoriesChanges.isEmpty()) {
                 Arrays.stream(commands)
                         .reduce((c1, c2) -> c1 + ", " + c2)
                         .ifPresent(cmdlist -> resultMessage
@@ -317,160 +292,201 @@ public class RightsCommand
                                 .appendNewLine());
             }
 
-            addUsersListToMessage(resultMessage, usersChanged);
-            addRolesListToMessage(resultMessage, rolesChanged);
-            addServerTextChannelsListToMessage(resultMessage, channelsChanged);
+            addMentionableListToMessage(resultMessage, usersChanged, "To users:");
+            addMentionableListToMessage(resultMessage, rolesChanged, "To roles:");
+            addChannelsListToMessage(resultMessage, channelsChanged, "To channels:");
+            addChannelsListToMessage(resultMessage, categoriesChanges, "To channel categories (and all it's channels):");
 
-            if (usersNoChanged.size() > 0 || rolesNoChanged.size() > 0 || channelsNoChanged.size() > 0) {
+            if (!usersNoChanged.isEmpty() || !rolesNoChanged.isEmpty() || !channelsNoChanged.isEmpty() || !categoriesNoChanges.isEmpty()) {
                 resultMessage.append("Settings ")
                         .append("no changed", MessageDecoration.BOLD)
-                        .append(" (already granted or cannot be granted):")
+                        .append(" for (already granted or cannot be granted):")
                         .appendNewLine();
-                addUsersListToMessage(resultMessage, usersNoChanged);
-                addRolesListToMessage(resultMessage, rolesNoChanged);
-                addServerTextChannelsListToMessage(resultMessage, channelsNoChanged);
+                addMentionableListToMessage(resultMessage, usersNoChanged, "To users:");
+                addMentionableListToMessage(resultMessage, rolesNoChanged, "To roles:");
+                addChannelsListToMessage(resultMessage, channelsNoChanged, "To channels:");
+                addChannelsListToMessage(resultMessage, categoriesNoChanges, "To channel categories:");
             }
 
-            showInfoMessage(resultMessage.getStringBuilder().toString(), event);
+            showMessage(resultMessage, event);
         } else if (showMode) {
-            MessageBuilder msgBuilder = new MessageBuilder();
+            LongEmbedMessage resultMessage = LongEmbedMessage.withTitleInfoStyle("Command rights");
+
+            MainDBController mainDBController = SettingsController.getInstance().getMainDBController();
+            UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
+            RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
+            ChannelRightsDAO channelRightsDAO = mainDBController.getChannelRightsDAO();
+            ChannelCategoryRightsDAO categoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
+            NameCacheService cacheService = SettingsController.getInstance().getNameCacheService();
+
             for (String cmd : commands) {
-                msgBuilder.append("Command: ")
+                resultMessage.append("Command: ")
                         .append(cmd, MessageDecoration.BOLD)
                         .append(":")
                         .appendNewLine();
-                CommandRights commandRights = settingsController.getServerPreferences(server.getId())
-                        .getRightsForCommand(cmd);
 
-                Optional<String> resolvedAllowedUsers = commandRights.getAllowUsers().stream()
-                        .map(userId -> {
-                            Optional<User> mayBeUser = server.getMemberById(userId);
-                            if (mayBeUser.isPresent()) {
-                                User user = mayBeUser.get();
-                                return user.getDiscriminatedName() + " (id: " + userId + ")";
-                            } else {
-                                commandRights.delAllowUser(userId);
-                                settingsController.saveServerSideParameters(server.getId());
-                                return "[leaved-user, now removed from settings] (id: " + userId + ")";
-                            }
-                        }).reduce(CommonUtils::reduceConcat);
-                resolvedAllowedUsers.ifPresent(s -> msgBuilder.append("  * allow for users: ")
-                        .append(s)
+                Optional<String> allowedUsers = userRightsDAO.getAllAllowed(server.getId(), cmd).stream()
+                        .map(userId -> getLastKnownUser(cacheService, server, userId))
+                        .reduce(CommonUtils::reduceNewLine);
+                allowedUsers.ifPresent(usersList -> resultMessage.append("Allowed for users:", MessageDecoration.UNDERLINE)
+                        .appendNewLine()
+                        .append(usersList)
                         .appendNewLine());
 
-                Optional<String> resolvedAllowedRoles = commandRights.getAllowRoles().stream()
-                        .map(roleId -> {
-                            Optional<Role> mayBeRole = server.getRoleById(roleId);
-                            if (mayBeRole.isPresent()) {
-                                Role role = mayBeRole.get();
-                                return role.getName() + " (id: " + roleId + ")";
-                            } else {
-                                commandRights.delAllowRole(roleId);
-                                settingsController.saveServerSideParameters(server.getId());
-                                return "[removed role, now removed from settings] (id: " + roleId + ")";
-                            }
-                        }).reduce(CommonUtils::reduceConcat);
-                resolvedAllowedRoles.ifPresent(s -> msgBuilder.append("  * allow for roles: ")
-                        .append(s)
+                Optional<String> allowedRoles = roleRightsDAO.getAllAllowed(server.getId(), cmd).stream().map(roleId -> {
+                    Optional<Role> mayBeRole = server.getRoleById(roleId);
+                    if (mayBeRole.isPresent()) {
+                        return mayBeRole.get().getMentionTag();
+                    } else {
+                        roleRightsDAO.deny(server.getId(), roleId, cmd);
+                        return null;
+                    }
+                })
+                        .filter(Objects::nonNull)
+                        .reduce(CommonUtils::reduceNewLine);
+
+                allowedRoles.ifPresent(rolesList -> resultMessage.append("Allowed for roles:", MessageDecoration.UNDERLINE)
+                        .appendNewLine()
+                        .append(rolesList)
                         .appendNewLine());
 
-                Optional<String> resolvedAllowedChannels = commandRights.getAllowChannels().stream()
-                        .map(channelId -> {
-                            Optional<ServerTextChannel> mayBeChannel = server.getTextChannelById(channelId);
-                            if (mayBeChannel.isPresent()) {
-                                return this.getChannelNameAndId(mayBeChannel.get());
-                            } else {
-                                Optional<ChannelCategory> mayBeCategory = server.getChannelCategoryById(channelId);
-                                if (mayBeCategory.isEmpty()) {
-                                    commandRights.delAllowChannel(channelId);
-                                    settingsController.saveServerSideParameters(server.getId());
-                                    return "[removed channel/category, now removed from settings] (id: " + channelId + ")";
-                                } else {
-                                    return "";
-                                }
-                            }
-                        })
-                        .filter(s -> !CommonUtils.isTrStringEmpty(s))
-                        .reduce(CommonUtils::reduceConcat);
-                resolvedAllowedChannels.ifPresent(s -> msgBuilder.append("  * allow for channels: ")
-                        .append(s)
+                Optional<String> allowedChannels = channelRightsDAO.getAllAllowed(server.getId(), cmd).stream().map(channelId -> {
+                    Optional<ServerChannel> mayBeChannel = server.getChannelById(channelId);
+                    if (mayBeChannel.isEmpty()) {
+                        channelRightsDAO.deny(server.getId(), channelId, cmd);
+                    } else {
+                        ServerChannel serverChannel = mayBeChannel.get();
+                        if (serverChannel instanceof ChannelCategory) {
+                            channelRightsDAO.deny(server.getId(), channelId, cmd);
+                        } else {
+                            return printServerChannel(serverChannel);
+                        }
+                    }
+                    return null;
+                })
+                        .filter(Objects::nonNull)
+                        .reduce(CommonUtils::reduceNewLine);
+
+                allowedChannels.ifPresent(channelsList -> resultMessage.append("Allowed for channels:", MessageDecoration.UNDERLINE)
+                        .appendNewLine()
+                        .append(channelsList)
                         .appendNewLine());
 
-                Optional<String> resolvedAllowedCategories = commandRights.getAllowChannels().stream()
-                        .map(channelId -> {
-                            Optional<ChannelCategory> mayBeCategory = server.getChannelCategoryById(channelId);
-                            if (mayBeCategory.isPresent()) {
-                                return this.getChannelNameAndId(mayBeCategory.get());
-                            } else {
-                                Optional<ServerTextChannel> mayBeChannel = server.getTextChannelById(channelId);
-                                if (mayBeChannel.isEmpty()) {
-                                    commandRights.delAllowChannel(channelId);
-                                    settingsController.saveServerSideParameters(server.getId());
-                                    return "[removed channel/category, now removed from settings] (id: " + channelId + ")";
-                                } else {
-                                    return "";
-                                }
-                            }
-                        })
-                        .filter(s -> !CommonUtils.isTrStringEmpty(s))
-                        .reduce(CommonUtils::reduceConcat);
-                resolvedAllowedCategories.ifPresent(s -> msgBuilder.append("  * allowed for categories: ")
-                        .append(s)
+                Optional<String> allowedCategories = categoryRightsDAO.getAllAllowed(server.getId(), cmd).stream().map(categoryId -> {
+                    Optional<ChannelCategory> mayBeCategory = server.getChannelCategoryById(categoryId);
+                    if (mayBeCategory.isEmpty()) {
+                        categoryRightsDAO.deny(server.getId(), categoryId, cmd);
+                    } else {
+                        return printServerChannel(mayBeCategory.get());
+                    }
+                    return null;
+                })
+                        .filter(Objects::nonNull)
+                        .reduce(CommonUtils::reduceNewLine);
+
+                allowedCategories.ifPresent(categoryList -> resultMessage.append("Allowed for categories (and all it's channels):", MessageDecoration.UNDERLINE)
+                        .appendNewLine()
+                        .append(categoryList)
                         .appendNewLine());
 
-                if (resolvedAllowedUsers.isEmpty() &&
-                        resolvedAllowedRoles.isEmpty() &&
-                        resolvedAllowedChannels.isEmpty() &&
-                        resolvedAllowedCategories.isEmpty())
-                    msgBuilder.append("  * No rights were specified for the command.");
-                showInfoMessage(msgBuilder.getStringBuilder().toString(), event);
+                if (allowedUsers.isEmpty() &&
+                        allowedRoles.isEmpty() &&
+                        allowedChannels.isEmpty() &&
+                        allowedCategories.isEmpty())
+                    resultMessage.append("No rights were specified for the command.");
+
+                showMessage(resultMessage, event);
             }
         }
     }
 
-    private void addUsersListToMessage(MessageBuilder resultMessage, @NotNull List<User> users) {
-        users.stream()
-                .map(u -> u.getDiscriminatedName() + " (id: " + u.getIdAsString() + ")")
-                .reduce(CommonUtils::reduceConcat)
-                .ifPresent(usrlist -> resultMessage
-                        .append("Users: ")
-                        .append(usrlist)
-                        .appendNewLine());
+    private <T extends DiscordEntity> void modifyRights(final boolean allowMode,
+                                                        @NotNull final RightsDAO rightsDAO,
+                                                        @NotNull final Server server,
+                                                        @NotNull final T entity,
+                                                        @NotNull final String command,
+                                                        @NotNull final List<T> changedList,
+                                                        @NotNull final List<T> notChangedList) {
+
+        boolean result = allowMode ? rightsDAO.allow(server.getId(), entity.getId(), command)
+                : rightsDAO.deny(server.getId(), entity.getId(), command);
+        if (result) {
+            if (!changedList.contains(entity)) changedList.add(entity);
+        } else {
+            if (!notChangedList.contains(entity)) notChangedList.add(entity);
+        }
     }
 
-    private void addRolesListToMessage(MessageBuilder resultMessage, @NotNull List<Role> roles) {
-        roles.stream()
-                .map(r -> r.getName() + " (id: " + r.getIdAsString() + ")")
-                .reduce(CommonUtils::reduceConcat)
-                .ifPresent(rlist -> resultMessage
-                        .append("Roles: ")
-                        .append(rlist)
-                        .appendNewLine());
+    private <T extends Mentionable> void addMentionableListToMessage(@NotNull final LongEmbedMessage resultMessage,
+                                                                     @NotNull final List<T> entities,
+                                                                     @NotNull final String header) {
+        entities.stream()
+                .map(Mentionable::getMentionTag)
+                .reduce(CommonUtils::reduceNewLine)
+                .ifPresent(line ->
+                        resultMessage.append(header)
+                                .appendNewLine()
+                                .append(line)
+                                .appendNewLine());
     }
 
-    private void addServerTextChannelsListToMessage(@NotNull MessageBuilder resultMessage,
-                                                    @NotNull List<ServerChannel> channels) {
-        channels.stream()
-                .filter(c -> c instanceof ServerTextChannel)
-                .map(this::getChannelNameAndId)
-                .reduce(CommonUtils::reduceConcat)
-                .ifPresent(clist -> resultMessage
-                        .append("For channels: ")
-                        .append(clist)
-                        .appendNewLine());
-        channels.stream()
-                .filter(c -> c instanceof ChannelCategory)
-                .map(this::getChannelNameAndId)
-                .reduce(CommonUtils::reduceConcat)
-                .ifPresent(cliet -> resultMessage
-                        .append("For categories: ")
-                        .append(cliet)
-                        .appendNewLine());
+    private <T extends ServerChannel> void addChannelsListToMessage(@NotNull final LongEmbedMessage resultMessage,
+                                                                    @NotNull final List<T> entities,
+                                                                    @NotNull final String header) {
+        entities.stream()
+                .map(this::printServerChannel)
+                .reduce(CommonUtils::reduceNewLine)
+                .ifPresent(line ->
+                        resultMessage.append(header)
+                                .appendNewLine()
+                                .append(line)
+                                .appendNewLine());
     }
 
-    @NotNull
-    private String getChannelNameAndId(@NotNull ServerChannel channel) {
-        return channel.getName() + " (id: " + channel.getIdAsString() + ")";
+    private <T extends ServerChannel> String printServerChannel(@NotNull final T serverChannel) {
+        if (serverChannel instanceof ServerTextChannel) {
+            return ((ServerTextChannel) serverChannel).getMentionTag();
+        } else {
+            final String name = ServerSideResolver.getReadableContent(serverChannel.getName(), Optional.of(serverChannel.getServer()));
+            if (serverChannel instanceof ServerVoiceChannel) {
+                return SPEAKER_EMOJI + name;
+            } else if (serverChannel instanceof ChannelCategory) {
+                return CATEGORY_EMOJI + name;
+            } else {
+                return "#" + name;
+            }
+        }
+    }
+
+    private String getLastKnownUser(@NotNull final NameCacheService cacheService,
+                                    @NotNull final Server server,
+                                    final long userId) {
+
+        Optional<User> mayBeMember = server.getMemberById(userId);
+        if (mayBeMember.isPresent()) {
+            return mayBeMember.get().getMentionTag();
+        }
+        final StringBuilder result = new StringBuilder()
+                .append("(member not present on server) ");
+        cacheService.findLastKnownName(server, userId).ifPresent(lastKnownNick ->
+                result.append("Nickname: ").append(lastKnownNick).append(", "));
+        boolean foundDiscriminatedName = false;
+        try {
+            User user = server.getApi().getUserById(userId).get(CommonConstants.OP_WAITING_TIMEOUT, CommonConstants.OP_TIME_UNIT);
+            if (user != null && !cacheService.isDeletedUserDiscriminatedName(user.getDiscriminatedName())) {
+                cacheService.update(user);
+                result.append(ServerSideResolver.getReadableContent(user.getDiscriminatedName(), Optional.of(server))).append(", ");
+                foundDiscriminatedName = true;
+            }
+        } catch (Exception ignore) {
+        }
+        if (!foundDiscriminatedName) {
+            cacheService.findLastKnownName(userId).ifPresentOrElse(cachedName ->
+                            result.append(ServerSideResolver.getReadableContent(cachedName, Optional.of(server))).append(", "),
+                    () -> result.append("[discriminated name is unknown], "));
+        }
+        result.append("ID: ").append(userId);
+        return result.toString();
     }
 
     /**

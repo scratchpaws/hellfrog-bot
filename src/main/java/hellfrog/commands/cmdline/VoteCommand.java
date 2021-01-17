@@ -300,7 +300,7 @@ public class VoteCommand
 
             Optional<ServerTextChannel> targetChannelOpt = event.getServerTextChannel();
             if (specifiedChannel) {
-                targetChannelOpt = ServerSideResolver.resolveChannel(server, cmdline.getOptionValue('c'));
+                targetChannelOpt = ServerSideResolver.resolveTextChannel(server, cmdline.getOptionValue('c'));
             }
             ServerTextChannel targetChannel;
             if (targetChannelOpt.isPresent()) {

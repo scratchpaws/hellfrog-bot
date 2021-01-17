@@ -18,10 +18,10 @@ public class JSONServerPreferences {
     // hellfrog.settings.db.sqlite.VotesDAO
     // migrate available
     private List<JSONActiveVote> activeVotes = Collections.emptyList();
-    // hellfrog.settings.db.sqlite.ServerPreferencesDAO.isJoinLeaveDisplay
+    // hellfrog.settings.db.sqlite.ServerPreferencesDAO.isDisplayEventLog
     // migrate available
     private boolean joinLeaveDisplay = false;
-    // hellfrog.settings.db.sqlite.ServerPreferencesDAO.getJoinLeaveChannel
+    // hellfrog.settings.db.sqlite.ServerPreferencesDAO.getEventLogChannel
     // migrate available
     private long joinLeaveChannel = 0L;
     // hellfrog.settings.db.sqlite.ServerPreferencesDAO.isNewAclMode

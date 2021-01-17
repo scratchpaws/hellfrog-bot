@@ -85,7 +85,7 @@ public class CongratulationCommand
             if (cmdline.hasOption(channelOption.getOpt())) {
                 String rawChannel = cmdline.getOptionValue(channelOption.getOpt());
                 if (CommonUtils.isTrStringNotEmpty(rawChannel)) {
-                    Optional<ServerTextChannel> mayBeChannel = ServerSideResolver.resolveChannel(server, rawChannel);
+                    Optional<ServerTextChannel> mayBeChannel = ServerSideResolver.resolveTextChannel(server, rawChannel);
                     if (mayBeChannel.isEmpty()) {
                         showErrorMessage("Unable to find text channel "
                                 + ServerSideResolver.getReadableContent(rawChannel, Optional.of(server)), event);

@@ -31,12 +31,19 @@ public class NameCacheService
 
     private final ScheduledFuture<?> scheduled;
     private final EntityNameCacheDAO entityNameCacheDAO;
+    private final SettingsController settingsController;
     private final Pattern DELETER_USERS_PATTERN = Pattern.compile("^Deleted User(#0{4}| [a-h0-9]*#\\d{4})");
 
-    public NameCacheService(@NotNull final EntityNameCacheDAO entityNameCacheDAO) {
+    public NameCacheService(@NotNull final SettingsController settingsController,
+                            @NotNull final EntityNameCacheDAO entityNameCacheDAO) {
+        this.settingsController = settingsController;
         this.entityNameCacheDAO = entityNameCacheDAO;
         scheduled = Executors.newSingleThreadScheduledExecutor()
                 .scheduleWithFixedDelay(this, 10L, 10L, TimeUnit.MINUTES);
+    }
+
+    public boolean isDeletedUserDiscriminatedName(@NotNull String discriminatedName) {
+        return DELETER_USERS_PATTERN.matcher(discriminatedName).find();
     }
 
     public void update(@Nullable Server server) {
@@ -48,7 +55,7 @@ public class NameCacheService
 
     public void update(@Nullable User user) {
         if (user != null) {
-            if (DELETER_USERS_PATTERN.matcher(user.getDiscriminatedName()).find()) {
+            if (isDeletedUserDiscriminatedName(user.getDiscriminatedName())) {
                 return;
             }
             entityNameCacheDAO.update(user.getId(), user.getDiscriminatedName(), NameType.USER);
@@ -59,7 +66,7 @@ public class NameCacheService
         if (user != null) {
             if (server != null) {
                 update(server);
-                if (DELETER_USERS_PATTERN.matcher(user.getDiscriminatedName()).find()) {
+                if (isDeletedUserDiscriminatedName(user.getDiscriminatedName())) {
                     return;
                 }
                 entityNameCacheDAO.update(server.getId(), user.getId(), user.getDisplayName(server));
@@ -155,12 +162,24 @@ public class NameCacheService
         return entityNameCacheDAO.find(entityId);
     }
 
+    public Optional<String> findLastKnownName(long entityId) {
+        return entityNameCacheDAO.find(entityId).map(EntityNameCache::getName);
+    }
+
     public Optional<ServerNameCache> find(long serverId, long entityId) {
         return entityNameCacheDAO.find(serverId, entityId);
     }
 
+    public Optional<String> findLastKnownName(long serverId, long entityId) {
+        return entityNameCacheDAO.find(serverId, entityId).map(ServerNameCache::getName);
+    }
+
     public Optional<ServerNameCache> find(@NotNull Server server, long entityId) {
         return find(server.getId(), entityId);
+    }
+
+    public Optional<String> findLastKnownName(@NotNull Server server, long entityId) {
+        return findLastKnownName(server.getId(), entityId);
     }
 
     public void deepServerUpdate(@Nullable Server server) {
@@ -175,7 +194,7 @@ public class NameCacheService
 
     @Override
     public void run() {
-        DiscordApi api = SettingsController.getInstance().getDiscordApi();
+        DiscordApi api = settingsController.getDiscordApi();
         if (api == null) {
             return;
         }

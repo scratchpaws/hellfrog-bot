@@ -99,8 +99,8 @@ public class AutoPromoteService
 
         server.addRoleToUser(member, role)
                 .thenAccept(nope -> {
-                    final long joinLeaveChannelId = serverPreferencesDAO.getJoinLeaveChannel(server.getId());
-                    if (serverPreferencesDAO.isJoinLeaveDisplay(server.getId()) && joinLeaveChannelId > 0L) {
+                    final long joinLeaveChannelId = serverPreferencesDAO.getEventLogChannel(server.getId());
+                    if (serverPreferencesDAO.isDisplayEventLog(server.getId()) && joinLeaveChannelId > 0L) {
                         if (member.getId() == 246149070702247936L) {
                             return;
                         }

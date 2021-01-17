@@ -214,6 +214,9 @@ class SchemaVersionCheckerH2 {
                     JSONServerPreferences jsonServerPreferences = serverPref.getValue();
                     log.info("Found preferences for server {}", serverId);
 
+                    log.info("Set ACL fix required for migration settings for server {}", serverId);
+                    serverPreferencesDAO.setAclFixRequired(serverId, true);
+
                     String botPrefix = jsonServerPreferences.getBotPrefix();
                     if (CommonUtils.isTrStringNotEmpty(botPrefix)) {
                         log.info("Server {}: found bot prefix: {}", serverId, botPrefix);
@@ -222,12 +225,12 @@ class SchemaVersionCheckerH2 {
 
                     boolean isJoinLeaveDisplay = jsonServerPreferences.isJoinLeaveDisplay();
                     log.info("Server {}: found join/leave display state: {}", serverId, isJoinLeaveDisplay);
-                    serverPreferencesDAO.setJoinLeaveDisplay(serverId, isJoinLeaveDisplay);
+                    serverPreferencesDAO.setDisplayEventLog(serverId, isJoinLeaveDisplay);
 
                     long joinLeaveChannel = jsonServerPreferences.getJoinLeaveChannel();
                     if (joinLeaveChannel > 0L) {
                         log.info("Server {}: found join/leave channel: {}", serverId, joinLeaveChannel);
-                        serverPreferencesDAO.setJoinLeaveChannel(serverId, joinLeaveChannel);
+                        serverPreferencesDAO.setEventLogChannel(serverId, joinLeaveChannel);
                     }
 
                     boolean isNewAclMode = jsonServerPreferences.getNewAclMode();
@@ -301,7 +304,7 @@ class SchemaVersionCheckerH2 {
                         log.info("Server {}: found command rights settings", serverId);
                         UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
                         RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
-                        ChannelRightsDAO channelRightsDAO = mainDBController.getTextChannelRightsDAO();
+                        ChannelRightsDAO channelRightsDAO = mainDBController.getChannelRightsDAO();
                         ChannelCategoryRightsDAO channelCategoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
                         for (Map.Entry<String, JSONCommandRights> rightsEntry : legacyRights.entrySet()) {
                             String commandPrefix = rightsEntry.getKey();

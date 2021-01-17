@@ -133,7 +133,7 @@ public class ServerSideResolver
         return role;
     }
 
-    public static Optional<ServerTextChannel> resolveChannel(Server server, String rawValue) {
+    public static Optional<ServerTextChannel> resolveTextChannel(Server server, String rawValue) {
         NameCacheService nameCacheService = SettingsController.getInstance().getNameCacheService();
         // 1. Вначале ищем по явному id канала
         if (CommonUtils.isLong(rawValue)) {
@@ -175,6 +175,23 @@ public class ServerSideResolver
         Optional<ChannelCategory> channelCategory = CommonUtils.getFirstOrEmpty(server.getChannelCategoriesByNameIgnoreCase(rawValue));
         channelCategory.ifPresent(nameCacheService::update);
         return channelCategory;
+    }
+
+    public static Optional<ServerChannel> resolveServerChannel(Server server, String rawValue) {
+        NameCacheService nameCacheService = SettingsController.getInstance().getNameCacheService();
+        // 1. First, search by channel ID
+        if (CommonUtils.isLong(rawValue)) {
+            long unresolvedChannelId = CommonUtils.onlyNumbersToLong(rawValue);
+            Optional<ServerChannel> serverChannel = server.getChannelById(unresolvedChannelId);
+            if (serverChannel.isPresent()) {
+                nameCacheService.update(serverChannel.get());
+                return serverChannel;
+            }
+        }
+        // 2. Second, search for the specified name
+        Optional<ServerChannel> serverChannel = CommonUtils.getFirstOrEmpty(server.getChannelsByNameIgnoreCase(rawValue));
+        serverChannel.ifPresent(nameCacheService::update);
+        return serverChannel;
     }
 
     public static Optional<KnownCustomEmoji> resolveCustomEmoji(Server server, String rawText) {
@@ -249,7 +266,7 @@ public class ServerSideResolver
         List<ServerTextChannel> resolvedChannels = new ArrayList<>(rawTextChannelList.size());
         List<String> unresolvedChannels = new ArrayList<>(rawTextChannelList.size());
         rawTextChannelList.forEach((rawChannel) -> {
-            Optional<ServerTextChannel> mayBeChannel = ServerSideResolver.resolveChannel(server, rawChannel);
+            Optional<ServerTextChannel> mayBeChannel = ServerSideResolver.resolveTextChannel(server, rawChannel);
             if (mayBeChannel.isPresent()) {
                 resolvedChannels.add(mayBeChannel.get());
             } else {
@@ -281,22 +298,17 @@ public class ServerSideResolver
     }
 
     @NotNull
-    public static ParseResult<ServerChannel> resolveTextChannelsAndCategoriesList(Server server,
-                                                                                  @NotNull List<String> rawChannelsList) {
+    public static ParseResult<ServerChannel> resolveAnyServerChannelList(Server server,
+                                                                         @NotNull List<String> rawChannelsList) {
         ParseResult<ServerChannel> result = new ParseResult<>();
         List<ServerChannel> resolvedChannels = new ArrayList<>(rawChannelsList.size());
         List<String> unresolvedChannels = new ArrayList<>(rawChannelsList.size());
         rawChannelsList.forEach((rawChannel) -> {
-            Optional<ServerTextChannel> mayBeTextChannel = ServerSideResolver.resolveChannel(server, rawChannel);
-            if (mayBeTextChannel.isPresent()) {
-                resolvedChannels.add(mayBeTextChannel.get());
+            Optional<ServerChannel> mayBeChannel = ServerSideResolver.resolveServerChannel(server, rawChannel);
+            if (mayBeChannel.isPresent()) {
+                resolvedChannels.add(mayBeChannel.get());
             } else {
-                Optional<ChannelCategory> mayBeCategory = ServerSideResolver.resolveCategory(server, rawChannel);
-                if (mayBeCategory.isPresent()) {
-                    resolvedChannels.add(mayBeCategory.get());
-                } else {
-                    unresolvedChannels.add(rawChannel);
-                }
+                unresolvedChannels.add(rawChannel);
             }
         });
         result.setFound(resolvedChannels);
@@ -342,7 +354,7 @@ public class ServerSideResolver
         Matcher textChannelMentionMatcher = CHANNEL_TAG_SEARCH.matcher(message);
         while (textChannelMentionMatcher.find()) {
             String textChannelMention = textChannelMentionMatcher.group();
-            Optional<ServerTextChannel> serverTextChannel = resolveChannel(server, textChannelMention);
+            Optional<ServerTextChannel> serverTextChannel = resolveTextChannel(server, textChannelMention);
             if (serverTextChannel.isPresent()) {
                 message = message.replace(textChannelMention, "#" + serverTextChannel.get().getName());
             }

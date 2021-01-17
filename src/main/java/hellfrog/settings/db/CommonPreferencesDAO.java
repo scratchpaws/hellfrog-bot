@@ -19,13 +19,9 @@ public interface CommonPreferencesDAO {
     String API_KEY = "api.key";
     String BOT_NAME_KEY = "bot.name";
     String OFFICIAL_SERVER_KEY = "bot.server";
-    String OFFICIAL_SERVER_DEFAULT_STR = String.valueOf(OFFICIAL_SERVER_DEFAULT);
     String SERVICE_CHANNEL_KEY = "bot.service.channel";
-    String SERVICE_CHANNEL_DEFAULT_STR = String.valueOf(SERVICE_CHANNEL_DEFAULT);
     String HIGH_ROLL_CHANNEL_KEY = "bot.high.channel";
-    String HIGH_ROLL_CHANNEL_KEY_DEFAULT_STR = String.valueOf(HIGH_ROLL_CHANNEL_KEY_DEFAULT);
     String LOW_ROLL_CHANNEL_KEY = "bot.low.channel";
-    String LOW_ROLL_CHANNEL_DEFAULT_STR = String.valueOf(LOW_ROLL_CHANNEL_DEFAULT);
 
     String getApiKey();
 

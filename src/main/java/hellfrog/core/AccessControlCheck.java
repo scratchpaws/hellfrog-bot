@@ -1,8 +1,15 @@
 package hellfrog.core;
 
+import hellfrog.commands.ACLCommand;
+import hellfrog.commands.cmdline.BotCommand;
+import hellfrog.commands.scenes.Scenario;
+import hellfrog.reacts.MsgCreateReaction;
 import hellfrog.settings.CommandRights;
 import hellfrog.settings.SettingsController;
+import hellfrog.settings.db.*;
+import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.channel.ChannelCategory;
+import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.permission.Role;
@@ -12,10 +19,15 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.event.message.reaction.SingleReactionEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class AccessControlCheck {
+
+    private static List<String> allCommandPrefix = null;
+    private static final ReentrantLock prefixLoadLock = new ReentrantLock();
 
     public static boolean canExecuteOnServer(@NotNull String commandPrefix, @NotNull User user,
                                              @NotNull Server server, @NotNull TextChannel channel,
@@ -108,5 +120,65 @@ public class AccessControlCheck {
         long userId = event.getUserId();
         long botOwner = event.getApi().getOwnerId();
         return SettingsController.getInstance().isGlobalBotOwner(userId) || userId == botOwner;
+    }
+
+    public static void checkAndFixAcl(@NotNull final Server server) {
+        MainDBController mainDBController = SettingsController.getInstance().getMainDBController();
+        ServerPreferencesDAO serverPreferencesDAO = mainDBController.getServerPreferencesDAO();
+        if (serverPreferencesDAO.isAclFixRequired(server.getId())) {
+            RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
+            ChannelRightsDAO channelRightsDAO = mainDBController.getChannelRightsDAO();
+            ChannelCategoryRightsDAO categoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
+            getAllCommandPrefix().forEach(prefix -> {
+                roleRightsDAO.getAllAllowed(server.getId(), prefix).forEach(roleId -> {
+                    if (server.getRoleById(roleId).isEmpty()) {
+                        roleRightsDAO.deny(server.getId(), roleId, prefix);
+                    }
+                });
+                channelRightsDAO.getAllAllowed(server.getId(), prefix).forEach(channelId -> {
+                    Optional<ServerChannel> mayBeChannel = server.getChannelById(channelId);
+                    if (mayBeChannel.isEmpty()) {
+                        channelRightsDAO.deny(server.getId(), channelId, prefix);
+                    } else {
+                        ServerChannel serverChannel = mayBeChannel.get();
+                        if (serverChannel instanceof ChannelCategory) {
+                            channelRightsDAO.deny(server.getId(), channelId, prefix);
+                        }
+                    }
+                });
+                categoryRightsDAO.getAllAllowed(server.getId(), prefix).forEach(categoryId -> {
+                    Optional<ChannelCategory> mayBeChannel = server.getChannelCategoryById(categoryId);
+                    if (mayBeChannel.isEmpty()) {
+                        channelRightsDAO.deny(server.getId(), categoryId, prefix);
+                    }
+                });
+            });
+            serverPreferencesDAO.setAclFixRequired(server.getId(), false);
+        }
+    }
+
+    public static List<String> getAllCommandPrefix() {
+        if (allCommandPrefix == null) {
+            prefixLoadLock.lock();
+            try {
+                if (allCommandPrefix == null) {
+                    List<String> allCommands = new ArrayList<>();
+                    for (MsgCreateReaction reaction : MsgCreateReaction.all()) {
+                        allCommands.add(reaction.getCommandPrefix());
+                    }
+                    for (BotCommand command : BotCommand.all()) {
+                        allCommands.add(command.getPrefix());
+                    }
+                    for (Scenario scenario : Scenario.all()) {
+                        allCommands.add(scenario.getPrefix());
+                    }
+                    Collections.sort(allCommands);
+                    allCommandPrefix = Collections.unmodifiableList(allCommands);
+                }
+            } finally {
+                prefixLoadLock.unlock();
+            }
+        }
+        return allCommandPrefix;
     }
 }

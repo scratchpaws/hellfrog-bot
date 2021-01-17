@@ -97,7 +97,7 @@ public class SettingsController {
         congratulationsController = new CongratulationsController();
         serviceLogsNotificator = new ServiceLogsNotificator();
         autoBackupService = new AutoBackupService();
-        nameCacheService = new NameCacheService(mainDBController.getEntityNameCacheDAO());
+        nameCacheService = new NameCacheService(this, mainDBController.getEntityNameCacheDAO());
 
         autoPromoteService = new AutoPromoteService(mainDBController.getAutoPromoteRolesDAO(),
                 mainDBController.getRoleAssignDAO(),

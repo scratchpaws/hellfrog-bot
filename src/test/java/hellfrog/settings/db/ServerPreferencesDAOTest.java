@@ -32,28 +32,30 @@ public class ServerPreferencesDAOTest {
             ServerPreferencesDAO preferencesDAO = mainDBController.getServerPreferencesDAO();
 
             String awaitPrefix = ServerPreferencesDAO.PREFIX_DEFAULT;
-            boolean awaitJoinLeaveDisplay = ServerPreferencesDAO.JOIN_LEAVE_DISPLAY_DEFAULT;
-            long awaitJoinLeaveChannelId = ServerPreferencesDAO.JOIN_LEAVE_CHANNEL_ID_DEFAULT;
+            boolean awaitJoinLeaveDisplay = ServerPreferencesDAO.DISPLAY_EVENT_LOG_DEFAULT;
+            long awaitJoinLeaveChannelId = ServerPreferencesDAO.EVENT_LOG_CHANNEL_ID_DEFAULT;
             boolean awaitNewAclMode = ServerPreferencesDAO.NEW_ACL_MODE_DEFAULT;
             boolean awaitCongratulationsEnabled = ServerPreferencesDAO.CONGRATULATIONS_ENABLED_DEFAULT;
             long awaitCongratulationsChannelId = ServerPreferencesDAO.CONGRATULATIONS_CHANNEL_DEFAULT;
             String awaitCongratulationsTimeZoneId = ServerPreferencesDAO.CONGRATULATIONS_TIMEZONE_DEFAULT;
             boolean awaitEnabledStatistic = ServerPreferencesDAO.STATISTIC_ENABLED_DEFAULT;
             Instant awaitStatisticDate = ServerPreferencesDAO.STATISTIC_START_DATE_DEFAULT;
+            boolean awaitAclFixRequired = ServerPreferencesDAO.ACL_FIX_REQUIRED_DEFAULT;
 
             // извлечение значений по-умолчанию
             for (Map.Entry<Long, ServerSettings> entry : servers.entrySet()) {
                 long serverId = entry.getKey();
 
                 String prefix = preferencesDAO.getPrefix(serverId);
-                boolean joinLeaveDisplay = preferencesDAO.isJoinLeaveDisplay(serverId);
-                long joinLeaveChannel = preferencesDAO.getJoinLeaveChannel(serverId);
+                boolean joinLeaveDisplay = preferencesDAO.isDisplayEventLog(serverId);
+                long joinLeaveChannel = preferencesDAO.getEventLogChannel(serverId);
                 boolean newAclMode = preferencesDAO.isNewAclMode(serverId);
                 boolean congratulationsEnabled = preferencesDAO.isCongratulationsEnabled(serverId);
                 long congratulationsChannelId = preferencesDAO.getCongratulationChannel(serverId);
                 String congratulationsTimeZoneId = preferencesDAO.getCongratulationTimeZone(serverId);
                 boolean enabledStatistic = preferencesDAO.isStatisticEnabled(serverId);
                 Instant statisticDate = preferencesDAO.getStatisticStartDate(serverId);
+                boolean aclFixRequired = preferencesDAO.isAclFixRequired(serverId);
 
                 Assertions.assertEquals(awaitPrefix, prefix);
                 Assertions.assertEquals(awaitJoinLeaveDisplay, joinLeaveDisplay);
@@ -64,6 +66,7 @@ public class ServerPreferencesDAOTest {
                 Assertions.assertEquals(awaitCongratulationsTimeZoneId, congratulationsTimeZoneId);
                 Assertions.assertEquals(awaitEnabledStatistic, enabledStatistic);
                 Assertions.assertEquals(awaitStatisticDate, statisticDate);
+                Assertions.assertEquals(awaitAclFixRequired, aclFixRequired);
             }
 
             // задание значений, здесь извлекаются всё ещё значения по-умолчанию
@@ -72,14 +75,15 @@ public class ServerPreferencesDAOTest {
                 ServerSettings settings = entry.getValue();
 
                 String prefix = preferencesDAO.setPrefix(serverId, settings.prefix);
-                boolean joinLeaveDisplay = preferencesDAO.setJoinLeaveDisplay(serverId, settings.joinLeaveDisplay);
-                long joinLeaveChannel = preferencesDAO.setJoinLeaveChannel(serverId, settings.joinLeaveChannel);
+                boolean joinLeaveDisplay = preferencesDAO.setDisplayEventLog(serverId, settings.joinLeaveDisplay);
+                long joinLeaveChannel = preferencesDAO.setEventLogChannel(serverId, settings.joinLeaveChannel);
                 boolean newAclMode = preferencesDAO.setNewAclMode(serverId, settings.newAclMode);
                 boolean congratulationsEnabled = preferencesDAO.setCongratulationEnabled(serverId, settings.enabledCongratulations);
                 long congratulationsChannelId = preferencesDAO.setCongratulationChannel(serverId, settings.congratulationsChannel);
                 String congratulationsTimeZoneId = preferencesDAO.setCongratulationTimeZone(serverId, settings.congratulationsTimezone);
                 boolean enabledStatistic = preferencesDAO.setStatisticEnabled(serverId, settings.enableStatistic);
                 Instant statisticDate = preferencesDAO.setStatisticStartDate(serverId, settings.statisticStartDate);
+                boolean aclFixRequired = preferencesDAO.setAclFixRequired(serverId, settings.aclFixRequired);
 
                 Assertions.assertEquals(awaitPrefix, prefix);
                 Assertions.assertEquals(awaitJoinLeaveDisplay, joinLeaveDisplay);
@@ -90,6 +94,7 @@ public class ServerPreferencesDAOTest {
                 Assertions.assertEquals(awaitCongratulationsTimeZoneId, congratulationsTimeZoneId);
                 Assertions.assertEquals(awaitEnabledStatistic, enabledStatistic);
                 Assertions.assertEquals(awaitStatisticDate, statisticDate);
+                Assertions.assertEquals(awaitAclFixRequired, aclFixRequired);
             }
 
             // проверяем, что значения сохранились
@@ -98,14 +103,15 @@ public class ServerPreferencesDAOTest {
                 ServerSettings settings = entry.getValue();
 
                 String prefix = preferencesDAO.getPrefix(serverId);
-                boolean joinLeaveDisplay = preferencesDAO.isJoinLeaveDisplay(serverId);
-                long joinLeaveChannel = preferencesDAO.getJoinLeaveChannel(serverId);
+                boolean joinLeaveDisplay = preferencesDAO.isDisplayEventLog(serverId);
+                long joinLeaveChannel = preferencesDAO.getEventLogChannel(serverId);
                 boolean newAclMode = preferencesDAO.isNewAclMode(serverId);
                 boolean congratulationsEnabled = preferencesDAO.isCongratulationsEnabled(serverId);
                 long congratulationsChannelId = preferencesDAO.getCongratulationChannel(serverId);
                 String congratulationsTimeZoneId = preferencesDAO.getCongratulationTimeZone(serverId);
                 boolean enabledStatistic = preferencesDAO.isStatisticEnabled(serverId);
                 Instant statisticDate = preferencesDAO.getStatisticStartDate(serverId);
+                boolean aclFixRequired = preferencesDAO.isAclFixRequired(serverId);
 
                 Assertions.assertEquals(settings.prefix, prefix);
                 Assertions.assertEquals(settings.joinLeaveDisplay, joinLeaveDisplay);
@@ -116,6 +122,7 @@ public class ServerPreferencesDAOTest {
                 Assertions.assertEquals(settings.congratulationsTimezone, congratulationsTimeZoneId);
                 Assertions.assertEquals(settings.enableStatistic, enabledStatistic);
                 Assertions.assertEquals(settings.statisticStartDate, statisticDate);
+                Assertions.assertEquals(settings.aclFixRequired, aclFixRequired);
             }
 
             // проверяем, что значения не перезаписались дефолтом при извлечении данных
@@ -124,14 +131,15 @@ public class ServerPreferencesDAOTest {
                 ServerSettings settings = entry.getValue();
 
                 String prefix = preferencesDAO.getPrefix(serverId);
-                boolean joinLeaveDisplay = preferencesDAO.isJoinLeaveDisplay(serverId);
-                long joinLeaveChannel = preferencesDAO.getJoinLeaveChannel(serverId);
+                boolean joinLeaveDisplay = preferencesDAO.isDisplayEventLog(serverId);
+                long joinLeaveChannel = preferencesDAO.getEventLogChannel(serverId);
                 boolean newAclMode = preferencesDAO.isNewAclMode(serverId);
                 boolean congratulationsEnabled = preferencesDAO.isCongratulationsEnabled(serverId);
                 long congratulationsChannelId = preferencesDAO.getCongratulationChannel(serverId);
                 String congratulationsTimeZoneId = preferencesDAO.getCongratulationTimeZone(serverId);
                 boolean enabledStatistic = preferencesDAO.isStatisticEnabled(serverId);
                 Instant statisticDate = preferencesDAO.getStatisticStartDate(serverId);
+                boolean aclFixRequired = preferencesDAO.isAclFixRequired(serverId);
 
                 Assertions.assertEquals(settings.prefix, prefix);
                 Assertions.assertEquals(settings.joinLeaveDisplay, joinLeaveDisplay);
@@ -142,6 +150,7 @@ public class ServerPreferencesDAOTest {
                 Assertions.assertEquals(settings.congratulationsTimezone, congratulationsTimeZoneId);
                 Assertions.assertEquals(settings.enableStatistic, enabledStatistic);
                 Assertions.assertEquals(settings.statisticStartDate, statisticDate);
+                Assertions.assertEquals(settings.aclFixRequired, aclFixRequired);
             }
         }
 
@@ -154,14 +163,15 @@ public class ServerPreferencesDAOTest {
                 ServerSettings settings = entry.getValue();
 
                 String prefix = preferencesDAO.getPrefix(serverId);
-                boolean joinLeaveDisplay = preferencesDAO.isJoinLeaveDisplay(serverId);
-                long joinLeaveChannel = preferencesDAO.getJoinLeaveChannel(serverId);
+                boolean joinLeaveDisplay = preferencesDAO.isDisplayEventLog(serverId);
+                long joinLeaveChannel = preferencesDAO.getEventLogChannel(serverId);
                 boolean newAclMode = preferencesDAO.isNewAclMode(serverId);
                 boolean congratulationsEnabled = preferencesDAO.isCongratulationsEnabled(serverId);
                 long congratulationsChannelId = preferencesDAO.getCongratulationChannel(serverId);
                 String congratulationsTimeZoneId = preferencesDAO.getCongratulationTimeZone(serverId);
                 boolean enabledStatistic = preferencesDAO.isStatisticEnabled(serverId);
                 Instant statisticDate = preferencesDAO.getStatisticStartDate(serverId);
+                boolean aclFixRequired = preferencesDAO.isAclFixRequired(serverId);
 
                 Assertions.assertEquals(settings.prefix, prefix);
                 Assertions.assertEquals(settings.joinLeaveDisplay, joinLeaveDisplay);
@@ -172,6 +182,7 @@ public class ServerPreferencesDAOTest {
                 Assertions.assertEquals(settings.congratulationsTimezone, congratulationsTimeZoneId);
                 Assertions.assertEquals(settings.enableStatistic, enabledStatistic);
                 Assertions.assertEquals(settings.statisticStartDate, statisticDate);
+                Assertions.assertEquals(settings.aclFixRequired, aclFixRequired);
             }
         }
 
@@ -190,6 +201,7 @@ public class ServerPreferencesDAOTest {
         final String congratulationsTimezone;
         final boolean enableStatistic;
         final Instant statisticStartDate;
+        final boolean aclFixRequired;
 
         ServerSettings() {
             ThreadLocalRandom lr = ThreadLocalRandom.current();
@@ -202,6 +214,7 @@ public class ServerPreferencesDAOTest {
             congratulationsTimezone = TestUtils.randomTimeZone().getID();
             enableStatistic = lr.nextBoolean();
             statisticStartDate = TestUtils.randomInstant();
+            aclFixRequired = lr.nextBoolean();
         }
     }
 }

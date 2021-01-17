@@ -36,7 +36,7 @@ public class RightsDAOTest {
         try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
             RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
-            ChannelRightsDAO channelRightsDAO = mainDBController.getTextChannelRightsDAO();
+            ChannelRightsDAO channelRightsDAO = mainDBController.getChannelRightsDAO();
             ChannelCategoryRightsDAO channelCategoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
 
             testServers.parallelStream()
@@ -104,7 +104,7 @@ public class RightsDAOTest {
         try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
             UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
             RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
-            ChannelRightsDAO channelRightsDAO = mainDBController.getTextChannelRightsDAO();
+            ChannelRightsDAO channelRightsDAO = mainDBController.getChannelRightsDAO();
             ChannelCategoryRightsDAO channelCategoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
 
             testServers.parallelStream()

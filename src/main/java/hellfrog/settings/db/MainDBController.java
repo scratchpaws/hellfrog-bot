@@ -35,7 +35,7 @@ public abstract class MainDBController implements Closeable, AutoCloseable {
 
     public abstract RoleRightsDAO getRoleRightsDAO();
 
-    public abstract ChannelRightsDAO getTextChannelRightsDAO();
+    public abstract ChannelRightsDAO getChannelRightsDAO();
 
     public abstract ChannelCategoryRightsDAO getChannelCategoryRightsDAO();
 

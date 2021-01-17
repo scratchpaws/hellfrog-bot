@@ -5,7 +5,6 @@ import hellfrog.common.LongEmbedMessage;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import hellfrog.settings.db.ServerPreferencesDAO;
-import hellfrog.settings.db.entity.ServerNameCache;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.ServerTextChannel;
@@ -80,13 +79,13 @@ public class EventLogCommand
                     .getMainDBController()
                     .getServerPreferencesDAO();
             long targetChannel = 0;
-            long previousChannel = preferencesDAO.getJoinLeaveChannel(server.getId());
-            boolean currentState = preferencesDAO.isJoinLeaveDisplay(server.getId());
+            long previousChannel = preferencesDAO.getEventLogChannel(server.getId());
+            boolean currentState = preferencesDAO.isDisplayEventLog(server.getId());
             Optional<ServerTextChannel> mayBeChannel = previousChannel > 0 ?
                     server.getTextChannelById(previousChannel) : Optional.empty();
 
             if (!CommonUtils.isTrStringEmpty(textChannelName)) {
-                mayBeChannel = ServerSideResolver.resolveChannel(server, textChannelName);
+                mayBeChannel = ServerSideResolver.resolveTextChannel(server, textChannelName);
                 if (mayBeChannel.isEmpty()) {
                     showErrorMessage("Unable to resolve text channel", event);
                     return;
@@ -112,10 +111,10 @@ public class EventLogCommand
                 }
 
                 if (targetChannel > 0) {
-                    preferencesDAO.setJoinLeaveChannel(server.getId(), targetChannel);
+                    preferencesDAO.setEventLogChannel(server.getId(), targetChannel);
                 }
 
-                preferencesDAO.setJoinLeaveDisplay(server.getId(), true);
+                preferencesDAO.setDisplayEventLog(server.getId(), true);
                 LongEmbedMessage message = LongEmbedMessage.withTitleInfoStyle("Event logging settings")
                         .append("Event logging enabled");
                 mayBeChannel.ifPresent(serverTextChannel ->
@@ -129,7 +128,7 @@ public class EventLogCommand
                 if (!currentState) {
                     showErrorMessage("Event logging already disabled.", event);
                 } else {
-                    preferencesDAO.setJoinLeaveDisplay(server.getId(), false);
+                    preferencesDAO.setDisplayEventLog(server.getId(), false);
                     showInfoMessage("Event logging disabled", event);
                 }
             }
@@ -145,8 +144,7 @@ public class EventLogCommand
                     } else {
                         message.append(" (text channel ");
                         SettingsController.getInstance().getNameCacheService()
-                                .find(server, previousChannel)
-                                .map(ServerNameCache::getName)
+                                .findLastKnownName(server, previousChannel)
                                 .ifPresent(s -> message.append(" \"").appendReadable(s, server).append("\" "));
                         message.append("of the event log was not found, need to specify another channel to enable)");
                     }

@@ -288,7 +288,7 @@ public class MainDBControllerH2
     }
 
     @Override
-    public ChannelRightsDAO getTextChannelRightsDAO() {
+    public ChannelRightsDAO getChannelRightsDAO() {
         return channelRightsDAO;
     }
 

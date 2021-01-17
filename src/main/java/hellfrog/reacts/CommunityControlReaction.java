@@ -154,10 +154,10 @@ public class CommunityControlReaction
                 .getMainDBController()
                 .getServerPreferencesDAO();
 
-        if (preferencesDAO.isJoinLeaveDisplay(server.getId())
-                && preferencesDAO.getJoinLeaveChannel(server.getId()) > 0L) {
+        if (preferencesDAO.isDisplayEventLog(server.getId())
+                && preferencesDAO.getEventLogChannel(server.getId()) > 0L) {
 
-            server.getTextChannelById(preferencesDAO.getJoinLeaveChannel(server.getId()))
+            server.getTextChannelById(preferencesDAO.getEventLogChannel(server.getId()))
                     .ifPresent(serverTextChannel ->
                             UserUtils.assignRoleAndDisplay(server, serverTextChannel, role, member));
         }

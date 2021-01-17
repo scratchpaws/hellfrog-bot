@@ -167,23 +167,23 @@ class ServerPreferencesDAOImpl
     }
 
     @Override
-    public boolean isJoinLeaveDisplay(long serverId) {
-        return getBooleanValue(serverId, ServerPrefKey.DISPLAY_JOIN_LEAVE, JOIN_LEAVE_DISPLAY_DEFAULT);
+    public boolean isDisplayEventLog(long serverId) {
+        return getBooleanValue(serverId, ServerPrefKey.DISPLAY_EVENT_LOG, DISPLAY_EVENT_LOG_DEFAULT);
     }
 
     @Override
-    public boolean setJoinLeaveDisplay(long serverId, boolean newState) {
-        return setBooleanValue(serverId, ServerPrefKey.DISPLAY_JOIN_LEAVE, newState, JOIN_LEAVE_DISPLAY_DEFAULT);
+    public boolean setDisplayEventLog(long serverId, boolean newState) {
+        return setBooleanValue(serverId, ServerPrefKey.DISPLAY_EVENT_LOG, newState, DISPLAY_EVENT_LOG_DEFAULT);
     }
 
     @Override
-    public long getJoinLeaveChannel(long serverId) {
-        return getLongValue(serverId, ServerPrefKey.JOIN_LEAVE_CHANNEL, JOIN_LEAVE_CHANNEL_ID_DEFAULT);
+    public long getEventLogChannel(long serverId) {
+        return getLongValue(serverId, ServerPrefKey.EVENT_LOG_CHANNEL, EVENT_LOG_CHANNEL_ID_DEFAULT);
     }
 
     @Override
-    public long setJoinLeaveChannel(long serverId, long newChannelId) {
-        return setLongValue(serverId, ServerPrefKey.JOIN_LEAVE_CHANNEL, newChannelId, JOIN_LEAVE_CHANNEL_ID_DEFAULT);
+    public long setEventLogChannel(long serverId, long newChannelId) {
+        return setLongValue(serverId, ServerPrefKey.EVENT_LOG_CHANNEL, newChannelId, EVENT_LOG_CHANNEL_ID_DEFAULT);
     }
 
     @Override
@@ -240,5 +240,15 @@ class ServerPreferencesDAOImpl
 
     public Instant setStatisticStartDate(long serverId, @NotNull final Instant startDate) {
         return setDateTimeValue(serverId, ServerPrefKey.STATISTIC_DATE, startDate, STATISTIC_START_DATE_DEFAULT);
+    }
+
+    @Override
+    public boolean isAclFixRequired(long serverId) {
+        return getBooleanValue(serverId, ServerPrefKey.ACL_FIX_REQUIRED, ACL_FIX_REQUIRED_DEFAULT);
+    }
+
+    @Override
+    public boolean setAclFixRequired(long serverId, boolean required) {
+        return setBooleanValue(serverId, ServerPrefKey.ACL_FIX_REQUIRED, required, ACL_FIX_REQUIRED_DEFAULT);
     }
 }
