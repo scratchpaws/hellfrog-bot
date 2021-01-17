@@ -24,12 +24,14 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 public class NameCacheService
         implements Runnable {
 
     private final ScheduledFuture<?> scheduled;
     private final EntityNameCacheDAO entityNameCacheDAO;
+    private final Pattern DELETER_USERS_PATTERN = Pattern.compile("^Deleted User(#0{4}| [a-h0-9]*#\\d{4})");
 
     public NameCacheService(@NotNull final EntityNameCacheDAO entityNameCacheDAO) {
         this.entityNameCacheDAO = entityNameCacheDAO;
@@ -46,6 +48,9 @@ public class NameCacheService
 
     public void update(@Nullable User user) {
         if (user != null) {
+            if (DELETER_USERS_PATTERN.matcher(user.getDiscriminatedName()).find()) {
+                return;
+            }
             entityNameCacheDAO.update(user.getId(), user.getDiscriminatedName(), NameType.USER);
         }
     }
@@ -53,8 +58,11 @@ public class NameCacheService
     public void update(@Nullable User user, @Nullable Server server) {
         if (user != null) {
             if (server != null) {
-                entityNameCacheDAO.update(server.getId(), user.getId(), user.getDisplayName(server));
                 update(server);
+                if (DELETER_USERS_PATTERN.matcher(user.getDiscriminatedName()).find()) {
+                    return;
+                }
+                entityNameCacheDAO.update(server.getId(), user.getId(), user.getDisplayName(server));
             }
             update(user);
         }
