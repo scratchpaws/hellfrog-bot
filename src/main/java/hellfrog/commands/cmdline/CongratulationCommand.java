@@ -66,6 +66,11 @@ public class CongratulationCommand
                                                    MessageCreateEvent event,
                                                    ArrayList<String> anotherLines) {
 
+        if (!canExecuteServerCommand(event, server)) {
+            showAccessDeniedServerMessage(event);
+            return;
+        }
+
         final SettingsController settingsController = SettingsController.getInstance();
         final ServerPreferencesDAO serverPreferencesDAO = settingsController.getMainDBController().getServerPreferencesDAO();
 
