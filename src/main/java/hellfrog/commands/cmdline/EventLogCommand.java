@@ -1,24 +1,21 @@
 package hellfrog.commands.cmdline;
 
 import hellfrog.common.CommonUtils;
+import hellfrog.common.LongEmbedMessage;
 import hellfrog.core.ServerSideResolver;
-import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
+import hellfrog.settings.db.ServerPreferencesDAO;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.event.message.MessageCreateEvent;
 
 import java.util.ArrayList;
 import java.util.Optional;
 
-/**
- * Логгирование присоединившихся и отсоединившихся участников сервера
- */
-public class JoinLogCommand
+public class EventLogCommand
         extends BotCommand {
 
     private static final String BOT_PREFIX = "jlog";
@@ -49,7 +46,7 @@ public class JoinLogCommand
             .desc("Show logging status")
             .build();
 
-    public JoinLogCommand() {
+    public EventLogCommand() {
         super(BOT_PREFIX, DESCRIPTION);
         super.enableOnlyServerCommandStrict();
 
@@ -70,7 +67,7 @@ public class JoinLogCommand
             return;
         }
 
-        boolean isChannelSet = cmdline.hasOption('c');
+        boolean isChannelSet = cmdline.hasOption(channelOption.getOpt());
         String textChannelName = isChannelSet ? cmdline.getOptionValue(channelOption.getOpt()) : "";
 
         boolean enableFlag = cmdline.hasOption(enableOption.getOpt());
@@ -78,11 +75,12 @@ public class JoinLogCommand
         boolean statusFlag = cmdline.hasOption(statusOption.getOpt());
 
         if (enableFlag ^ disableFlag ^ statusFlag) {
-            SettingsController settingsController = SettingsController.getInstance();
-            ServerPreferences preferences = settingsController.getServerPreferences(server.getId());
+            ServerPreferencesDAO preferencesDAO = SettingsController.getInstance()
+                    .getMainDBController()
+                    .getServerPreferencesDAO();
             long targetChannel = 0;
-            long previousChannel = preferences.getJoinLeaveChannel();
-            boolean currentState = preferences.isJoinLeaveDisplay();
+            long previousChannel = preferencesDAO.getJoinLeaveChannel(server.getId());
+            boolean currentState = preferencesDAO.isJoinLeaveDisplay(server.getId());
             Optional<ServerTextChannel> mayBeChannel = previousChannel > 0 ?
                     server.getTextChannelById(previousChannel) : Optional.empty();
 
@@ -113,43 +111,41 @@ public class JoinLogCommand
                 }
 
                 if (targetChannel > 0) {
-                    preferences.setJoinLeaveChannel(targetChannel);
+                    preferencesDAO.setJoinLeaveChannel(server.getId(), targetChannel);
                 }
 
-                preferences.setJoinLeaveDisplay(true);
-                settingsController.saveServerSideParameters(server.getId());
-
-                MessageBuilder msg = new MessageBuilder().append("Join/Leave logging enabled");
+                preferencesDAO.setJoinLeaveDisplay(server.getId(), true);
+                LongEmbedMessage message = LongEmbedMessage.withTitleInfoStyle("Event logging settings")
+                        .append("Event logging enabled");
                 mayBeChannel.ifPresent(serverTextChannel ->
-                        msg.append(" to channel ")
+                        message.append(" to channel ")
                                 .append(serverTextChannel));
 
-                showInfoMessage(msg.getStringBuilder().toString(), event);
+                showMessage(message, event);
             }
 
             if (disableFlag) {
                 if (!currentState) {
-                    showErrorMessage("Logging already disabled.", event);
+                    showErrorMessage("Event logging already disabled.", event);
                 } else {
-                    preferences.setJoinLeaveDisplay(false);
-                    settingsController.saveServerSideParameters(server.getId());
-                    showInfoMessage("Join/Leave logging disabled", event);
+                    preferencesDAO.setJoinLeaveDisplay(server.getId(), false);
+                    showInfoMessage("Event logging disabled", event);
                 }
             }
 
             if (statusFlag) {
-                MessageBuilder msg = new MessageBuilder()
-                        .append("Join/Leave logging ")
-                        .append(currentState ? "enabled" : "disabled");
+                LongEmbedMessage message = LongEmbedMessage.withTitleInfoStyle("Event logging settings")
+                        .append("Event logging  ")
+                        .append(currentState && mayBeChannel.isPresent() ? "enabled" : "disabled");
                 if (currentState) {
                     if (mayBeChannel.isPresent()) {
-                        msg.append(" to channel ")
+                        message.append(" to channel ")
                                 .append(mayBeChannel.get());
                     } else {
-                        msg.append(", but target text channel not found. Logging will not work.");
+                        message.append(" (text channel of the event log was not found, need to specify another channel to enable)");
                     }
                 }
-                showInfoMessage(msg.getStringBuilder().toString(), event);
+                showMessage(message, event);
             }
         } else if (!enableFlag && !disableFlag) {
             showErrorMessage("Action required", event);
