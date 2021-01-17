@@ -139,9 +139,7 @@ public class LongEmbedMessage
     }
 
     public LongEmbedMessage setAuthor(@NotNull final MessageAuthor author) {
-        this.authorName = author.getDisplayName();
-        this.authorUrl = null;
-        this.authorIconUrl = author.getAvatar().getUrl().toString();
+        this.setAuthor(author.getDisplayName(), null, author.getAvatar().getUrl().toString());
         return this;
     }
 
@@ -207,14 +205,14 @@ public class LongEmbedMessage
                 lastEmbed = embedBuilder;
                 messageBuilders.add(messageBuilder);
             }
-            
+
             if (timestamp != null) {
                 lastEmbed.setTimestamp(timestamp);
             }
             if (title != null) {
                 firstEmbed.setTitle(title);
             }
-            if (!CommonUtils.isTrStringNotEmpty(authorName)) {
+            if (CommonUtils.isTrStringNotEmpty(authorName)) {
                 firstEmbed.setAuthor(authorName, authorUrl, authorIconUrl);
             }
 
