@@ -5,6 +5,7 @@ import hellfrog.common.LongEmbedMessage;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import hellfrog.settings.db.ServerPreferencesDAO;
+import hellfrog.settings.db.entity.ServerNameCache;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.ServerTextChannel;
@@ -142,7 +143,12 @@ public class EventLogCommand
                         message.append(" to channel ")
                                 .append(mayBeChannel.get());
                     } else {
-                        message.append(" (text channel of the event log was not found, need to specify another channel to enable)");
+                        message.append(" (text channel ");
+                        SettingsController.getInstance().getNameCacheService()
+                                .find(server, previousChannel)
+                                .map(ServerNameCache::getName)
+                                .ifPresent(s -> message.append(" \"").appendReadable(s, server).append("\" "));
+                        message.append("of the event log was not found, need to specify another channel to enable)");
                     }
                 }
                 showMessage(message, event);
