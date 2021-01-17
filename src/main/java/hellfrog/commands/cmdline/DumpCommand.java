@@ -8,6 +8,7 @@ import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.MessageBuilder;
+import org.javacord.api.entity.message.Messageable;
 import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
@@ -26,18 +27,20 @@ public class DumpCommand
     private static final String PREF = "dmp";
     private static final String DESCRIPTIONS = "Dump server info and data";
 
+    private final Option infoOption = Option.builder("i")
+            .longOpt("info")
+            .hasArg()
+            .optionalArg(true)
+            .argName("server id")
+            .desc("Dump server info (settings, channels, roles, members)")
+            .build();
+
     public DumpCommand() {
         super(PREF, DESCRIPTIONS);
 
-        Option info = Option.builder("i")
-                .longOpt("info")
-                .hasArg()
-                .optionalArg(true)
-                .argName("server id")
-                .desc("Dump server info (settings, channels, roles, members)")
-                .build();
 
-        super.addCmdlineOption(info);
+
+        super.addCmdlineOption(infoOption);
     }
 
     @Override
@@ -52,8 +55,8 @@ public class DumpCommand
 
     private void executeAction(CommandLine cmdline, TextChannel channel, MessageCreateEvent event) {
 
-        boolean serverInfo = cmdline.hasOption('i');
-        String serverInfoIdValue = cmdline.getOptionValue('i', "");
+        boolean serverInfo = cmdline.hasOption(infoOption.getOpt());
+        String serverInfoIdValue = cmdline.getOptionValue(infoOption.getOpt(), "");
 
         if (serverInfo) {
             long serverId = 0L;
@@ -76,7 +79,8 @@ public class DumpCommand
                 boolean isCanServerExecute = super.canExecuteServerCommand(event, server, channel.getId());
                 boolean isCanGlobalExecute = super.canExecuteGlobalCommand(event);
                 if (isCanGlobalExecute || isCanServerExecute) {
-                    detachedGrabServerInfo(server, event);
+                    Messageable target = getMessageTargetByRights(event);
+                    detachedGrabServerInfo(server, target);
                 } else {
                     showAccessDeniedGlobalMessage(event);
                 }
@@ -84,7 +88,7 @@ public class DumpCommand
         }
     }
 
-    private void detachedGrabServerInfo(final Server server, final MessageCreateEvent event) {
+    private void detachedGrabServerInfo(final Server server, final Messageable target) {
         StringBuilder sw = new StringBuilder();
         MessageBuilder res = new MessageBuilder();
         String serverName = server.getName();
@@ -247,6 +251,6 @@ public class DumpCommand
                 );
         byte[] attach = sw.toString().getBytes(StandardCharsets.UTF_8);
         res.addAttachment(attach, "ServerInfo_" + server.getId() + ".txt");
-        res.send(getMessageTargetByRights(event));
+        res.send(target);
     }
 }

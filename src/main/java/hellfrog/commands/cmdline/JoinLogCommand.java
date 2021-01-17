@@ -22,36 +22,38 @@ public class JoinLogCommand
         extends BotCommand {
 
     private static final String BOT_PREFIX = "jlog";
-    private static final String DESCRIPTION = "Join and left logging.";
-    private static final String FOOTER = "Log join and left server members to server text channel.";
+    private static final String DESCRIPTION = "Configuring event logging.";
+    private static final String FOOTER = "When activated, joins, lefts and bans members on the server, automatic " +
+            "role assignment are displayed in a given channel. In addition, if the bot has access rights that allow it " +
+            "to monitor invitations, the prospective inviter is displayed in the log when the members joins.";
+
+    private final Option channelOption = Option.builder("c")
+            .longOpt("channel")
+            .hasArg()
+            .argName("Text channel")
+            .desc("Text channel where the join and left will be displayed")
+            .build();
+
+    private final Option enableOption = Option.builder("e")
+            .longOpt("enable")
+            .desc("Enable logging")
+            .build();
+
+    private final Option disableOption = Option.builder("d")
+            .longOpt("disable")
+            .desc("Disable logging")
+            .build();
+
+    private final Option statusOption = Option.builder("s")
+            .longOpt("status")
+            .desc("Show logging status")
+            .build();
 
     public JoinLogCommand() {
         super(BOT_PREFIX, DESCRIPTION);
         super.enableOnlyServerCommandStrict();
 
-        Option chatName = Option.builder("c")
-                .longOpt("channel")
-                .hasArg()
-                .argName("Text channel")
-                .desc("Text channel where the join and left will be displayed")
-                .build();
-
-        Option enable = Option.builder("e")
-                .longOpt("enable")
-                .desc("Enable logging")
-                .build();
-
-        Option disable = Option.builder("d")
-                .longOpt("disable")
-                .desc("Disable logging")
-                .build();
-
-        Option status = Option.builder("s")
-                .longOpt("status")
-                .desc("Show logging status")
-                .build();
-
-        super.addCmdlineOption(chatName, enable, disable, status);
+        super.addCmdlineOption(channelOption, enableOption, disableOption, statusOption);
         super.setFooter(FOOTER);
     }
 
@@ -69,11 +71,11 @@ public class JoinLogCommand
         }
 
         boolean isChannelSet = cmdline.hasOption('c');
-        String textChannelName = isChannelSet ? cmdline.getOptionValue('c') : "";
+        String textChannelName = isChannelSet ? cmdline.getOptionValue(channelOption.getOpt()) : "";
 
-        boolean enableFlag = cmdline.hasOption('e');
-        boolean disableFlag = cmdline.hasOption('d');
-        boolean statusFlag = cmdline.hasOption('s');
+        boolean enableFlag = cmdline.hasOption(enableOption.getOpt());
+        boolean disableFlag = cmdline.hasOption(disableOption.getOpt());
+        boolean statusFlag = cmdline.hasOption(statusOption.getOpt());
 
         if (enableFlag ^ disableFlag ^ statusFlag) {
             SettingsController settingsController = SettingsController.getInstance();

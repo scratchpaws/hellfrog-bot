@@ -1,13 +1,12 @@
 package hellfrog.commands.cmdline;
 
 import com.vdurmont.emoji.EmojiParser;
-import hellfrog.common.MessageUtils;
+import hellfrog.common.LongEmbedMessage;
 import hellfrog.core.ServerSideResolver;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.server.Server;
@@ -25,29 +24,26 @@ public class EffectiveRightsCommand
     private static final String PREFIX = "eff";
     private static final String DESCRIPTION = "Get effective rights for users";
 
+    private final Option userOption = Option.builder("u")
+            .longOpt("user")
+            .hasArgs()
+            .valueSeparator(',')
+            .argName("User")
+            .desc("Select user for rights check")
+            .build();
+
+    private final Option channelOption = Option.builder("t")
+            .longOpt("channel")
+            .hasArgs()
+            .optionalArg(true)
+            .argName("Channel")
+            .desc("Select text channel for check rights. If not arguments - use this text channel.")
+            .build();
+
     public EffectiveRightsCommand() {
         super(PREFIX, DESCRIPTION);
-
-        Option userOption = Option.builder("u")
-                .longOpt("user")
-                .hasArgs()
-                .valueSeparator(',')
-                .argName("User")
-                .desc("Select user for rights check")
-                .build();
-
-        Option channelOption = Option.builder("t")
-                .longOpt("channel")
-                .hasArgs()
-                .optionalArg(true)
-                .argName("Channel")
-                .desc("Select text channel for check rights. If not arguments - use this text channel.")
-                .build();
-
         addCmdlineOption(userOption, channelOption);
-
         super.enableOnlyServerCommandStrict();
-
     }
 
     /**
@@ -72,8 +68,8 @@ public class EffectiveRightsCommand
             return;
         }
 
-        String[] rawUsers = cmdline.getOptionValues('u');
-        String[] rawChannels = cmdline.getOptionValues('t');
+        String[] rawUsers = cmdline.getOptionValues(userOption.getOpt());
+        String[] rawChannels = cmdline.getOptionValues(channelOption.getOpt());
 
         if (rawUsers == null || rawUsers.length == 0) {
             showErrorMessage("Users required", event);
@@ -102,19 +98,19 @@ public class EffectiveRightsCommand
             channels.add((ServerTextChannel) channel);
         }
 
-        MessageBuilder resultMessage = new MessageBuilder();
+        LongEmbedMessage resultMessage = LongEmbedMessage.withTitleInfoStyle("Effective rights");
 
         foundUsers.getFound().forEach(user -> {
             resultMessage.append("User", MessageDecoration.BOLD)
                     .append(" ")
-                    .append(MessageUtils.escapeSpecialSymbols(server.getDisplayName(user)))
+                    .appendReadable(server.getDisplayName(user), server)
                     .append(":")
                     .appendNewLine();
             channels.forEach(textChannel -> {
                 resultMessage.append(". ")
                         .append("Channel", MessageDecoration.ITALICS)
                         .append(" ")
-                        .append(textChannel.getMentionTag())
+                        .append(textChannel)
                         .append(":")
                         .appendNewLine();
                 Permissions permissions = textChannel.getEffectivePermissions(user);
@@ -123,7 +119,7 @@ public class EffectiveRightsCommand
                 if (allowed.isEmpty() && denied.isEmpty()) {
                     resultMessage.append(".  ")
                             .append(EmojiParser.parseToUnicode(":question:"))
-                            .append("No has effective permissions")
+                            .append("The user does not have any specified channel effective permissions.")
                             .appendNewLine();
                 } else {
                     allowed.ifPresent(a -> resultMessage.append(".  ")
@@ -140,7 +136,7 @@ public class EffectiveRightsCommand
             });
         });
 
-        MessageUtils.sendLongMessage(resultMessage, channel);
+        super.showMessage(resultMessage, event);
     }
 
     /**
