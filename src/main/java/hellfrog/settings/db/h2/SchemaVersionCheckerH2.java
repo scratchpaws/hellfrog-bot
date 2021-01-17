@@ -531,7 +531,7 @@ class SchemaVersionCheckerH2 {
                                     if (CommonUtils.isTrStringNotEmpty(oldChannelStat.getLastKnownName())) {
                                         log.info("Found last known name for text chat entry {}: \"{}\"",
                                                 textChannelId, oldChannelStat.getLastKnownName());
-                                        nameCacheDAO.update(textChannelId, oldChannelStat.getLastKnownName(), NameType.CHANNEL);
+                                        nameCacheDAO.update(textChannelId, oldChannelStat.getLastKnownName(), NameType.SERVER_TEXT_CHANNEL);
                                         nameCacheDAO.update(serverId, textChannelId, oldChannelStat.getLastKnownName());
                                     }
 

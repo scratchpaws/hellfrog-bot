@@ -76,6 +76,7 @@ public class EventsListener
         boolean isPlainMessage = true;
 
         messageStats.onMessageCreate(event);
+        SettingsController.getInstance().getNameCacheService().update(event);
 
         String strMessage = event.getMessageContent();
         Optional<Server> mayBeServer = event.getServer();
@@ -263,7 +264,7 @@ public class EventsListener
 
     @Override
     public void onMessageEdit(MessageEditEvent event) {
-
+        SettingsController.getInstance().getNameCacheService().update(event);
     }
 
     @Override
@@ -287,6 +288,7 @@ public class EventsListener
                 }
             }
         }
+        SettingsController.getInstance().getNameCacheService().update(event);
     }
 
     @Override
@@ -298,12 +300,8 @@ public class EventsListener
         final Server server = event.getServer();
         server.getSystemChannel()
                 .ifPresent(this::showFirstLoginHelp);
-        final ServerPreferences serverPreference = SettingsController.getInstance().getServerPreferences(server.getId());
-        final InvitesController invitesController = SettingsController.getInstance().getInvitesController();
-        if (serverPreference.isJoinLeaveDisplay() && serverPreference.getJoinLeaveChannel() > 0L) {
-            server.getTextChannelById(serverPreference.getJoinLeaveChannel()).ifPresent(jlChannel ->
-                    invitesController.addInvitesToCache(server));
-        }
+        SettingsController.getInstance().getInvitesController().addInvitesToCache(server);
+        SettingsController.getInstance().getNameCacheService().deepServerUpdate(event.getServer());
     }
 
     @Override
@@ -344,6 +342,7 @@ public class EventsListener
                 }
             }
         }
+        SettingsController.getInstance().getNameCacheService().update(event);
     }
 
     void onReady() {
@@ -383,6 +382,7 @@ public class EventsListener
 
     @Override
     public void onServerMemberJoin(ServerMemberJoinEvent event) {
+        SettingsController.getInstance().getNameCacheService().update(event.getUser(), event.getServer());
         serverMemberStateDisplay(event, MemberEventCode.JOIN);
         SettingsController.getInstance()
                 .getAutoPromoteService()
@@ -391,16 +391,19 @@ public class EventsListener
 
     @Override
     public void onServerMemberLeave(ServerMemberLeaveEvent event) {
+        SettingsController.getInstance().getNameCacheService().update(event.getUser());
         serverMemberStateDisplay(event, MemberEventCode.LEAVE);
     }
 
     @Override
     public void onServerMemberBan(ServerMemberBanEvent event) {
+        SettingsController.getInstance().getNameCacheService().update(event.getUser());
         serverMemberStateDisplay(event, MemberEventCode.BAN);
     }
 
     @Override
     public void onServerMemberUnban(ServerMemberUnbanEvent event) {
+        SettingsController.getInstance().getNameCacheService().update(event.getUser());
         serverMemberStateDisplay(event, MemberEventCode.UNBAN);
     }
 
@@ -409,6 +412,7 @@ public class EventsListener
         SettingsController.getInstance()
                 .getInvitesController()
                 .addInvitesToCache(event.getServer());
+        SettingsController.getInstance().getNameCacheService().update(event.getChannel());
     }
 
     @Override
@@ -416,6 +420,7 @@ public class EventsListener
         SettingsController.getInstance()
                 .getInvitesController()
                 .addInvitesToCache(event.getServer());
+        SettingsController.getInstance().getNameCacheService().update(event.getChannel());
     }
 
     private void serverMemberStateDisplay(@NotNull ServerMemberEvent event, MemberEventCode code) {

@@ -54,6 +54,7 @@ public class SettingsController {
     private final CongratulationsController congratulationsController;
     private final ServiceLogsNotificator serviceLogsNotificator;
     private final AutoBackupService autoBackupService;
+    private final NameCacheService nameCacheService;
 
     private final AutoPromoteService autoPromoteService;
 
@@ -96,6 +97,7 @@ public class SettingsController {
         congratulationsController = new CongratulationsController();
         serviceLogsNotificator = new ServiceLogsNotificator();
         autoBackupService = new AutoBackupService();
+        nameCacheService = new NameCacheService(mainDBController.getEntityNameCacheDAO());
 
         autoPromoteService = new AutoPromoteService(mainDBController.getAutoPromoteRolesDAO(),
                 mainDBController.getRoleAssignDAO(),
@@ -503,5 +505,9 @@ public class SettingsController {
 
     public AutoPromoteService getAutoPromoteService() {
         return autoPromoteService;
+    }
+
+    public NameCacheService getNameCacheService() {
+        return nameCacheService;
     }
 }

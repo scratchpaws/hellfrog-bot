@@ -46,11 +46,13 @@ public class ServerSideResolver
     private static final String QUOTED_HERE_TAG = "`@here`";
 
     public static Optional<User> resolveUser(Server server, String rawValue) {
+        NameCacheService nameCacheService = SettingsController.getInstance().getNameCacheService();
         // 1. вначале ищем по явному id
         if (CommonUtils.isLong(rawValue)) {
             long unresolvedUserId = Long.parseLong(rawValue);
             Optional<User> member = server.getMemberById(unresolvedUserId);
             if (member.isPresent()) {
+                nameCacheService.update(member.get(), server);
                 return member;
             }
         }
@@ -59,24 +61,30 @@ public class ServerSideResolver
         if (matcher.find()) {
             long unresolvedUserId = CommonUtils.onlyNumbersToLong(rawValue);
             Optional<User> member = server.getMemberById(unresolvedUserId);
-            if (member.isPresent())
+            if (member.isPresent()) {
+                nameCacheService.update(member.get(), server);
                 return member;
+            }
         }
         // 3. Затем по discriminated name
         matcher = USER_LOGIN_WITH_DISCRIMINATE_REGEXP.matcher(rawValue);
         if (matcher.find()) {
             Optional<User> member = server.getMemberByDiscriminatedNameIgnoreCase(rawValue);
-            if (member.isPresent())
+            if (member.isPresent()) {
+                nameCacheService.update(member.get(), server);
                 return member;
+            }
         }
         // 4. Затем просто по name
         Optional<User> member = CommonUtils.getFirstOrEmpty(server.getMembersByNameIgnoreCase(rawValue));
         if (member.isPresent()) {
+            nameCacheService.update(member.get(), server);
             return member;
         }
         // 5. И наконец по нику
         member = CommonUtils.getFirstOrEmpty(server.getMembersByDisplayNameIgnoreCase(rawValue));
         if (member.isPresent()) {
+            nameCacheService.update(member.get(), server);
             return member;
         }
         // 6. Пытаемся отыскать по глобальному id
@@ -84,6 +92,9 @@ public class ServerSideResolver
             User found = server.getApi()
                     .getUserById(CommonUtils.onlyNumbersToLong(rawValue))
                     .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT);
+            if (found != null) {
+                nameCacheService.update(found);
+            }
             return Optional.ofNullable(found);
         } catch (Exception err) {
             return Optional.empty();
@@ -91,60 +102,79 @@ public class ServerSideResolver
     }
 
     public static Optional<Role> resolveRole(Server server, String rawValue) {
+        NameCacheService nameCacheService = SettingsController.getInstance().getNameCacheService();
         // 1. Вначале ищем по явному id роли
         if (CommonUtils.isLong(rawValue)) {
             long unresolvedRole = Long.parseLong(rawValue);
             Optional<Role> role = server.getRoleById(unresolvedRole);
-            if (role.isPresent())
+            if (role.isPresent()) {
+                nameCacheService.update(role.get());
                 return role;
+            }
         }
         // 2. Далее ищем по явным указаниям-теггированиям
         Matcher matcher = ROLE_TAG_REGEXP.matcher(rawValue);
         if (matcher.find()) {
             long unresolvedRole = CommonUtils.onlyNumbersToLong(rawValue);
             Optional<Role> role = server.getRoleById(unresolvedRole);
-            if (role.isPresent())
+            if (role.isPresent()) {
+                nameCacheService.update(role.get());
                 return role;
+            }
         }
         // 3. Ищем @everyone
-        if (rawValue.strip().toLowerCase().equals("everyone")
-                || rawValue.strip().toLowerCase().equals(EVERYONE_TAG)) {
+        if (rawValue.strip().equalsIgnoreCase("everyone")
+                || rawValue.strip().equalsIgnoreCase(EVERYONE_TAG)) {
             return Optional.of(server.getEveryoneRole());
         }
         // 3. И наконец ищем по имени роли
-        return CommonUtils.getFirstOrEmpty(server.getRolesByNameIgnoreCase(rawValue));
+        Optional<Role> role = CommonUtils.getFirstOrEmpty(server.getRolesByNameIgnoreCase(rawValue));
+        role.ifPresent(nameCacheService::update);
+        return role;
     }
 
     public static Optional<ServerTextChannel> resolveChannel(Server server, String rawValue) {
+        NameCacheService nameCacheService = SettingsController.getInstance().getNameCacheService();
         // 1. Вначале ищем по явному id канала
         if (CommonUtils.isLong(rawValue)) {
             long unresolvedChannel = CommonUtils.onlyNumbersToLong(rawValue);
             Optional<ServerTextChannel> textChannel = server.getTextChannelById(unresolvedChannel);
-            if (textChannel.isPresent())
+            if (textChannel.isPresent()) {
+                nameCacheService.update(textChannel.get());
                 return textChannel;
+            }
         }
         // 2. Далее ищем по упоминанию канала
         Matcher matcher = CHANNEL_TAG_REGEXP.matcher(rawValue);
         if (matcher.find()) {
             long unresolvedChannel = CommonUtils.onlyNumbersToLong(rawValue);
             Optional<ServerTextChannel> textChannel = server.getTextChannelById(unresolvedChannel);
-            if (textChannel.isPresent())
+            if (textChannel.isPresent()) {
+                nameCacheService.update(textChannel.get());
                 return textChannel;
+            }
         }
         // 4. И наконец просто по имени канала
-        return CommonUtils.getFirstOrEmpty(server.getTextChannelsByNameIgnoreCase(rawValue));
+        Optional<ServerTextChannel> serverTextChannel = CommonUtils.getFirstOrEmpty(server.getTextChannelsByNameIgnoreCase(rawValue));
+        serverTextChannel.ifPresent(nameCacheService::update);
+        return serverTextChannel;
     }
 
     public static Optional<ChannelCategory> resolveCategory(Server server, String rawValue) {
+        NameCacheService nameCacheService = SettingsController.getInstance().getNameCacheService();
         // 1. Вначале ищем по явному ID канала
         if (CommonUtils.isLong(rawValue)) {
             long unresolvedCategoryId = CommonUtils.onlyNumbersToLong(rawValue);
             Optional<ChannelCategory> channelCategory = server.getChannelCategoryById(unresolvedCategoryId);
-            if (channelCategory.isPresent())
+            if (channelCategory.isPresent()) {
+                nameCacheService.update(channelCategory.get());
                 return channelCategory;
+            }
         }
         // 2. Далее ищем по имени категории
-        return CommonUtils.getFirstOrEmpty(server.getChannelCategoriesByNameIgnoreCase(rawValue));
+        Optional<ChannelCategory> channelCategory = CommonUtils.getFirstOrEmpty(server.getChannelCategoriesByNameIgnoreCase(rawValue));
+        channelCategory.ifPresent(nameCacheService::update);
+        return channelCategory;
     }
 
     public static Optional<KnownCustomEmoji> resolveCustomEmoji(Server server, String rawText) {
