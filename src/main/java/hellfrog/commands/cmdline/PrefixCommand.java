@@ -1,6 +1,8 @@
 package hellfrog.commands.cmdline;
 
 import hellfrog.settings.SettingsController;
+import hellfrog.settings.db.CommonPreferencesDAO;
+import hellfrog.settings.db.ServerPreferencesDAO;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.channel.TextChannel;
@@ -18,25 +20,24 @@ public class PrefixCommand
     private static final String FOOTER = "This is an expert command. To invoke an interactive user-friendly " +
             "command, use \"prefix\" command.";
 
+    private final Option setOption = Option.builder("s")
+            .desc("Set bot prefix")
+            .longOpt("set")
+            .build();
+
+    private final Option getOption = Option.builder("g")
+            .desc("Get bot prefix")
+            .longOpt("get")
+            .build();
+
+    private final Option globalSwitcherOption = Option.builder("l")
+            .desc("Global default bot setting (only for global bot owners)")
+            .longOpt("global")
+            .build();
+
     public PrefixCommand() {
         super(PREF, DESCRIPTION);
-
-        Option set = Option.builder("s")
-                .desc("Set bot prefix")
-                .longOpt("set")
-                .build();
-
-        Option get = Option.builder("g")
-                .desc("Get bot prefix")
-                .longOpt("get")
-                .build();
-
-        Option globalSwitcher = Option.builder("l")
-                .desc("Global default bot setting (only for global bot owners)")
-                .longOpt("global")
-                .build();
-
-        addCmdlineOption(set, get, globalSwitcher);
+        addCmdlineOption(setOption, getOption, globalSwitcherOption);
         super.setCommandAsExpert();
         super.setFooter(FOOTER);
     }
@@ -57,44 +58,46 @@ public class PrefixCommand
                                                    ArrayList<String> anotherLines) {
 
         SettingsController settingsController = SettingsController.getInstance();
+        CommonPreferencesDAO commonPreferencesDAO = settingsController.getMainDBController().getCommonPreferencesDAO();
+        ServerPreferencesDAO serverPreferencesDAO = settingsController.getMainDBController().getServerPreferencesDAO();
 
-        if (cmdline.hasOption('g') && cmdline.hasOption('s')) {
+        if (cmdline.hasOption(getOption.getOpt()) && cmdline.hasOption(setOption.getOpt())) {
             showErrorMessage("Сannot specify changing and display parameters at the same time.", event);
             return;
         }
 
-        if (cmdline.hasOption('g')) {
-            if (!cmdline.hasOption('l')) {
+        if (cmdline.hasOption(getOption.getOpt())) {
+            if (!cmdline.hasOption(globalSwitcherOption.getOpt())) {
                 // индивидуально для сервреа
                 long serverId = server.getId();
                 String serverName = server.getName();
-                String serverPrefix = settingsController.getBotPrefix(serverId);
+                String serverPrefix = serverPreferencesDAO.getPrefix(serverId);
                 showInfoMessage("Current bot prefix for " + serverName + " server is: " +
                         serverPrefix, event);
             } else {
                 // глобально
-                String globalPrefix = settingsController.getGlobalCommonPrefix();
+                String globalPrefix = commonPreferencesDAO.getBotPrefix();
                 showInfoMessage("Current bot global prefix is: " +
                         globalPrefix, event);
             }
-        } else if (cmdline.hasOption('s')) {
+        } else if (cmdline.hasOption(setOption.getOpt())) {
             if (cmdlineArgs.size() < 1) {
                 showErrorMessage("Prefix not set", event);
             } else {
 
                 String newPrefix = cmdlineArgs.get(0).trim();
 
-                if (!cmdline.hasOption('l')) {
+                if (!cmdline.hasOption(globalSwitcherOption.getOpt())) {
                     // индивидуально для сервера
                     long serverId = server.getId();
                     String serverName = server.getName();
                     if (canExecuteServerCommand(event, server)) {
-                        settingsController.setBotPrefix(serverId, newPrefix);
+                        serverPreferencesDAO.setPrefix(serverId, newPrefix);
                         showInfoMessage("Prefix changed to " + newPrefix.trim() +
                                 " on server " + serverName, event);
                         if (server.canYouChangeOwnNickname()) {
                             User botUser = server.getApi().getYourself();
-                            server.updateNickname(botUser, settingsController.getBotName() + " ("
+                            server.updateNickname(botUser, commonPreferencesDAO.getBotName() + " ("
                                     + newPrefix + " help)");
                         }
                     } else {
@@ -103,7 +106,7 @@ public class PrefixCommand
                 } else {
                     // глобально
                     if (canExecuteGlobalCommand(event)) {
-                        settingsController.setGlobalCommonPrefix(newPrefix);
+                        commonPreferencesDAO.setBotPrefix(newPrefix);
                         showInfoMessage("Prefix changed to " + newPrefix.trim() +
                                 " (globally, by default) ", event);
                     } else {
@@ -128,23 +131,24 @@ public class PrefixCommand
                                                    ArrayList<String> anotherLines) {
 
         SettingsController settingsController = SettingsController.getInstance();
+        CommonPreferencesDAO commonPreferencesDAO = settingsController.getMainDBController().getCommonPreferencesDAO();
 
-        if (cmdline.hasOption('g') && cmdline.hasOption('s')) {
+        if (cmdline.hasOption(getOption.getOpt()) && cmdline.hasOption(setOption.getOpt())) {
             showErrorMessage("Сannot specify changing and display parameters at the same time.", event);
             return;
         }
 
-        if (cmdline.hasOption('g')) {
-            String globalPrefix = settingsController.getGlobalCommonPrefix();
+        if (cmdline.hasOption(getOption.getOpt())) {
+            String globalPrefix = commonPreferencesDAO.getBotPrefix();
             showInfoMessage("Current bot global prefix is: " +
                     globalPrefix, event);
-        } else if (cmdline.hasOption('s')) {
+        } else if (cmdline.hasOption(setOption.getOpt())) {
             if (cmdlineArgs.size() < 1) {
                 showErrorMessage("Prefix not set", event);
             } else {
                 String newPrefix = cmdlineArgs.get(0).trim();
                 if (canExecuteGlobalCommand(event)) {
-                    settingsController.setGlobalCommonPrefix(newPrefix);
+                    commonPreferencesDAO.setBotPrefix(newPrefix);
                     showInfoMessage("Prefix changed to " + newPrefix.trim() +
                             " (globally, by default) ", event);
                 } else {
