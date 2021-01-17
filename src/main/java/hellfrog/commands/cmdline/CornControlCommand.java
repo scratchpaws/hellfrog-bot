@@ -1,6 +1,7 @@
 package hellfrog.commands.cmdline;
 
 import com.vdurmont.emoji.EmojiParser;
+import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.LongEmbedMessage;
 import hellfrog.core.ServerSideResolver;
@@ -17,7 +18,6 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -274,7 +274,7 @@ public class CornControlCommand
                 .map(User::getMentionTag)
                 .collect(Collectors.toUnmodifiableList());
         Optional<String> controlUsersAsString = communityControlUsers.stream()
-                .reduce((s1, s2) -> s1 + ", " + s2);
+                .reduce(CommonUtils::reduceConcat);
         Optional<Role> controlRole = server.getRoleById(settings.getRoleId());
         Optional<KnownCustomEmoji> customEmoji = server.getCustomEmojiById(settings.getCustomEmojiId());
         Optional<String> stringEmoji = Optional.ofNullable(settings.getUnicodeEmoji());
@@ -282,29 +282,29 @@ public class CornControlCommand
                 && settings.getThreshold() < communityControlUsers.size()
                 && (customEmoji.isPresent() || stringEmoji.isPresent())
                 && controlRole.isPresent();
-        message.append("Current community control status:", MessageDecoration.BOLD)
-                .append(" ")
-                .append(active ? "enabled" : "disabled", MessageDecoration.CODE_SIMPLE)
-                .appendNewLine();
-        controlUsersAsString.ifPresent(users ->
-                message.append("Users list: ")
-                        .append(users)
-                        .appendNewLine());
-        if (settings.getThreshold() > 0L) {
-            message.append("Reactions threshold: ")
-                    .append(settings.getThreshold())
-                    .append(" counts.")
+        if (controlUsersAsString.isEmpty() || controlUsersAsString.get().length() <= CommonConstants.MAX_EMBED_FIELD_VALUE_LENGTH) {
+            message.addField("Current community control status:", active ? "enabled" : "disabled");
+        } else {
+            message.append("Current community control status:", MessageDecoration.BOLD)
+                    .append(" ")
+                    .append(active ? "enabled" : "disabled", MessageDecoration.CODE_SIMPLE)
                     .appendNewLine();
         }
-        controlRole.ifPresent(r -> message.append("Role: ")
-                .append(r)
-                .appendNewLine());
-        customEmoji.ifPresent(e -> message.append("Emoji: ")
-                .append(e)
-                .appendNewLine());
-        stringEmoji.ifPresent(e -> message.append("Emoji: ")
-                .append(e)
-                .appendNewLine());
+        controlUsersAsString.ifPresent(users -> {
+            if (users.length() <= CommonConstants.MAX_EMBED_FIELD_VALUE_LENGTH) {
+                message.addField("Users list:", users);
+            } else {
+                message.append("Users list: ")
+                        .append(users)
+                        .appendNewLine();
+            }
+        });
+        if (settings.getThreshold() > 0L) {
+            message.addField("Reactions threshold:", settings.getThreshold() + " counts.");
+        }
+        controlRole.ifPresent(r -> message.addField("Role:", r.getMentionTag()));
+        customEmoji.ifPresent(e -> message.addField("Emoji:", e.getMentionTag()));
+        stringEmoji.ifPresent(e -> message.addField("Emoji:", e));
     }
 
     /**

@@ -25,4 +25,20 @@ public interface CommonConstants {
      * Единица времени ожидания
      */
     TimeUnit OP_TIME_UNIT = TimeUnit.MILLISECONDS;
+
+    // https://discord.com/developers/docs/resources/channel#embed-limits
+    /**
+     * Embed titles are limited to 256 characters
+     */
+    int MAX_EMBED_TITLE_LENGTH = 256;
+
+    /**
+     * A field's name is limited to 256 characters
+     */
+    int MAX_EMBED_FIELD_NAME_LENGTH = 256;
+
+    /**
+     * A field's value is limited to 1024 characters
+     */
+    int MAX_EMBED_FIELD_VALUE_LENGTH = 1024;
 }

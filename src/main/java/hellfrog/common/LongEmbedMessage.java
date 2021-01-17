@@ -5,7 +5,6 @@ import org.javacord.api.entity.Mentionable;
 import org.javacord.api.entity.message.*;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.user.User;
-import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnmodifiableView;
@@ -18,7 +17,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class LongEmbedMessage
-        implements CommonConstants, Cloneable {
+        implements CommonConstants {
 
     private final StringBuilder messageBuffer = new StringBuilder();
     private Instant timestamp = null;
@@ -29,6 +28,8 @@ public class LongEmbedMessage
     private String authorName = null;
     private String authorUrl = null;
     private String authorIconUrl = null;
+
+    private List<LongEmbedField> fields = new ArrayList<>();
 
     public static LongEmbedMessage withTitleInfoStyle(@NotNull final String title) {
         return new LongEmbedMessage()
@@ -150,6 +151,21 @@ public class LongEmbedMessage
         return this;
     }
 
+    public LongEmbedMessage addField(String name, String value) {
+        this.fields.add(new LongEmbedField(name, value, false));
+        return this;
+    }
+
+    public LongEmbedMessage addField(String name, String value, boolean inline) {
+        this.fields.add(new LongEmbedField(name, value, inline));
+        return this;
+    }
+
+    public LongEmbedMessage addInlineField(String name, String value) {
+        this.fields.add(new LongEmbedField(name, value, true));
+        return this;
+    }
+
     public CompletableFuture<Message> send(Messageable target) {
 
         final CompletableFuture<Message> future = new CompletableFuture<>();
@@ -191,7 +207,7 @@ public class LongEmbedMessage
                 lastEmbed = embedBuilder;
                 messageBuilders.add(messageBuilder);
             }
-
+            
             if (timestamp != null) {
                 lastEmbed.setTimestamp(timestamp);
             }
@@ -200,6 +216,10 @@ public class LongEmbedMessage
             }
             if (!CommonUtils.isTrStringNotEmpty(authorName)) {
                 firstEmbed.setAuthor(authorName, authorUrl, authorIconUrl);
+            }
+
+            for (LongEmbedField field : fields) {
+                lastEmbed.addField(field.getName(), field.getValue(), field.isInline());
             }
 
             sendMessageChain(future, null, target, messageBuilders, 0);
@@ -240,18 +260,5 @@ public class LongEmbedMessage
     @Override
     public String toString() {
         return messageBuffer.toString();
-    }
-
-    @Override
-    public LongEmbedMessage clone() {
-        try {
-            return (LongEmbedMessage) super.clone();
-        } catch (Exception ignore) {
-            LongEmbedMessage result = new LongEmbedMessage();
-            result.messageBuffer.append(messageBuffer);
-            result.timestamp = timestamp;
-            result.color = color;
-            return result;
-        }
     }
 }
