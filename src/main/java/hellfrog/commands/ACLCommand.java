@@ -4,7 +4,6 @@ import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.LongEmbedMessage;
 import hellfrog.common.MessageUtils;
-import hellfrog.core.AccessControlCheck;
 import hellfrog.core.RateLimiter;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
@@ -112,20 +111,28 @@ public abstract class ACLCommand {
 
     public boolean canExecuteServerCommand(MessageCreateEvent event, Server server,
                                            long... anotherTargetChannel) {
-        return AccessControlCheck.canExecuteOnServer(getPrefix(), event, server, isStrictOnServer(server), anotherTargetChannel);
+        return SettingsController.getInstance()
+                .getAccessControlService()
+                .canExecuteOnServer(getPrefix(), event, server, isStrictOnServer(server), anotherTargetChannel);
     }
 
     public boolean canExecuteServerCommand(SingleReactionEvent event, Server server,
                                            long... anotherTargetChannel) {
-        return AccessControlCheck.canExecuteOnServer(getPrefix(), event, server, isStrictOnServer(server), anotherTargetChannel);
+        return SettingsController.getInstance()
+                .getAccessControlService()
+                .canExecuteOnServer(getPrefix(), event, server, isStrictOnServer(server), anotherTargetChannel);
     }
 
     protected boolean canExecuteGlobalCommand(@NotNull MessageCreateEvent event) {
-        return AccessControlCheck.canExecuteGlobalCommand(event);
+        return SettingsController.getInstance()
+                .getAccessControlService()
+                .canExecuteGlobalCommand(event);
     }
 
     protected boolean canExecuteGlobalCommand(@NotNull SingleReactionEvent event) {
-        return AccessControlCheck.canExecuteGlobalCommand(event);
+        return SettingsController.getInstance()
+                .getAccessControlService()
+                .canExecuteGlobalCommand(event);
     }
 
     /**
@@ -201,7 +208,9 @@ public abstract class ACLCommand {
 
         event.getServer().ifPresentOrElse(server -> event.getServerTextChannel().ifPresentOrElse(serverTextChannel -> {
 
-                    boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, user, server, serverTextChannel, isStrictOnServer(server));
+                    boolean hasRights = SettingsController.getInstance()
+                            .getAccessControlService()
+                            .canExecuteOnServer(prefix, user, server, serverTextChannel, isStrictOnServer(server));
                     boolean canWriteToChannel = serverTextChannel.canYouWrite();
                     if (hasRights && canWriteToChannel) {
                         showEmbedMessage(message, serverTextChannel, user);
@@ -227,7 +236,9 @@ public abstract class ACLCommand {
         if (mayBeUser.isPresent() && mayBeServer.isPresent() && mayBeTextChannel.isPresent()) {
             Server server = mayBeServer.get();
             ServerTextChannel channel = mayBeTextChannel.get();
-            boolean hasRights = AccessControlCheck.canExecuteOnServer(prefix, event, server, isStrictOnServer(server));
+            boolean hasRights = SettingsController.getInstance()
+                    .getAccessControlService()
+                    .canExecuteOnServer(prefix, event, server, isStrictOnServer(server));
             boolean canWriteToChannel = channel.canYouWrite();
             return hasRights && canWriteToChannel;
         } else {

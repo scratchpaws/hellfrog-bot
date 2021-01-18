@@ -25,6 +25,7 @@ abstract class EntityRightsDAOImpl<T extends EntityRight> {
     private final TriFunction<Long, String, Long, T> builder; // server id, command prefix, entity id
     private final String entityField;
     private final String getAllAllowedQuery;
+    private final String getAllowedCountQuery;
 
     EntityRightsDAOImpl(@NotNull final AutoSessionFactory sessionFactory,
                         @NotNull final String loggerName,
@@ -40,6 +41,9 @@ abstract class EntityRightsDAOImpl<T extends EntityRight> {
 
         this.getAllAllowedQuery = "from " + managedClass.getSimpleName() + " e where e.serverId = :serverId " +
                 "and e.commandPrefix = :commandPrefix";
+        this.getAllowedCountQuery = "select count(e) " +
+                "from " + managedClass.getSimpleName() + " e " +
+                "where e.serverId = :serverId and e.commandPrefix = :commandPrefix";
     }
 
     public List<Long> getAllAllowed(long serverId, @NotNull String commandPrefix) {
@@ -66,6 +70,25 @@ abstract class EntityRightsDAOImpl<T extends EntityRight> {
             LogsStorage.addErrorMessage(errMsg);
         }
         return Collections.emptyList();
+    }
+
+    public long getAllowedCount(long serverId, @NotNull String commandPrefix) {
+        if (CommonUtils.isTrStringEmpty(commandPrefix)) {
+            return 0L;
+        }
+
+        try (AutoSession session = sessionFactory.openSession()) {
+            return session.createQuery(getAllowedCountQuery, Long.class)
+                    .setParameter("serverId", serverId)
+                    .setParameter("commandPrefix", commandPrefix)
+                    .uniqueResult();
+        } catch (Exception err) {
+            String errMsg = String.format("Unable to get allowed counts of \"%s\" for server %d and command \"%s\": %s",
+                    managedClass.getSimpleName(), serverId, commandPrefix, err.getMessage());
+            log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
+        }
+        return 0L;
     }
 
     public boolean isAllowed(long serverId, long what, @NotNull String commandPrefix) {

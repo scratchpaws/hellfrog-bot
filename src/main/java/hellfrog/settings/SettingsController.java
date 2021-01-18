@@ -30,8 +30,6 @@ public class SettingsController {
     private static final Logger log = LogManager.getLogger("Settings controller");
     private final Path SETTINGS_PATH = Paths.get("./settings/");
 
-    private final String apiKey;
-
     private final String COMMON_SETTINGS_FILE_NAME = "common.json";
     private final Path COMMON_SETTINGS = SETTINGS_PATH.resolve(COMMON_SETTINGS_FILE_NAME);
     private final String SERVER_SETTINGS_FILES_SUFFIX = "_server.json";
@@ -55,7 +53,7 @@ public class SettingsController {
     private final ServiceLogsNotificator serviceLogsNotificator;
     private final AutoBackupService autoBackupService;
     private final NameCacheService nameCacheService;
-
+    private final AccessControlService accessControlService;
     private final AutoPromoteService autoPromoteService;
 
     private CommonPreferences commonPreferences = new CommonPreferences();
@@ -76,15 +74,13 @@ public class SettingsController {
             LogsStorage.addErrorMessage(errMsg);
         }
 
-        String _apiKey = "";
         try {
-            _apiKey = ApiKeyStorage.readApiKey();
+            ApiKeyStorage.readApiKey();
         } catch (IOException err) {
             // todo: todo: Transition warnings. In the future, errors in reading the file with the API key will result in application crash
             log.error(err.getMessage(), err);
             LogsStorage.addErrorMessage(err.getMessage());
         }
-        apiKey = _apiKey;
 
         loadCommonSettings();
         loadServersSettings();
@@ -98,6 +94,7 @@ public class SettingsController {
         serviceLogsNotificator = new ServiceLogsNotificator();
         autoBackupService = new AutoBackupService();
         nameCacheService = new NameCacheService(this, mainDBController.getEntityNameCacheDAO());
+        accessControlService = new AccessControlService(mainDBController);
 
         autoPromoteService = new AutoPromoteService(mainDBController.getAutoPromoteRolesDAO(),
                 mainDBController.getRoleAssignDAO(),
@@ -509,5 +506,9 @@ public class SettingsController {
 
     public NameCacheService getNameCacheService() {
         return nameCacheService;
+    }
+
+    public AccessControlService getAccessControlService() {
+        return accessControlService;
     }
 }

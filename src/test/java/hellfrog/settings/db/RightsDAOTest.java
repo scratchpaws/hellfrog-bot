@@ -42,6 +42,16 @@ public class RightsDAOTest {
             testServers.parallelStream()
                     .forEach(testServer -> testServer.testRights.keySet().parallelStream().forEach(cmd -> {
                         TestCommandRights rights = testServer.testRights.get(cmd);
+
+                        long count = userRightsDAO.getAllowedCount(testServer.serverId, cmd);
+                        Assertions.assertEquals(0L, count);
+                        count = roleRightsDAO.getAllowedCount(testServer.serverId, cmd);
+                        Assertions.assertEquals(0L, count);
+                        count = channelRightsDAO.getAllowedCount(testServer.serverId, cmd);
+                        Assertions.assertEquals(0L, count);
+                        count = channelCategoryRightsDAO.getAllowedCount(testServer.serverId, cmd);
+                        Assertions.assertEquals(0L, count);
+
                         rights.allowedUsers
                                 .parallelStream()
                                 .forEach(userId -> {
@@ -90,6 +100,7 @@ public class RightsDAOTest {
                                             categoryId, cmd);
                                     Assertions.assertTrue(isAllowed);
                                 });
+
                         Assertions.assertEquals(rights.allowedUsers.size(),
                                 userRightsDAO.getAllAllowed(testServer.serverId, cmd).size());
                         Assertions.assertEquals(rights.allowedRoles.size(),
@@ -98,6 +109,15 @@ public class RightsDAOTest {
                                 channelRightsDAO.getAllAllowed(testServer.serverId, cmd).size());
                         Assertions.assertEquals(rights.allowedCategories.size(),
                                 channelCategoryRightsDAO.getAllAllowed(testServer.serverId, cmd).size());
+
+                        Assertions.assertEquals(rights.allowedUsers.size(),
+                                userRightsDAO.getAllowedCount(testServer.serverId, cmd));
+                        Assertions.assertEquals(rights.allowedRoles.size(),
+                                roleRightsDAO.getAllowedCount(testServer.serverId, cmd));
+                        Assertions.assertEquals(rights.allowedTextChats.size(),
+                                channelRightsDAO.getAllowedCount(testServer.serverId, cmd));
+                        Assertions.assertEquals(rights.allowedCategories.size(),
+                                channelCategoryRightsDAO.getAllowedCount(testServer.serverId, cmd));
                     }));
         }
 
@@ -110,6 +130,16 @@ public class RightsDAOTest {
             testServers.parallelStream()
                     .forEach(testServer -> testServer.testRights.keySet().parallelStream().forEach(cmd -> {
                         TestCommandRights rights = testServer.testRights.get(cmd);
+
+                        Assertions.assertEquals(rights.allowedUsers.size(),
+                                userRightsDAO.getAllowedCount(testServer.serverId, cmd));
+                        Assertions.assertEquals(rights.allowedRoles.size(),
+                                roleRightsDAO.getAllowedCount(testServer.serverId, cmd));
+                        Assertions.assertEquals(rights.allowedTextChats.size(),
+                                channelRightsDAO.getAllowedCount(testServer.serverId, cmd));
+                        Assertions.assertEquals(rights.allowedCategories.size(),
+                                channelCategoryRightsDAO.getAllowedCount(testServer.serverId, cmd));
+
                         rights.allowedUsers
                                 .parallelStream()
                                 .forEach(userId -> {
@@ -164,6 +194,15 @@ public class RightsDAOTest {
                                 .isEmpty());
                         Assertions.assertTrue(channelCategoryRightsDAO.getAllAllowed(testServer.serverId, cmd)
                                 .isEmpty());
+
+                        long count = userRightsDAO.getAllowedCount(testServer.serverId, cmd);
+                        Assertions.assertEquals(0L, count);
+                        count = roleRightsDAO.getAllowedCount(testServer.serverId, cmd);
+                        Assertions.assertEquals(0L, count);
+                        count = channelRightsDAO.getAllowedCount(testServer.serverId, cmd);
+                        Assertions.assertEquals(0L, count);
+                        count = channelCategoryRightsDAO.getAllowedCount(testServer.serverId, cmd);
+                        Assertions.assertEquals(0L, count);
                     }));
         }
 

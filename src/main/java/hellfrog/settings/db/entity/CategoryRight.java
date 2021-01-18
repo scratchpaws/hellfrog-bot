@@ -7,7 +7,8 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "category_rights", indexes = {
-        @Index(name = "uniq_category_right", columnList = "server_id,command_prefix,category_id", unique = true)
+        @Index(name = "uniq_category_right", columnList = "server_id,command_prefix,category_id", unique = true),
+        @Index(name = "category_right_idx", columnList = "server_id,command_prefix")
 })
 public class CategoryRight implements EntityRight {
 

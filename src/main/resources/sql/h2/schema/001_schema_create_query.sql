@@ -156,6 +156,7 @@ create table user_rights
     constraint uniq_user_right unique (server_id, command_prefix, user_id)
 );
 
+create index user_right_idx on user_rights (server_id, command_prefix);
 comment on table user_rights is 'List of members who have access to any commands of the bot';
 comment on column user_rights.id is 'Unique record ID';
 comment on column user_rights.server_id is 'Discord server ID';
@@ -177,6 +178,7 @@ create table role_rights
     constraint uniq_role_right unique (server_id, command_prefix, role_id)
 );
 
+create index role_right_idx on role_rights (server_id, command_prefix);
 comment on table role_rights is 'List of roles who have access to any commands of the bot';
 comment on column role_rights.id is 'Unique record ID';
 comment on column role_rights.server_id is 'Discord server ID';
@@ -198,6 +200,7 @@ create table channel_rights
     constraint uniq_channel_right unique (server_id, command_prefix, channel_id)
 );
 
+create index channel_right_idx on channel_rights (server_id, command_prefix);
 comment on table channel_rights is 'List of server channels where allowed execute any commands of the bot';
 comment on column channel_rights.id is 'Unique record ID';
 comment on column channel_rights.server_id is 'Discord server ID';
@@ -219,6 +222,7 @@ create table category_rights
     constraint uniq_category_right unique (server_id, command_prefix, category_id)
 );
 
+create index category_right_idx on category_rights (server_id, command_prefix);
 comment on table category_rights is 'List of server channels categories where allowed execute any commands of the bot';
 comment on column category_rights.id is 'Unique record ID';
 comment on column category_rights.server_id is 'Discord server ID';

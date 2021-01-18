@@ -4,7 +4,7 @@ import com.vdurmont.emoji.EmojiParser;
 import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.LongEmbedMessage;
-import hellfrog.core.AccessControlCheck;
+import hellfrog.core.AccessControlService;
 import hellfrog.core.NameCacheService;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
@@ -94,7 +94,7 @@ public class RightsCommand
                     " - old and new. Old mode strongly required permissions for manage channel " +
                     "and strongly allowed role/user list. New mode strongly required permissions " +
                     "only for manage channel, allowed role/user list is optional. Default action is " +
-                    "show current mode. Default mode is old.")
+                    "show current mode. Default mode is new.")
             .build();
 
     public RightsCommand() {
@@ -126,7 +126,9 @@ public class RightsCommand
             return;
         }
 
-        AccessControlCheck.checkAndFixAcl(server);
+        final AccessControlService ACL = SettingsController.getInstance()
+                .getAccessControlService();
+        ACL.checkAndFixAcl(server);
 
         boolean aclSwitchMode = cmdline.hasOption(aclModeSwitchOption.getOpt());
         String aclSwitchModeValue = cmdline.getOptionValue(aclModeSwitchOption.getOpt(), "").toLowerCase();
@@ -166,7 +168,7 @@ public class RightsCommand
             commands[i] = commands[i].toLowerCase();
 
         String unknownCommandsString = Arrays.stream(commands)
-                .filter(command -> !AccessControlCheck.getAllCommandPrefix().contains(command))
+                .filter(command -> !ACL.getAllCommandPrefix().contains(command))
                 .map(command -> ServerSideResolver.getReadableContent(command, Optional.of(server)))
                 .reduce(CommonUtils::reduceConcat)
                 .orElse("");

@@ -4,9 +4,9 @@ import hellfrog.common.BroadCast;
 import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
-import hellfrog.core.AccessControlCheck;
 import hellfrog.core.RateLimiter;
 import hellfrog.core.ServerSideResolver;
+import hellfrog.settings.SettingsController;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
@@ -64,7 +64,9 @@ public abstract class MsgCreateReaction
     public void onMessageCreate(@NotNull MessageCreateEvent event) {
         Optional<Server> server = event.getServer();
         if (accessControl && server.isPresent()) {
-            boolean granted = AccessControlCheck.canExecuteOnServer(commandPrefix, event, server.get(),
+            boolean granted = SettingsController.getInstance()
+                    .getAccessControlService()
+                    .canExecuteOnServer(commandPrefix, event, server.get(),
                     strictByChannel, event.getChannel().getId());
             if (!granted) return;
         }
