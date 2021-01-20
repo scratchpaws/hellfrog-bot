@@ -1,19 +1,18 @@
 package hellfrog.commands.cmdline;
 
-import com.vdurmont.emoji.EmojiParser;
-import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.LongEmbedMessage;
 import hellfrog.core.AccessControlService;
-import hellfrog.core.NameCacheService;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
-import hellfrog.settings.db.*;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.DiscordEntity;
 import org.javacord.api.entity.Mentionable;
-import org.javacord.api.entity.channel.*;
+import org.javacord.api.entity.channel.ChannelCategory;
+import org.javacord.api.entity.channel.ServerChannel;
+import org.javacord.api.entity.channel.ServerTextChannel;
+import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
@@ -21,7 +20,10 @@ import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 public class RightsCommand
         extends BotCommand {
@@ -34,9 +36,6 @@ public class RightsCommand
             "to manage server can use any command by default. Certain commands " +
             "(such as: vote) also may require permission to manage channel, " +
             "designated for a poll.";
-
-    private static final String SPEAKER_EMOJI = EmojiParser.parseToUnicode(":loud_sound:");
-    private static final String CATEGORY_EMOJI = "`v`";
 
     private final Option userOption = Option.builder("u")
             .longOpt("user")
@@ -134,16 +133,14 @@ public class RightsCommand
         String aclSwitchModeValue = cmdline.getOptionValue(aclModeSwitchOption.getOpt(), "").toLowerCase();
 
         if (aclSwitchMode) {
-            ServerPreferencesDAO serverPreferencesDAO = SettingsController.getInstance()
-                    .getMainDBController().getServerPreferencesDAO();
             if (CommonUtils.isTrStringEmpty(aclSwitchModeValue)) {
-                String message = "Current access control mode is " + (serverPreferencesDAO.isNewAclMode(server.getId())
+                String message = "Current access control mode is " + (ACL.isNewAclMode(server)
                         ? "new" : "old") + '.';
                 showInfoMessage(message, event);
             } else {
                 switch (aclSwitchModeValue) {
-                    case "old" -> serverPreferencesDAO.setNewAclMode(server.getId(), false);
-                    case "new" -> serverPreferencesDAO.setNewAclMode(server.getId(), true);
+                    case "old" -> ACL.setNewAclMode(server, false);
+                    case "new" -> ACL.setNewAclMode(server, true);
                     default -> {
                         showErrorMessage("Unknown mode. Must be \"old\" or \"new\" or " +
                                 "empty for display current mode", event);
@@ -151,7 +148,7 @@ public class RightsCommand
                     }
                 }
 
-                String message = "Access control switched to " + (serverPreferencesDAO.isNewAclMode(server.getId()) ?
+                String message = "Access control switched to " + (ACL.isNewAclMode(server) ?
                         "new" : "old") + " mode.";
                 showInfoMessage(message, event);
             }
@@ -260,26 +257,20 @@ public class RightsCommand
             List<ChannelCategory> categoriesChanges = new ArrayList<>();
             List<ChannelCategory> categoriesNoChanges = new ArrayList<>();
 
-            MainDBController mainDBController = SettingsController.getInstance().getMainDBController();
-            UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
-            RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
-            ChannelRightsDAO channelRightsDAO = mainDBController.getChannelRightsDAO();
-            ChannelCategoryRightsDAO categoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
-
             for (String command : commands) {
                 for (User user : parsedUsers.getFound()) {
-                    modifyRights(allowMode, userRightsDAO, server, user, command, usersChanged, usersNoChanged);
+                    modifyRights(allowMode, ACL, server, user, command, usersChanged, usersNoChanged);
                 }
 
                 for (Role role : parsedRoles.getFound()) {
-                    modifyRights(allowMode, roleRightsDAO, server, role, command, rolesChanged, rolesNoChanged);
+                    modifyRights(allowMode, ACL, server, role, command, rolesChanged, rolesNoChanged);
                 }
 
                 for (ServerChannel rChannel : parsedChannels.getFound()) {
                     if (rChannel instanceof ChannelCategory) {
-                        modifyRights(allowMode, categoryRightsDAO, server, (ChannelCategory) rChannel, command, categoriesChanges, categoriesNoChanges);
+                        modifyRights(allowMode, ACL, server, (ChannelCategory) rChannel, command, categoriesChanges, categoriesNoChanges);
                     } else {
-                        modifyRights(allowMode, channelRightsDAO, server, rChannel, command, channelsChanged, channelsNoChanged);
+                        modifyRights(allowMode, ACL, server, rChannel, command, channelsChanged, channelsNoChanged);
                     }
                 }
             }
@@ -314,104 +305,30 @@ public class RightsCommand
         } else if (showMode) {
             LongEmbedMessage resultMessage = LongEmbedMessage.withTitleInfoStyle("Command rights");
 
-            MainDBController mainDBController = SettingsController.getInstance().getMainDBController();
-            UserRightsDAO userRightsDAO = mainDBController.getUserRightsDAO();
-            RoleRightsDAO roleRightsDAO = mainDBController.getRoleRightsDAO();
-            ChannelRightsDAO channelRightsDAO = mainDBController.getChannelRightsDAO();
-            ChannelCategoryRightsDAO categoryRightsDAO = mainDBController.getChannelCategoryRightsDAO();
-            NameCacheService cacheService = SettingsController.getInstance().getNameCacheService();
-
             for (String cmd : commands) {
-                resultMessage.append("Command: ")
-                        .append(cmd, MessageDecoration.BOLD)
-                        .append(":")
-                        .appendNewLine();
-
-                Optional<String> allowedUsers = userRightsDAO.getAllAllowed(server.getId(), cmd).stream()
-                        .map(userId -> getLastKnownUser(cacheService, server, userId))
-                        .reduce(CommonUtils::reduceNewLine);
-                allowedUsers.ifPresent(usersList -> resultMessage.append("Allowed for users:", MessageDecoration.UNDERLINE)
-                        .appendNewLine()
-                        .append(usersList)
-                        .appendNewLine());
-
-                Optional<String> allowedRoles = roleRightsDAO.getAllAllowed(server.getId(), cmd).stream().map(roleId -> {
-                    Optional<Role> mayBeRole = server.getRoleById(roleId);
-                    if (mayBeRole.isPresent()) {
-                        return mayBeRole.get().getMentionTag();
-                    } else {
-                        roleRightsDAO.deny(server.getId(), roleId, cmd);
-                        return null;
-                    }
-                })
-                        .filter(Objects::nonNull)
-                        .reduce(CommonUtils::reduceNewLine);
-
-                allowedRoles.ifPresent(rolesList -> resultMessage.append("Allowed for roles:", MessageDecoration.UNDERLINE)
-                        .appendNewLine()
-                        .append(rolesList)
-                        .appendNewLine());
-
-                Optional<String> allowedChannels = channelRightsDAO.getAllAllowed(server.getId(), cmd).stream().map(channelId -> {
-                    Optional<ServerChannel> mayBeChannel = server.getChannelById(channelId);
-                    if (mayBeChannel.isEmpty()) {
-                        channelRightsDAO.deny(server.getId(), channelId, cmd);
-                    } else {
-                        ServerChannel serverChannel = mayBeChannel.get();
-                        if (serverChannel instanceof ChannelCategory) {
-                            channelRightsDAO.deny(server.getId(), channelId, cmd);
-                        } else {
-                            return printServerChannel(serverChannel);
-                        }
-                    }
-                    return null;
-                })
-                        .filter(Objects::nonNull)
-                        .reduce(CommonUtils::reduceNewLine);
-
-                allowedChannels.ifPresent(channelsList -> resultMessage.append("Allowed for channels:", MessageDecoration.UNDERLINE)
-                        .appendNewLine()
-                        .append(channelsList)
-                        .appendNewLine());
-
-                Optional<String> allowedCategories = categoryRightsDAO.getAllAllowed(server.getId(), cmd).stream().map(categoryId -> {
-                    Optional<ChannelCategory> mayBeCategory = server.getChannelCategoryById(categoryId);
-                    if (mayBeCategory.isEmpty()) {
-                        categoryRightsDAO.deny(server.getId(), categoryId, cmd);
-                    } else {
-                        return printServerChannel(mayBeCategory.get());
-                    }
-                    return null;
-                })
-                        .filter(Objects::nonNull)
-                        .reduce(CommonUtils::reduceNewLine);
-
-                allowedCategories.ifPresent(categoryList -> resultMessage.append("Allowed for categories (and all it's channels):", MessageDecoration.UNDERLINE)
-                        .appendNewLine()
-                        .append(categoryList)
-                        .appendNewLine());
-
-                if (allowedUsers.isEmpty() &&
-                        allowedRoles.isEmpty() &&
-                        allowedChannels.isEmpty() &&
-                        allowedCategories.isEmpty())
-                    resultMessage.append("No rights were specified for the command.");
-
-                showMessage(resultMessage, event);
+                boolean hasSpecifiedRights = SettingsController.getInstance()
+                        .getAccessControlService()
+                        .appendCommandRightsInfo(server, cmd, resultMessage);
+                if (!hasSpecifiedRights) {
+                    resultMessage.append("  * No permissions set. A command can only be executed")
+                            .append(" by administrators and the owner of the server.\n");
+                }
             }
+
+            showMessage(resultMessage, event);
         }
     }
 
     private <T extends DiscordEntity> void modifyRights(final boolean allowMode,
-                                                        @NotNull final RightsDAO rightsDAO,
+                                                        @NotNull final AccessControlService ACL,
                                                         @NotNull final Server server,
                                                         @NotNull final T entity,
                                                         @NotNull final String command,
                                                         @NotNull final List<T> changedList,
                                                         @NotNull final List<T> notChangedList) {
 
-        boolean result = allowMode ? rightsDAO.allow(server.getId(), entity.getId(), command)
-                : rightsDAO.deny(server.getId(), entity.getId(), command);
+        boolean result = allowMode ? ACL.allow(server, entity, command)
+                : ACL.deny(server, entity, command);
         if (result) {
             if (!changedList.contains(entity)) changedList.add(entity);
         } else {
@@ -436,59 +353,13 @@ public class RightsCommand
                                                                     @NotNull final List<T> entities,
                                                                     @NotNull final String header) {
         entities.stream()
-                .map(this::printServerChannel)
+                .map(ServerSideResolver::printServerChannel)
                 .reduce(CommonUtils::reduceNewLine)
                 .ifPresent(line ->
                         resultMessage.append(header)
                                 .appendNewLine()
                                 .append(line)
                                 .appendNewLine());
-    }
-
-    private <T extends ServerChannel> String printServerChannel(@NotNull final T serverChannel) {
-        if (serverChannel instanceof ServerTextChannel) {
-            return ((ServerTextChannel) serverChannel).getMentionTag();
-        } else {
-            final String name = ServerSideResolver.getReadableContent(serverChannel.getName(), Optional.of(serverChannel.getServer()));
-            if (serverChannel instanceof ServerVoiceChannel) {
-                return SPEAKER_EMOJI + name;
-            } else if (serverChannel instanceof ChannelCategory) {
-                return CATEGORY_EMOJI + name;
-            } else {
-                return "#" + name;
-            }
-        }
-    }
-
-    private String getLastKnownUser(@NotNull final NameCacheService cacheService,
-                                    @NotNull final Server server,
-                                    final long userId) {
-
-        Optional<User> mayBeMember = server.getMemberById(userId);
-        if (mayBeMember.isPresent()) {
-            return mayBeMember.get().getMentionTag();
-        }
-        final StringBuilder result = new StringBuilder()
-                .append("(member not present on server) ");
-        cacheService.findLastKnownName(server, userId).ifPresent(lastKnownNick ->
-                result.append("Nickname: ").append(lastKnownNick).append(", "));
-        boolean foundDiscriminatedName = false;
-        try {
-            User user = server.getApi().getUserById(userId).get(CommonConstants.OP_WAITING_TIMEOUT, CommonConstants.OP_TIME_UNIT);
-            if (user != null && !cacheService.isDeletedUserDiscriminatedName(user.getDiscriminatedName())) {
-                cacheService.update(user);
-                result.append(ServerSideResolver.getReadableContent(user.getDiscriminatedName(), Optional.of(server))).append(", ");
-                foundDiscriminatedName = true;
-            }
-        } catch (Exception ignore) {
-        }
-        if (!foundDiscriminatedName) {
-            cacheService.findLastKnownName(userId).ifPresentOrElse(cachedName ->
-                            result.append(ServerSideResolver.getReadableContent(cachedName, Optional.of(server))).append(", "),
-                    () -> result.append("[discriminated name is unknown], "));
-        }
-        result.append("ID: ").append(userId);
-        return result.toString();
     }
 
     /**

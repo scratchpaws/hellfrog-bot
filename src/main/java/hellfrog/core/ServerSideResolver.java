@@ -1,13 +1,11 @@
 package hellfrog.core;
 
+import com.vdurmont.emoji.EmojiParser;
 import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.settings.SettingsController;
 import org.javacord.api.DiscordApi;
-import org.javacord.api.entity.channel.ChannelCategory;
-import org.javacord.api.entity.channel.PrivateChannel;
-import org.javacord.api.entity.channel.ServerChannel;
-import org.javacord.api.entity.channel.ServerTextChannel;
+import org.javacord.api.entity.channel.*;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.permission.PermissionType;
@@ -44,6 +42,9 @@ public class ServerSideResolver
     private static final String HERE_TAG = "@here";
     private static final String QUOTED_EVERYONE_TAG = "`@everyone`";
     private static final String QUOTED_HERE_TAG = "`@here`";
+
+    private static final String SPEAKER_EMOJI = EmojiParser.parseToUnicode(":loud_sound:");
+    private static final String CATEGORY_EMOJI = "`v`";
 
     public static Optional<User> resolveUser(Server server, String rawValue) {
         NameCacheService nameCacheService = SettingsController.getInstance().getNameCacheService();
@@ -464,6 +465,21 @@ public class ServerSideResolver
                 .orElse("")
                 + mayBePrivate.map(channel -> " (private message)").orElse("");
         return getReadableContent(messageContent, event.getServer());
+    }
+
+    public static <T extends ServerChannel> String printServerChannel(@NotNull final T serverChannel) {
+        if (serverChannel instanceof ServerTextChannel) {
+            return ((ServerTextChannel) serverChannel).getMentionTag();
+        } else {
+            final String name = ServerSideResolver.getReadableContent(serverChannel.getName(), Optional.of(serverChannel.getServer()));
+            if (serverChannel instanceof ServerVoiceChannel) {
+                return SPEAKER_EMOJI + name;
+            } else if (serverChannel instanceof ChannelCategory) {
+                return CATEGORY_EMOJI + name;
+            } else {
+                return "#" + name;
+            }
+        }
     }
 
     public static class ParseResult<T> {

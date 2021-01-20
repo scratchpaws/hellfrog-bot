@@ -85,7 +85,7 @@ public class SettingsController {
         serviceLogsNotificator = new ServiceLogsNotificator();
         autoBackupService = new AutoBackupService();
         nameCacheService = new NameCacheService(this, mainDBController.getEntityNameCacheDAO());
-        accessControlService = new AccessControlService(mainDBController);
+        accessControlService = new AccessControlService(mainDBController, nameCacheService);
 
         autoPromoteService = new AutoPromoteService(mainDBController.getAutoPromoteRolesDAO(),
                 mainDBController.getRoleAssignDAO(),
