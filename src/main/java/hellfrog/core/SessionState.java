@@ -116,8 +116,10 @@ public class SessionState {
             try {
                 return type.cast(obj);
             } catch (ClassCastException err) {
-                log.error("Unable cast object with key " + key + " to " + type.getName()
-                        + ", step id: " + stepId, err);
+                String errMsg = String.format("Unable case object with key %s to %s, step id %d: %s",
+                        key, type.getName(), stepId, err.getMessage());
+                log.error(errMsg, err);
+                LogsStorage.addErrorMessage(errMsg);
                 return null;
             }
         } else {
@@ -259,8 +261,10 @@ public class SessionState {
                 try {
                     return type.cast(obj);
                 } catch (ClassCastException err) {
-                    log.error("Unable cast object with key " + key + " to " + type.getName()
-                            + ", step id: " + stepId, err);
+                    String errMsg = String.format("Unable case object with key %s to %s, step id %d: %s",
+                            key, type.getName(), stepId, err.getMessage());
+                    log.error(errMsg, err);
+                    LogsStorage.addErrorMessage(errMsg);
                     return null;
                 }
             } else {
@@ -269,8 +273,20 @@ public class SessionState {
         }
 
         public SessionState build() {
-            if (userId == 0L)
+            if (userId == 0L || textChannelId == 0L || scenario == null) {
+                StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+                if (stackTrace.length >= 2) {
+                    String errMsg = String.format("BUG: detected %s::build() usage from %s (line %d) without " +
+                                    "required items: userId == %d (required non zero), textChannelId == %d (required non zero)," +
+                                    "scenario == %s (required non null)",
+                            this.getClass().getName(), stackTrace[1].getClassName(), stackTrace[1].getLineNumber(),
+                            userId, textChannelId, (scenario == null ? null : scenario.getClass().getSimpleName()));
+                    LogsStorage.addErrorMessage(errMsg);
+                }
+            }
+            if (userId == 0L) {
                 throw new IllegalArgumentException("User cannot be empty");
+            }
             if (textChannelId == 0L)
                 throw new IllegalArgumentException("Text channel cannot be empty");
             Objects.requireNonNull(scenario, "Scenario cannot be null");
