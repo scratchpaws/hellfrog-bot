@@ -42,7 +42,8 @@ public class Loader {
             System.exit(0);
         }
 
-        final SettingsController settingsController = SettingsController.getInstance();
+        SettingsController.getInstance().init();
+
         final EventsListener eventsListener = new EventsListener();
         for (BotCommand cmd : BotCommand.all()) { // заранее инициируем поиск и инстантинацию классов команд
             if (log.isDebugEnabled()) {
@@ -60,8 +61,18 @@ public class Loader {
             }
         }
 
+        String apiKey = "";
+        try {
+            apiKey = ApiKeyStorage.readApiKey();
+        } catch (Exception err) {
+            String errMsg = String.format("Unable to start BOT: %s. Emergency terminated", err.getMessage());
+            log.fatal(errMsg, err);
+            System.err.println(errMsg);
+            System.exit(2);
+        }
+
         new DiscordApiBuilder()
-                .setToken(settingsController.getApiKey())
+                .setToken(apiKey)
                 .setAllIntents()
                 .setWaitForUsersOnStartup(true)
                 .setWaitForServersOnStartup(true)

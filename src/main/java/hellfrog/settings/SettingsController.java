@@ -68,18 +68,9 @@ public class SettingsController {
         try {
             mainDBController = MainDBController.getInstance(InstanceType.PROD);
         } catch (Exception err) {
-            // todo: Transition warnings. In the future, errors in starting the database will lead to the crash of the application.
             String errMsg = String.format("Unable to start %s database: %s", InstanceType.PROD, err.getMessage());
-            log.error(errMsg, err);
-            LogsStorage.addErrorMessage(errMsg);
-        }
-
-        try {
-            ApiKeyStorage.readApiKey();
-        } catch (IOException err) {
-            // todo: todo: Transition warnings. In the future, errors in reading the file with the API key will result in application crash
-            log.error(err.getMessage(), err);
-            LogsStorage.addErrorMessage(err.getMessage());
+            log.fatal(errMsg, err);
+            System.exit(2);
         }
 
         loadCommonSettings();
@@ -107,6 +98,11 @@ public class SettingsController {
     @Contract(pure = true)
     public static SettingsController getInstance() {
         return instance;
+    }
+
+    public void init() {
+        // nothing to do
+        log.info("Settings controller init OK");
     }
 
     @Deprecated
