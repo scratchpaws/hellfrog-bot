@@ -134,10 +134,14 @@ public class LongEmbedMessage
         return this;
     }
 
-    private void setStyleAttributes() {
-        this.setTimestampToNow();
+    public void setYourselfAuthor() {
         User yourself = SettingsController.getInstance().getDiscordApi().getYourself();
         this.setAuthor(yourself);
+    }
+
+    private void setStyleAttributes() {
+        this.setTimestampToNow();
+        setYourselfAuthor();
     }
 
     public LongEmbedMessage setAuthor(@NotNull final String authorName,

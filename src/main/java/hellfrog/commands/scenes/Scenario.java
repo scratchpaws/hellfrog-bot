@@ -4,6 +4,7 @@ import hellfrog.commands.ACLCommand;
 import hellfrog.common.CodeSourceUtils;
 import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
+import hellfrog.common.LongEmbedMessage;
 import hellfrog.core.SessionState;
 import hellfrog.settings.SettingsController;
 import org.javacord.api.DiscordApi;
@@ -470,6 +471,20 @@ public abstract class Scenario
                     .setEmbed(embedBuilder)
                     .send(target)
                     .get(OP_WAITING_TIMEOUT, OP_TIME_UNIT));
+        } catch (Exception err) {
+            log.error("Unable to send message: " + err.getMessage(), err);
+            return Optional.empty();
+        }
+    }
+
+    protected Optional<Message> displayMessage(@Nullable LongEmbedMessage message,
+                                               @Nullable Messageable target) {
+        if (message == null || target == null) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.ofNullable(message.send(target).get(OP_WAITING_TIMEOUT, OP_TIME_UNIT));
         } catch (Exception err) {
             log.error("Unable to send message: " + err.getMessage(), err);
             return Optional.empty();
