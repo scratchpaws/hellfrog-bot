@@ -32,11 +32,17 @@ public class LongEmbedMessage
     private String authorUrl = null;
     private String authorIconUrl = null;
 
-    private List<LongEmbedField> fields = new ArrayList<>();
+    private final List<LongEmbedField> fields = new ArrayList<>();
 
     public static LongEmbedMessage withTitleInfoStyle(@NotNull final String title) {
         return new LongEmbedMessage()
                 .setInfoStyle()
+                .setTitle(title);
+    }
+
+    public static LongEmbedMessage withTitleScenarioStyle(@Nullable final String title) {
+        return new LongEmbedMessage()
+                .setScenarioStyle()
                 .setTitle(title);
     }
 
@@ -76,6 +82,21 @@ public class LongEmbedMessage
         messageBuffer.append(str);
         if (decoration != null) {
             messageBuffer.append(decoration.getSuffix());
+        }
+        return this;
+    }
+
+    public LongEmbedMessage append(String str, MessageDecoration... decorations) {
+        if (decorations != null && decorations.length > 0) {
+            for (MessageDecoration decoration : decorations) {
+                messageBuffer.append(decoration.getPrefix());
+            }
+        }
+        messageBuffer.append(str);
+        if (decorations != null && decorations.length > 0) {
+            for (int i = (decorations.length - 1); i >= 0; i--) {
+                messageBuffer.append(decorations[i]);
+            }
         }
         return this;
     }
@@ -134,6 +155,12 @@ public class LongEmbedMessage
         return this;
     }
 
+    public LongEmbedMessage setScenarioStyle() {
+        this.color = Color.GREEN;
+        this.setStyleAttributes();
+        return this;
+    }
+
     public void setYourselfAuthor() {
         User yourself = SettingsController.getInstance().getDiscordApi().getYourself();
         this.setAuthor(yourself);
@@ -182,6 +209,11 @@ public class LongEmbedMessage
     public LongEmbedMessage addInlineField(String name, String value) {
         this.fields.add(new LongEmbedField(name, value, true));
         return this;
+    }
+
+    @Nullable
+    public Color getColor() {
+        return color;
     }
 
     public CompletableFuture<Message> send(Messageable target) {
