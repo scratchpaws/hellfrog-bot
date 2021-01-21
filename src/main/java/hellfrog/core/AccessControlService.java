@@ -301,7 +301,9 @@ public class AccessControlService {
                 if (allCommandPrefix == null) {
                     List<String> allCommands = new ArrayList<>();
                     for (MsgCreateReaction reaction : MsgCreateReaction.all()) {
-                        allCommands.add(reaction.getCommandPrefix());
+                        if (reaction.isAccessControl()) {
+                            allCommands.add(reaction.getCommandPrefix());
+                        }
                     }
                     for (BotCommand command : BotCommand.all()) {
                         allCommands.add(command.getPrefix());
@@ -345,15 +347,11 @@ public class AccessControlService {
     public boolean appendCommandRightsInfo(@NotNull final Server server,
                                            @NotNull final String command,
                                            @NotNull final LongEmbedMessage message) {
-        message.append("Command: ")
-                .append(command, MessageDecoration.UNDERLINE, MessageDecoration.BOLD)
-                .append(":")
-                .appendNewLine();
 
         Optional<String> allowedUsers = userRightsDAO.getAllAllowed(server.getId(), command).stream().map(userId -> {
             Optional<User> mayBeUser = server.getMemberById(userId);
             if (mayBeUser.isPresent()) {
-                return mayBeUser.get().getMentionTag();
+                return nameCacheService.printEntityDetailed(mayBeUser.get(), server);
             } else {
                 userRightsDAO.deny(server.getId(), userId, command);
                 return null;
@@ -361,15 +359,11 @@ public class AccessControlService {
         })
                 .filter(Objects::nonNull)
                 .reduce(CommonUtils::reduceNewLine);
-        allowedUsers.ifPresent(usersList -> message.append("  * Allowed for users:")
-                .appendNewLine()
-                .append(usersList)
-                .appendNewLine());
 
         Optional<String> allowedRoles = roleRightsDAO.getAllAllowed(server.getId(), command).stream().map(roleId -> {
             Optional<Role> mayBeRole = server.getRoleById(roleId);
             if (mayBeRole.isPresent()) {
-                return mayBeRole.get().getMentionTag();
+                return nameCacheService.printEntityDetailed(mayBeRole.get(), server);
             } else {
                 roleRightsDAO.deny(server.getId(), roleId, command);
                 return null;
@@ -377,11 +371,6 @@ public class AccessControlService {
         })
                 .filter(Objects::nonNull)
                 .reduce(CommonUtils::reduceNewLine);
-
-        allowedRoles.ifPresent(rolesList -> message.append("  * Allowed for roles:", MessageDecoration.UNDERLINE)
-                .appendNewLine()
-                .append(rolesList)
-                .appendNewLine());
 
         Optional<String> allowedChannels = channelRightsDAO.getAllAllowed(server.getId(), command).stream().map(channelId -> {
             Optional<ServerChannel> mayBeChannel = server.getChannelById(channelId);
@@ -400,11 +389,6 @@ public class AccessControlService {
                 .filter(Objects::nonNull)
                 .reduce(CommonUtils::reduceNewLine);
 
-        allowedChannels.ifPresent(channelsList -> message.append("  * Allowed for channels:", MessageDecoration.UNDERLINE)
-                .appendNewLine()
-                .append(channelsList)
-                .appendNewLine());
-
         Optional<String> allowedCategories = categoryRightsDAO.getAllAllowed(server.getId(), command).stream().map(categoryId -> {
             Optional<ChannelCategory> mayBeCategory = server.getChannelCategoryById(categoryId);
             if (mayBeCategory.isEmpty()) {
@@ -417,14 +401,43 @@ public class AccessControlService {
                 .filter(Objects::nonNull)
                 .reduce(CommonUtils::reduceNewLine);
 
-        allowedCategories.ifPresent(categoryList -> message.append("  * Allowed for categories (and all it's channels):", MessageDecoration.UNDERLINE)
-                .appendNewLine()
-                .append(categoryList)
-                .appendNewLine());
-
-        return allowedUsers.isEmpty() &&
+        boolean hasNoRights = allowedUsers.isEmpty() &&
                 allowedRoles.isEmpty() &&
                 allowedChannels.isEmpty() &&
                 allowedCategories.isEmpty();
+
+        if (hasNoRights) {
+            return true;
+        }
+
+        message.append("Command: ")
+                .append(command, MessageDecoration.UNDERLINE, MessageDecoration.BOLD)
+                .append(":")
+                .appendNewLine();
+
+        allowedUsers.ifPresent(usersList -> message.append("  * Allowed for users:")
+                .appendNewLine()
+                .append(usersList)
+                .appendNewLine());
+
+        allowedRoles.ifPresent(rolesList ->
+                message.append("  * Allowed for roles:", MessageDecoration.UNDERLINE)
+                        .appendNewLine()
+                        .append(rolesList)
+                        .appendNewLine());
+
+        allowedChannels.ifPresent(channelsList ->
+                message.append("  * Allowed for channels:", MessageDecoration.UNDERLINE)
+                        .appendNewLine()
+                        .append(channelsList)
+                        .appendNewLine());
+
+        allowedCategories.ifPresent(categoryList ->
+                message.append("  * Allowed for categories (and all it's channels):", MessageDecoration.UNDERLINE)
+                        .appendNewLine()
+                        .append(categoryList)
+                        .appendNewLine());
+
+        return false;
     }
 }

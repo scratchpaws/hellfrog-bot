@@ -105,7 +105,7 @@ public class LongEmbedMessage
         messageBuffer.append(str);
         if (decorations != null && decorations.length > 0) {
             for (int i = (decorations.length - 1); i >= 0; i--) {
-                messageBuffer.append(decorations[i]);
+                messageBuffer.append(decorations[i].getSuffix());
             }
         }
         return this;

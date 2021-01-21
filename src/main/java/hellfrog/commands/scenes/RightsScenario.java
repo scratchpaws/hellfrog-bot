@@ -47,7 +47,7 @@ public class RightsScenario
                     The bot uses a command access model, which requires explicit permission to access any commands and reactions for users who do not have administrator rights and who do not own the server.
                     Access is granted on a whitelist basis, i.e. forbidden everything that is clearly not allowed.
                     There is no blacklist. If it is necessary to prohibit the user or role from executing any command or reaction, then it is necessary to remove the previously set permissive access.
-                    Some commands require explicit permission to execute in any specified text channels or channel categories. For bot commands that require explicit permission to work in a channel or category, there are two modes of access system operation (aka "ACL mode"): old and new.
+                    Some commands require explicit permission to execute in any specified channels or channel categories. For bot commands that require explicit permission to work in a channel or category, there are two modes of access system operation (aka "ACL mode"): old and new.
                     The old mode requires both explicit permission to execute in the channel or category, and explicit permission for the user or role.
                     The new mode requires only explicit permission to execute in a channel or category. But at the same time, if desired, you can also set explicit permission for the user or role. The mode can be set only for all bot commands on the server as a whole.""";
 
@@ -387,7 +387,7 @@ public class RightsScenario
                         .map(channel -> nameCache.printEntityDetailed(channel, server))
                         .reduce(CommonUtils::reduceNewLine)
                         .orElse("");
-                resultMessage.append("The following text channels allow to execute the command ")
+                resultMessage.append("The following channels allow to execute the command ")
                         .append(enteredCommandName, MessageDecoration.UNDERLINE).append(":")
                         .appendNewLine().append(channelsList)
                         .appendNewLine();
@@ -416,7 +416,7 @@ public class RightsScenario
                         .map(channelCategory -> nameCache.printEntityDetailed(channelCategory, server))
                         .reduce(CommonUtils::reduceNewLine)
                         .orElse("");
-                resultMessage.append("For text channels included in these channel categories, ")
+                resultMessage.append("For channels included in these channel categories, ")
                         .append("allowed to execute the command ").append(enteredCommandName, MessageDecoration.UNDERLINE).append(":")
                         .appendNewLine().append(categoriesList)
                         .appendNewLine();
@@ -552,7 +552,7 @@ public class RightsScenario
                 ServerSideResolver.ParseResult<ServerChannel> channelParseResult =
                         ServerSideResolver.resolveNonCategoriesChannelsList(server, entityNames);
                 if (channelParseResult.hasNotFound()) {
-                    resultMessage.append("These text channels cannot be found: ")
+                    resultMessage.append("These channels cannot be found: ")
                             .append(channelParseResult.getNotFoundStringList()).append(". ");
                     return displayEnterEntityError(serverTextChannel, sessionState, resultMessage);
                 }
@@ -574,7 +574,7 @@ public class RightsScenario
                         .reduce(CommonUtils::reduceNewLine)
                         .orElse("");
                 resultMessage.append("The right to execute the command ").append(enteredCommandName, MessageDecoration.UNDERLINE)
-                        .append(" was revoked for the following text channels:")
+                        .append(" was revoked for the following channels:")
                         .appendNewLine().append(channelsList)
                         .appendNewLine();
             }
@@ -610,7 +610,7 @@ public class RightsScenario
                         .orElse("");
                 resultMessage.append("The right to execute a command ").append(enteredCommandName, MessageDecoration.UNDERLINE)
                         .append(" has been revoked for the following ")
-                        .append("categories (and all text channels that include these categories):")
+                        .append("categories (and all channels that include these categories):")
                         .appendNewLine().append(categoriesList)
                         .appendNewLine();
             }
@@ -804,7 +804,7 @@ public class RightsScenario
                 .append(EMOJI_LETTER_U).append(" - for user, ")
                 .append(EMOJI_LETTER_R).append(" - for role");
         if (isStrictByChannels) {
-            descriptionText.append(", ").append(EMOJI_LETTER_T).append(" - for text chat, ")
+            descriptionText.append(", ").append(EMOJI_LETTER_T).append(" - for channel, ")
                     .append(EMOJI_LETTER_C).append(" - for category");
         }
         descriptionText.append(".").appendNewLine()
@@ -964,9 +964,9 @@ public class RightsScenario
             switch (rightType) {
                 case TYPE_USER -> descriptionText.append("users who are allowed to run this command is empty.");
                 case TYPE_ROLE -> descriptionText.append("roles that are allowed to run this command is empty.");
-                case TYPE_CHAT -> descriptionText.append("text channels in which the execution of this command " +
+                case TYPE_CHAT -> descriptionText.append("channels in which the execution of this command " +
                         "is allowed is empty.");
-                case TYPE_CATEGORY -> descriptionText.append("categories in the text channels of which " +
+                case TYPE_CATEGORY -> descriptionText.append("categories in the channels of which " +
                         "the execution of this command is allowed is empty.");
             }
             return super.displayMessage(descriptionText, serverTextChannel).map(message ->
@@ -1012,13 +1012,13 @@ public class RightsScenario
                     .append("performing a search for a role by a bot): role ID, its mention, ")
                     .append("role name.");
             case TYPE_CHAT -> {
-                descriptionText.append("Enter the text channel that you want to ")
+                descriptionText.append("Enter the channel that you want to ")
                         .append(wordReplace, MessageDecoration.BOLD)
                         .append(" the execution of the specified command. ");
                 if (!isAdditionRights) {
                     descriptionText.append("Keep in mind that permission to execute commands for a category ")
-                            .append("of text channels override the lack of rights to execute commands ")
-                            .append("for text channels in this category. ");
+                            .append("of channels override the lack of rights to execute commands ")
+                            .append("for channels in this category. ");
                 }
                 descriptionText.append("You can specify (listed in order of priority when ")
                         .append("performing a channel search with a bot): channel ID, its mention, ")
@@ -1035,8 +1035,8 @@ public class RightsScenario
                             .append("category while the permission is valid for the entire category). ");
                 } else {
                     descriptionText.append("Keep in mind that permission to execute commands for a category ")
-                            .append("of text channels override the lack of rights to execute commands ")
-                            .append("for text channels in this category. ");
+                            .append("of channels override the lack of rights to execute commands ")
+                            .append("for channels in this category. ");
                 }
                 descriptionText.append("You can specify (listed in order of priority when performing a channel ")
                         .append("search with a bot): category ID, category name.");
