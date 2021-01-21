@@ -105,7 +105,7 @@ public abstract class ACLCommand {
         return !expertCommand;
     }
 
-    private boolean isStrictOnServer(@NotNull final Server server) {
+    public boolean isStrictByChannelsOnServer(@NotNull final Server server) {
         return strictByChannels && !notStrictByChannelServers.contains(server.getId());
     }
 
@@ -113,14 +113,14 @@ public abstract class ACLCommand {
                                            long... anotherTargetChannel) {
         return SettingsController.getInstance()
                 .getAccessControlService()
-                .canExecuteOnServer(getPrefix(), event, server, isStrictOnServer(server), anotherTargetChannel);
+                .canExecuteOnServer(getPrefix(), event, server, isStrictByChannelsOnServer(server), anotherTargetChannel);
     }
 
     public boolean canExecuteServerCommand(SingleReactionEvent event, Server server,
                                            long... anotherTargetChannel) {
         return SettingsController.getInstance()
                 .getAccessControlService()
-                .canExecuteOnServer(getPrefix(), event, server, isStrictOnServer(server), anotherTargetChannel);
+                .canExecuteOnServer(getPrefix(), event, server, isStrictByChannelsOnServer(server), anotherTargetChannel);
     }
 
     protected boolean canExecuteGlobalCommand(@NotNull MessageCreateEvent event) {
@@ -210,7 +210,7 @@ public abstract class ACLCommand {
 
                     boolean hasRights = SettingsController.getInstance()
                             .getAccessControlService()
-                            .canExecuteOnServer(prefix, user, server, serverTextChannel, isStrictOnServer(server));
+                            .canExecuteOnServer(prefix, user, server, serverTextChannel, isStrictByChannelsOnServer(server));
                     boolean canWriteToChannel = serverTextChannel.canYouWrite();
                     if (hasRights && canWriteToChannel) {
                         showEmbedMessage(message, serverTextChannel, user);
@@ -238,7 +238,7 @@ public abstract class ACLCommand {
             ServerTextChannel channel = mayBeTextChannel.get();
             boolean hasRights = SettingsController.getInstance()
                     .getAccessControlService()
-                    .canExecuteOnServer(prefix, event, server, isStrictOnServer(server));
+                    .canExecuteOnServer(prefix, event, server, isStrictByChannelsOnServer(server));
             boolean canWriteToChannel = channel.canYouWrite();
             return hasRights && canWriteToChannel;
         } else {

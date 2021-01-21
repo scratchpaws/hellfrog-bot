@@ -3,12 +3,12 @@ package hellfrog.commands.cmdline;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.LongEmbedMessage;
 import hellfrog.core.AccessControlService;
+import hellfrog.core.NameCacheService;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.javacord.api.entity.DiscordEntity;
-import org.javacord.api.entity.Mentionable;
 import org.javacord.api.entity.channel.ChannelCategory;
 import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
@@ -229,6 +229,7 @@ public class RightsCommand
             }
 
             LongEmbedMessage resultMessage = LongEmbedMessage.withTitleInfoStyle("Command rights");
+            NameCacheService nameCacheService = SettingsController.getInstance().getNameCacheService();
 
             if (parsedUsers.hasNotFound())
                 resultMessage.append("This users cannot be resolve: ")
@@ -285,20 +286,20 @@ public class RightsCommand
                                 .appendNewLine());
             }
 
-            addMentionableListToMessage(resultMessage, usersChanged, "To users:");
-            addMentionableListToMessage(resultMessage, rolesChanged, "To roles:");
-            addChannelsListToMessage(resultMessage, channelsChanged, "To channels:");
-            addChannelsListToMessage(resultMessage, categoriesChanges, "To channel categories (and all it's channels):");
+            addEntityListToMessage(nameCacheService, resultMessage, server, usersChanged, "To users:");
+            addEntityListToMessage(nameCacheService, resultMessage, server, rolesChanged, "To roles:");
+            addEntityListToMessage(nameCacheService, resultMessage, server, channelsChanged, "To channels:");
+            addEntityListToMessage(nameCacheService, resultMessage, server, categoriesChanges, "To channel categories (and all it's channels):");
 
             if (!usersNoChanged.isEmpty() || !rolesNoChanged.isEmpty() || !channelsNoChanged.isEmpty() || !categoriesNoChanges.isEmpty()) {
                 resultMessage.append("Settings ")
                         .append("no changed", MessageDecoration.BOLD)
                         .append(" for (already granted or cannot be granted):")
                         .appendNewLine();
-                addMentionableListToMessage(resultMessage, usersNoChanged, "To users:");
-                addMentionableListToMessage(resultMessage, rolesNoChanged, "To roles:");
-                addChannelsListToMessage(resultMessage, channelsNoChanged, "To channels:");
-                addChannelsListToMessage(resultMessage, categoriesNoChanges, "To channel categories:");
+                addEntityListToMessage(nameCacheService, resultMessage, server, usersNoChanged, "To users:");
+                addEntityListToMessage(nameCacheService, resultMessage, server, rolesNoChanged, "To roles:");
+                addEntityListToMessage(nameCacheService, resultMessage, server, channelsNoChanged, "To channels:");
+                addEntityListToMessage(nameCacheService, resultMessage, server, categoriesNoChanges, "To channel categories:");
             }
 
             showMessage(resultMessage, event);
@@ -336,30 +337,19 @@ public class RightsCommand
         }
     }
 
-    private <T extends Mentionable> void addMentionableListToMessage(@NotNull final LongEmbedMessage resultMessage,
-                                                                     @NotNull final List<T> entities,
-                                                                     @NotNull final String header) {
-        entities.stream()
-                .map(Mentionable::getMentionTag)
-                .reduce(CommonUtils::reduceNewLine)
-                .ifPresent(line ->
-                        resultMessage.append(header)
-                                .appendNewLine()
-                                .append(line)
-                                .appendNewLine());
-    }
+    private <T extends DiscordEntity> void addEntityListToMessage(NameCacheService nameCacheService,
+                                                                  @NotNull final LongEmbedMessage resultMessage,
+                                                                  @NotNull final Server server,
+                                                                  @NotNull final List<T> entities,
+                                                                  @NotNull final String header) {
 
-    private <T extends ServerChannel> void addChannelsListToMessage(@NotNull final LongEmbedMessage resultMessage,
-                                                                    @NotNull final List<T> entities,
-                                                                    @NotNull final String header) {
         entities.stream()
-                .map(ServerSideResolver::printServerChannel)
+                .map(entity -> nameCacheService.printEntityDetailed(entity, server))
                 .reduce(CommonUtils::reduceNewLine)
-                .ifPresent(line ->
-                        resultMessage.append(header)
-                                .appendNewLine()
-                                .append(line)
-                                .appendNewLine());
+                .ifPresent(line -> resultMessage.append(header)
+                        .appendNewLine()
+                        .append(line)
+                        .appendNewLine());
     }
 
     /**

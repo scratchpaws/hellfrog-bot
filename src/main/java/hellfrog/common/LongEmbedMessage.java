@@ -51,6 +51,16 @@ public class LongEmbedMessage
         return this;
     }
 
+    public<T> LongEmbedMessage appendIfPresent(Optional<T> optional) {
+        optional.ifPresent(this::append);
+        return this;
+    }
+
+    public<T> LongEmbedMessage append(T value) {
+        messageBuffer.append(value);
+        return this;
+    }
+
     public LongEmbedMessage append(char c) {
         messageBuffer.append(c);
         return this;

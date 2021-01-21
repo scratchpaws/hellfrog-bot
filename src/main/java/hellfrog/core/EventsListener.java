@@ -17,6 +17,7 @@ import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
+import org.javacord.api.event.channel.server.ServerChannelDeleteEvent;
 import org.javacord.api.event.channel.server.invite.ServerChannelInviteCreateEvent;
 import org.javacord.api.event.channel.server.invite.ServerChannelInviteDeleteEvent;
 import org.javacord.api.event.message.MessageCreateEvent;
@@ -29,6 +30,8 @@ import org.javacord.api.event.server.ServerJoinEvent;
 import org.javacord.api.event.server.ServerLeaveEvent;
 import org.javacord.api.event.server.member.*;
 import org.javacord.api.event.server.role.RoleChangePermissionsEvent;
+import org.javacord.api.event.server.role.RoleDeleteEvent;
+import org.javacord.api.listener.channel.server.ServerChannelDeleteListener;
 import org.javacord.api.listener.channel.server.invite.ServerChannelInviteCreateListener;
 import org.javacord.api.listener.channel.server.invite.ServerChannelInviteDeleteListener;
 import org.javacord.api.listener.message.MessageCreateListener;
@@ -44,6 +47,7 @@ import org.javacord.api.listener.server.member.ServerMemberJoinListener;
 import org.javacord.api.listener.server.member.ServerMemberLeaveListener;
 import org.javacord.api.listener.server.member.ServerMemberUnbanListener;
 import org.javacord.api.listener.server.role.RoleChangePermissionsListener;
+import org.javacord.api.listener.server.role.RoleDeleteListener;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -57,7 +61,8 @@ public class EventsListener
         ReactionAddListener, ReactionRemoveListener, ReactionRemoveAllListener,
         ServerJoinListener, ServerLeaveListener, ServerMemberJoinListener, ServerMemberLeaveListener,
         ServerMemberBanListener, ServerMemberUnbanListener, CommonConstants,
-        RoleChangePermissionsListener, ServerChannelInviteCreateListener, ServerChannelInviteDeleteListener {
+        RoleChangePermissionsListener, ServerChannelInviteCreateListener, ServerChannelInviteDeleteListener,
+        RoleDeleteListener, ServerChannelDeleteListener {
 
     private static final String VERSION_STRING = "2021-01-07";
 
@@ -393,12 +398,14 @@ public class EventsListener
     public void onServerMemberLeave(ServerMemberLeaveEvent event) {
         SettingsController.getInstance().getNameCacheService().update(event.getUser());
         serverMemberStateDisplay(event, MemberEventCode.LEAVE);
+        SettingsController.getInstance().getAccessControlService().denyAll(event.getServer(), event.getUser());
     }
 
     @Override
     public void onServerMemberBan(ServerMemberBanEvent event) {
         SettingsController.getInstance().getNameCacheService().update(event.getUser());
         serverMemberStateDisplay(event, MemberEventCode.BAN);
+        SettingsController.getInstance().getAccessControlService().denyAll(event.getServer(), event.getUser());
     }
 
     @Override
@@ -421,6 +428,16 @@ public class EventsListener
                 .getInvitesController()
                 .addInvitesToCache(event.getServer());
         SettingsController.getInstance().getNameCacheService().update(event.getChannel());
+    }
+
+    @Override
+    public void onServerChannelDelete(ServerChannelDeleteEvent event) {
+        SettingsController.getInstance().getAccessControlService().denyAll(event.getServer(), event.getChannel());
+    }
+
+    @Override
+    public void onRoleDelete(RoleDeleteEvent event) {
+        SettingsController.getInstance().getAccessControlService().denyAll(event.getServer(), event.getRole());
     }
 
     private void serverMemberStateDisplay(@NotNull ServerMemberEvent event, MemberEventCode code) {

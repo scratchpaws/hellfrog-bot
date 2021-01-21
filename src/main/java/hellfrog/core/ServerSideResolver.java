@@ -5,6 +5,7 @@ import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.settings.SettingsController;
 import org.javacord.api.DiscordApi;
+import org.javacord.api.entity.DiscordEntity;
 import org.javacord.api.entity.channel.*;
 import org.javacord.api.entity.emoji.KnownCustomEmoji;
 import org.javacord.api.entity.message.Message;
@@ -279,6 +280,27 @@ public class ServerSideResolver
         return result;
     }
 
+    public static ParseResult<ServerChannel> resolveNonCategoriesChannelsList(@NotNull final Server server,
+                                                                              @NotNull final List<String> rawChannelsList) {
+        ParseResult<ServerChannel> result = new ParseResult<>();
+        List<ServerChannel> resolvedChannels = new ArrayList<>(rawChannelsList.size());
+        List<String> unresolvedChannels = new ArrayList<>(rawChannelsList.size());
+        rawChannelsList.forEach(rawChannel -> {
+            Optional<ServerChannel> mayBeChannel = ServerSideResolver.resolveServerChannel(server, rawChannel);
+            if (mayBeChannel.isPresent()) {
+                ServerChannel channel = mayBeChannel.get();
+                if (!(channel instanceof ChannelCategory)) {
+                    resolvedChannels.add(channel);
+                    return;
+                }
+            }
+            unresolvedChannels.add(rawChannel);
+        });
+        result.setFound(resolvedChannels);
+        result.setNotFound(unresolvedChannels);
+        return result;
+    }
+
     @NotNull
     public static ParseResult<ChannelCategory> resolveChannelCategoriesList(Server server,
                                                                             @NotNull List<String> rawTextCategoriesList) {
@@ -465,21 +487,6 @@ public class ServerSideResolver
                 .orElse("")
                 + mayBePrivate.map(channel -> " (private message)").orElse("");
         return getReadableContent(messageContent, event.getServer());
-    }
-
-    public static <T extends ServerChannel> String printServerChannel(@NotNull final T serverChannel) {
-        if (serverChannel instanceof ServerTextChannel) {
-            return ((ServerTextChannel) serverChannel).getMentionTag();
-        } else {
-            final String name = ServerSideResolver.getReadableContent(serverChannel.getName(), Optional.of(serverChannel.getServer()));
-            if (serverChannel instanceof ServerVoiceChannel) {
-                return SPEAKER_EMOJI + name;
-            } else if (serverChannel instanceof ChannelCategory) {
-                return CATEGORY_EMOJI + name;
-            } else {
-                return "#" + name;
-            }
-        }
     }
 
     public static class ParseResult<T> {

@@ -108,6 +108,10 @@ public abstract class MsgCreateReaction
         return accessControl;
     }
 
+    public boolean isStrictByChannel() {
+        return strictByChannel;
+    }
+
     public String getCommandPrefix() {
         return commandPrefix;
     }

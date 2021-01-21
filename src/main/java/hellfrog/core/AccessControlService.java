@@ -2,7 +2,6 @@ package hellfrog.core;
 
 import hellfrog.commands.cmdline.BotCommand;
 import hellfrog.commands.scenes.Scenario;
-import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.LongEmbedMessage;
 import hellfrog.reacts.MsgCreateReaction;
@@ -191,6 +190,11 @@ public class AccessControlService {
         return false;
     }
 
+    public <T extends DiscordEntity> void denyAll(@NotNull final Server server,
+                                                  @NotNull final T entity) {
+        getAllCommandPrefix().forEach(command -> deny(server, entity, command));
+    }
+
     public <T extends DiscordEntity> boolean isAllowed(@NotNull final Server server,
                                                        @NotNull final T entity,
                                                        @NotNull final String command) {
@@ -212,13 +216,57 @@ public class AccessControlService {
         return serverPreferencesDAO.isNewAclMode(server.getId());
     }
 
-    public boolean setNewAclMode(@NotNull final Server server, boolean isNewMode) {
-        return serverPreferencesDAO.setNewAclMode(server.getId(), isNewMode);
+    public void setNewAclMode(@NotNull final Server server, boolean isNewMode) {
+        serverPreferencesDAO.setNewAclMode(server.getId(), isNewMode);
+    }
+
+    public boolean notHasAnyRights(@NotNull final Server server, @NotNull final String command) {
+        return userRightsDAO.getAllowedCount(server.getId(), command) == 0L
+                && roleRightsDAO.getAllowedCount(server.getId(), command) == 0L
+                && channelRightsDAO.getAllowedCount(server.getId(), command) == 0L
+                && categoryRightsDAO.getAllowedCount(server.getId(), command) == 0L;
+    }
+
+    public boolean noHasUsersRights(@NotNull final Server server, @NotNull final String command) {
+        return userRightsDAO.getAllowedCount(server.getId(), command) == 0L;
+    }
+
+    public boolean noHasRolesRights(@NotNull final Server server, @NotNull final String command) {
+        return roleRightsDAO.getAllowedCount(server.getId(), command) == 0L;
+    }
+
+    public boolean noHasChannelRights(@NotNull final Server server, @NotNull final String command) {
+        return channelRightsDAO.getAllowedCount(server.getId(), command) == 0L;
+    }
+
+    public boolean noHasCategoryRights(@NotNull final Server server, @NotNull final String command) {
+        return categoryRightsDAO.getAllowedCount(server.getId(), command) == 0L;
+    }
+
+    public boolean hasUsersRights(@NotNull final Server server, @NotNull final String command) {
+        return userRightsDAO.getAllowedCount(server.getId(), command) > 0L;
+    }
+
+    public boolean hasRolesRights(@NotNull final Server server, @NotNull final String command) {
+        return roleRightsDAO.getAllowedCount(server.getId(), command) > 0L;
+    }
+
+    public boolean hasChannelRights(@NotNull final Server server, @NotNull final String command) {
+        return channelRightsDAO.getAllowedCount(server.getId(), command) > 0L;
+    }
+
+    public boolean hasCategoryRights(@NotNull final Server server, @NotNull final String command) {
+        return categoryRightsDAO.getAllowedCount(server.getId(), command) > 0L;
     }
 
     public void checkAndFixAcl(@NotNull final Server server) {
         if (serverPreferencesDAO.isAclFixRequired(server.getId())) {
             getAllCommandPrefix().forEach(prefix -> {
+                userRightsDAO.getAllAllowed(server.getId(), prefix).forEach(userId -> {
+                    if (server.getMemberById(userId).isEmpty()) {
+                        userRightsDAO.deny(server.getId(), userId, prefix);
+                    }
+                });
                 roleRightsDAO.getAllAllowed(server.getId(), prefix).forEach(roleId -> {
                     if (server.getRoleById(roleId).isEmpty()) {
                         roleRightsDAO.deny(server.getId(), roleId, prefix);
@@ -271,6 +319,29 @@ public class AccessControlService {
         return allCommandPrefix;
     }
 
+    public boolean isStrictByChannelsOnServer(@NotNull final Server server,
+                                              @NotNull final String command) {
+
+        if (getAllCommandPrefix().contains(command)) {
+            for (MsgCreateReaction reaction : MsgCreateReaction.all()) {
+                if (reaction.isAccessControl() && reaction.isStrictByChannel()) {
+                    return true;
+                }
+            }
+            for (BotCommand botCommand : BotCommand.all()) {
+                if (botCommand.isStrictByChannelsOnServer(server)) {
+                    return true;
+                }
+            }
+            for (Scenario scenario : Scenario.all()) {
+                if (scenario.isStrictByChannelsOnServer(server)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public boolean appendCommandRightsInfo(@NotNull final Server server,
                                            @NotNull final String command,
                                            @NotNull final LongEmbedMessage message) {
@@ -279,8 +350,16 @@ public class AccessControlService {
                 .append(":")
                 .appendNewLine();
 
-        Optional<String> allowedUsers = userRightsDAO.getAllAllowed(server.getId(), command).stream()
-                .map(userId -> getLastKnownUser(server, userId))
+        Optional<String> allowedUsers = userRightsDAO.getAllAllowed(server.getId(), command).stream().map(userId -> {
+            Optional<User> mayBeUser = server.getMemberById(userId);
+            if (mayBeUser.isPresent()) {
+                return mayBeUser.get().getMentionTag();
+            } else {
+                userRightsDAO.deny(server.getId(), userId, command);
+                return null;
+            }
+        })
+                .filter(Objects::nonNull)
                 .reduce(CommonUtils::reduceNewLine);
         allowedUsers.ifPresent(usersList -> message.append("  * Allowed for users:")
                 .appendNewLine()
@@ -313,7 +392,7 @@ public class AccessControlService {
                 if (serverChannel instanceof ChannelCategory) {
                     channelRightsDAO.deny(server.getId(), channelId, command);
                 } else {
-                    return ServerSideResolver.printServerChannel(serverChannel);
+                    return nameCacheService.printEntityDetailed(serverChannel, server);
                 }
             }
             return null;
@@ -331,7 +410,7 @@ public class AccessControlService {
             if (mayBeCategory.isEmpty()) {
                 categoryRightsDAO.deny(server.getId(), categoryId, command);
             } else {
-                return ServerSideResolver.printServerChannel(mayBeCategory.get());
+                return nameCacheService.printEntityDetailed(mayBeCategory.get(), server);
             }
             return null;
         })
@@ -347,35 +426,5 @@ public class AccessControlService {
                 allowedRoles.isEmpty() &&
                 allowedChannels.isEmpty() &&
                 allowedCategories.isEmpty();
-    }
-
-    private String getLastKnownUser(@NotNull final Server server,
-                                    final long userId) {
-
-        Optional<User> mayBeMember = server.getMemberById(userId);
-        if (mayBeMember.isPresent()) {
-            return mayBeMember.get().getMentionTag();
-        }
-        final StringBuilder result = new StringBuilder()
-                .append("(member not present on server) ");
-        nameCacheService.findLastKnownName(server, userId).ifPresent(lastKnownNick ->
-                result.append("Nickname: ").append(lastKnownNick).append(", "));
-        boolean foundDiscriminatedName = false;
-        try {
-            User user = server.getApi().getUserById(userId).get(CommonConstants.OP_WAITING_TIMEOUT, CommonConstants.OP_TIME_UNIT);
-            if (user != null && !nameCacheService.isDeletedUserDiscriminatedName(user.getDiscriminatedName())) {
-                nameCacheService.update(user);
-                result.append(ServerSideResolver.getReadableContent(user.getDiscriminatedName(), Optional.of(server))).append(", ");
-                foundDiscriminatedName = true;
-            }
-        } catch (Exception ignore) {
-        }
-        if (!foundDiscriminatedName) {
-            nameCacheService.findLastKnownName(userId).ifPresentOrElse(cachedName ->
-                            result.append(ServerSideResolver.getReadableContent(cachedName, Optional.of(server))).append(", "),
-                    () -> result.append("[discriminated name is unknown], "));
-        }
-        result.append("ID: ").append(userId);
-        return result.toString();
     }
 }

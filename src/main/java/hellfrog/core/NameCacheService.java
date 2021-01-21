@@ -1,15 +1,15 @@
 package hellfrog.core;
 
+import com.vdurmont.emoji.EmojiParser;
+import hellfrog.common.CommonConstants;
 import hellfrog.settings.SettingsController;
 import hellfrog.settings.db.EntityNameCacheDAO;
 import hellfrog.settings.db.entity.EntityNameCache;
 import hellfrog.settings.db.entity.NameType;
 import hellfrog.settings.db.entity.ServerNameCache;
 import org.javacord.api.DiscordApi;
-import org.javacord.api.entity.channel.ChannelCategory;
-import org.javacord.api.entity.channel.ServerChannel;
-import org.javacord.api.entity.channel.ServerTextChannel;
-import org.javacord.api.entity.channel.ServerVoiceChannel;
+import org.javacord.api.entity.DiscordEntity;
+import org.javacord.api.entity.channel.*;
 import org.javacord.api.entity.message.MessageAuthor;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
@@ -33,6 +33,9 @@ public class NameCacheService
     private final EntityNameCacheDAO entityNameCacheDAO;
     private final SettingsController settingsController;
     private final Pattern DELETER_USERS_PATTERN = Pattern.compile("^Deleted User(#0{4}| [a-h0-9]*#\\d{4})");
+
+    private static final String SPEAKER_EMOJI = EmojiParser.parseToUnicode(":loud_sound:");
+    private static final String CATEGORY_EMOJI = "`v`";
 
     public NameCacheService(@NotNull final SettingsController settingsController,
                             @NotNull final EntityNameCacheDAO entityNameCacheDAO) {
@@ -180,6 +183,76 @@ public class NameCacheService
 
     public Optional<String> findLastKnownName(@NotNull Server server, long entityId) {
         return findLastKnownName(server.getId(), entityId);
+    }
+
+    @NotNull
+    public <T extends DiscordEntity> String printEntityDetailed(@NotNull final T entity,
+                                                                @Nullable final Server server) {
+
+        if (entity instanceof User) {
+            User user = (User) entity;
+            StringBuilder result = new StringBuilder();
+            if (server != null && server.getMembers().contains(user)) {
+                result.append(user.getMentionTag()).append(", ");
+            }
+            result.append(user.getDiscriminatedName()).append(" ( id: ").append(user.getId()).append(")");
+            if (server != null && !server.getMembers().contains(user)) {
+                result.append(" (the user not present on the server)");
+            }
+            return result.toString();
+        } else if (entity instanceof Role) {
+            Role role = (Role) entity;
+            return role.getMentionTag() + ", (id: " + role.getId() + ")";
+        } else if (entity instanceof PrivateChannel) {
+            PrivateChannel channel = (PrivateChannel) entity;
+            return printEntityDetailed(channel.getRecipient(), server);
+        } else if (entity instanceof ServerTextChannel) {
+            ServerTextChannel channel = (ServerTextChannel) entity;
+            return channel.getMentionTag() + ", (id: " + channel.getId() + ")";
+        } else if (entity instanceof ServerVoiceChannel) {
+            ServerVoiceChannel channel = (ServerVoiceChannel) entity;
+            final String name = ServerSideResolver.getReadableContent(channel.getName(), Optional.of(channel.getServer()));
+            return SPEAKER_EMOJI + name;
+        } else if (entity instanceof ChannelCategory) {
+            ChannelCategory category = (ChannelCategory) entity;
+            final String name = ServerSideResolver.getReadableContent(category.getName(), Optional.of(category.getServer()));
+            return CATEGORY_EMOJI + name;
+        } else if (entity instanceof ServerChannel) {
+            ServerChannel channel = (ServerChannel) entity;
+            final String name = ServerSideResolver.getReadableContent(channel.getName(), Optional.of(channel.getServer()));
+            return "#" + name;
+        }
+        return "";
+    }
+
+    private String getLastKnownUser(@NotNull final Server server,
+                                    final long userId) {
+
+        Optional<User> mayBeMember = server.getMemberById(userId);
+        if (mayBeMember.isPresent()) {
+            return mayBeMember.get().getMentionTag();
+        }
+        final StringBuilder result = new StringBuilder()
+                .append("(member not present on server) ");
+        findLastKnownName(server, userId).ifPresent(lastKnownNick ->
+                result.append("Nickname: ").append(lastKnownNick).append(", "));
+        boolean foundDiscriminatedName = false;
+        try {
+            User user = server.getApi().getUserById(userId).get(CommonConstants.OP_WAITING_TIMEOUT, CommonConstants.OP_TIME_UNIT);
+            if (user != null && !isDeletedUserDiscriminatedName(user.getDiscriminatedName())) {
+                update(user);
+                result.append(ServerSideResolver.getReadableContent(user.getDiscriminatedName(), Optional.of(server))).append(", ");
+                foundDiscriminatedName = true;
+            }
+        } catch (Exception ignore) {
+        }
+        if (!foundDiscriminatedName) {
+            findLastKnownName(userId).ifPresentOrElse(cachedName ->
+                            result.append(ServerSideResolver.getReadableContent(cachedName, Optional.of(server))).append(", "),
+                    () -> result.append("[discriminated name is unknown], "));
+        }
+        result.append("ID: ").append(userId);
+        return result.toString();
     }
 
     public void deepServerUpdate(@Nullable Server server) {
