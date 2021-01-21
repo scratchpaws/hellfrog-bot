@@ -72,6 +72,7 @@ public class CornControlCommand
     public CornControlCommand() {
         super(PREFIX, DESCRIPTION);
 
+        super.setAdminCommand();
         super.addCmdlineOption(ADD_OPTION, DEL_OPTION,
                 ROLE_OPTION, THRESHOLD_OPTION, EMOJI_OPTION,
                 SHOW_OPTION);

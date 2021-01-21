@@ -21,7 +21,6 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -101,6 +100,7 @@ public class RightsCommand
         addCmdlineOption(userOption, roleOption, commandOption, allowOption, disallowOption, showAllowOption,
                 channelOption, aclModeSwitchOption);
         super.enableOnlyServerCommandStrict();
+        super.setAdminCommand();
         super.setFooter(FOOTER);
         super.setCommandAsExpert();
     }
@@ -160,12 +160,13 @@ public class RightsCommand
             return;
         }
 
-        String[] commands = cmdline.getOptionValues(commandOption.getOpt());
-        for (int i = 0; i < commands.length; i++)
-            commands[i] = commands[i].toLowerCase();
+        List<String> commands = new ArrayList<>();
+        for (String cmd : cmdline.getOptionValues(commandOption.getOpt())) {
+            commands.add(cmd.toLowerCase());
+        }
 
-        String unknownCommandsString = Arrays.stream(commands)
-                .filter(command -> !ACL.getAllCommandPrefix().contains(command))
+        String unknownCommandsString = commands.stream()
+                .filter(command -> !ACL.getAllCommandPrefix().contains(command) && !command.equals("all"))
                 .map(command -> ServerSideResolver.getReadableContent(command, Optional.of(server)))
                 .reduce(CommonUtils::reduceConcat)
                 .orElse("");
@@ -215,13 +216,13 @@ public class RightsCommand
             ServerSideResolver.ParseResult<ServerChannel> parsedChannels = ServerSideResolver.emptyResult();
 
             if (userModify) {
-                parsedUsers = ServerSideResolver.resolveUsersList(server, usersList);
+                parsedUsers = ServerSideResolver.resolveUsersListWithAllKeyword(server, usersList);
             }
             if (rolesModify) {
-                parsedRoles = ServerSideResolver.resolveRolesList(server, rolesList);
+                parsedRoles = ServerSideResolver.resolveRolesListWithAllKeyword(server, rolesList);
             }
             if (channelsModify) {
-                parsedChannels = ServerSideResolver.resolveAnyServerChannelList(server, channelsList);
+                parsedChannels = ServerSideResolver.resolveAnyChannelListWithAllKeyword(server, channelsList);
                 if (modifyThisChannel && (channel instanceof ServerTextChannel)) {
                     ServerTextChannel itsChannel = (ServerTextChannel) channel;
                     parsedChannels.getFound().add(itsChannel);
@@ -258,7 +259,26 @@ public class RightsCommand
             List<ChannelCategory> categoriesChanges = new ArrayList<>();
             List<ChannelCategory> categoriesNoChanges = new ArrayList<>();
 
+            boolean presentAllCommandKeyword = commands.stream().anyMatch(s -> s.equalsIgnoreCase("all"));
+            if (presentAllCommandKeyword && allowMode) {
+                for (String cmd : ACL.getNonAdminCommands()) {
+                    if (!commands.contains(cmd)) {
+                        commands.add(cmd);
+                    }
+                }
+            } else if (presentAllCommandKeyword) {
+                for (String cmd : ACL.getAllCommandPrefix()) {
+                    if (!commands.contains(cmd)) {
+                        commands.add(cmd);
+                    }
+                }
+            }
+
             for (String command : commands) {
+                if (command.equals("all")) {
+                    continue;
+                }
+
                 for (User user : parsedUsers.getFound()) {
                     modifyRights(allowMode, ACL, server, user, command, usersChanged, usersNoChanged);
                 }
@@ -277,7 +297,7 @@ public class RightsCommand
             }
 
             if (!usersChanged.isEmpty() || !rolesChanged.isEmpty() || !channelsChanged.isEmpty() || !categoriesChanges.isEmpty()) {
-                Arrays.stream(commands)
+                commands.stream()
                         .reduce((c1, c2) -> c1 + ", " + c2)
                         .ifPresent(cmdlist -> resultMessage
                                 .append((allowMode ? "Granted " : "Deny "), MessageDecoration.BOLD)

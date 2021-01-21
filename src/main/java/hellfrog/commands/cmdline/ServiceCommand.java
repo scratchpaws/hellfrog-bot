@@ -116,7 +116,7 @@ public class ServiceCommand
 
         super.addCmdlineOption(stopBot, memInfo, botDate, runGc, runtimeShell, lastUsage, secureTransfer,
                 executeQuery, getDDL, executeJPQL, createBackup);
-
+        super.setAdminCommand();
         super.disableUpdateLastCommandUsage();
     }
 

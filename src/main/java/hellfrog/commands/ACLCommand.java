@@ -49,6 +49,7 @@ public abstract class ACLCommand {
     private boolean onlyServerCommand = false;
     private boolean updateLastUsage = true;
     private boolean expertCommand = false;
+    private boolean adminCommand = false;
 
     protected ACLCommand(@NotNull String prefix, @NotNull String description) {
         if (CommonUtils.isTrStringEmpty(prefix))
@@ -80,6 +81,10 @@ public abstract class ACLCommand {
         this.expertCommand = true;
     }
 
+    protected final void setAdminCommand() {
+        this.adminCommand = true;
+    }
+
     /**
      * Получить префикс команды для её вызова
      *
@@ -103,6 +108,10 @@ public abstract class ACLCommand {
 
     public boolean isNotExpertCommand() {
         return !expertCommand;
+    }
+
+    public boolean isAdminCommand() {
+        return adminCommand;
     }
 
     public boolean isStrictByChannelsOnServer(@NotNull final Server server) {

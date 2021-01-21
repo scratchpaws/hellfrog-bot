@@ -114,6 +114,7 @@ public class RightsScenario
 
     public RightsScenario() {
         super(PREFIX, DESCRIPTION);
+        super.setAdminCommand();
         super.enableOnlyServerCommandStrict();
     }
 

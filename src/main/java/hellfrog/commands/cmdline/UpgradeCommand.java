@@ -55,6 +55,7 @@ public class UpgradeCommand
                 .build();
 
         disableUpdateLastCommandUsage();
+        super.setAdminCommand();
         addCmdlineOption(mainJar, showLibraries, updateLibrary, deleteLibrary);
     }
 

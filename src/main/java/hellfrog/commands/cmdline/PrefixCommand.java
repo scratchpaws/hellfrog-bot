@@ -38,6 +38,7 @@ public class PrefixCommand
     public PrefixCommand() {
         super(PREF, DESCRIPTION);
         addCmdlineOption(setOption, getOption, globalSwitcherOption);
+        super.setAdminCommand();
         super.setCommandAsExpert();
         super.setFooter(FOOTER);
     }

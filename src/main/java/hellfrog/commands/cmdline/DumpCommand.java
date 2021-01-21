@@ -38,8 +38,7 @@ public class DumpCommand
     public DumpCommand() {
         super(PREF, DESCRIPTIONS);
 
-
-
+        super.setAdminCommand();
         super.addCmdlineOption(infoOption);
     }
 

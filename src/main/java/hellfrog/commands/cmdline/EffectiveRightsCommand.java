@@ -43,6 +43,7 @@ public class EffectiveRightsCommand
     public EffectiveRightsCommand() {
         super(PREFIX, DESCRIPTION);
         addCmdlineOption(userOption, channelOption);
+        super.setAdminCommand();
         super.enableOnlyServerCommandStrict();
     }
 

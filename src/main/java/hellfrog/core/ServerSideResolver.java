@@ -21,10 +21,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -236,9 +233,45 @@ public class ServerSideResolver
         rawUserList.forEach((rawUser) -> {
             Optional<User> mayBeUser = resolveUser(server, rawUser);
             if (mayBeUser.isPresent()) {
-                resolvedUsers.add(mayBeUser.get());
+                User user = mayBeUser.get();
+                if (!resolvedUsers.contains(user)) {
+                    resolvedUsers.add(user);
+                }
             } else {
-                unresolvedUsers.add(rawUser);
+                if (!unresolvedUsers.contains(rawUser)) {
+                    unresolvedUsers.add(rawUser);
+                }
+            }
+        });
+        result.setFound(resolvedUsers);
+        result.setNotFound(unresolvedUsers);
+        return result;
+    }
+
+    public static ParseResult<User> resolveUsersListWithAllKeyword(@NotNull final Server server,
+                                                                   @NotNull final List<String> rawUserList) {
+        ParseResult<User> result = new ParseResult<>();
+        List<User> resolvedUsers = new ArrayList<>(rawUserList.size());
+        List<String> unresolvedUsers = new ArrayList<>(rawUserList.size());
+        rawUserList.forEach((rawUser) -> {
+            Optional<User> mayBeUser = resolveUser(server, rawUser);
+            if (mayBeUser.isPresent()) {
+                User user = mayBeUser.get();
+                if (!resolvedUsers.contains(user)) {
+                    resolvedUsers.add(user);
+                }
+            } else {
+                if (rawUser.equalsIgnoreCase("all")) {
+                    for (User user : server.getMembers()) {
+                        if (!resolvedUsers.contains(user)) {
+                            resolvedUsers.add(user);
+                        }
+                    }
+                } else {
+                    if (!unresolvedUsers.contains(rawUser)) {
+                        unresolvedUsers.add(rawUser);
+                    }
+                }
             }
         });
         result.setFound(resolvedUsers);
@@ -253,9 +286,40 @@ public class ServerSideResolver
         rawRolesList.forEach((rawRole) -> {
             Optional<Role> mayBeRole = ServerSideResolver.resolveRole(server, rawRole);
             if (mayBeRole.isPresent()) {
-                resolvedRoles.add(mayBeRole.get());
-            } else {
+                Role role = mayBeRole.get();
+                if (!resolvedRoles.contains(role)) {
+                    resolvedRoles.add(mayBeRole.get());
+                }
+            } else if (!unresolvedRoles.contains(rawRole)) {
                 unresolvedRoles.add(rawRole);
+            }
+        });
+        result.setFound(resolvedRoles);
+        result.setNotFound(unresolvedRoles);
+        return result;
+    }
+
+    public static ParseResult<Role> resolveRolesListWithAllKeyword(Server server, @NotNull List<String> rawRolesList) {
+        ParseResult<Role> result = new ParseResult<>();
+        List<Role> resolvedRoles = new ArrayList<>(rawRolesList.size());
+        List<String> unresolvedRoles = new ArrayList<>(rawRolesList.size());
+        rawRolesList.forEach((rawRole) -> {
+            Optional<Role> mayBeRole = ServerSideResolver.resolveRole(server, rawRole);
+            if (mayBeRole.isPresent()) {
+                Role role = mayBeRole.get();
+                if (!resolvedRoles.contains(role)) {
+                    resolvedRoles.add(mayBeRole.get());
+                }
+            } else {
+                if (rawRole.equalsIgnoreCase("all")) {
+                    for (Role role : server.getRoles()) {
+                        if (!resolvedRoles.contains(role)) {
+                            resolvedRoles.add(role);
+                        }
+                    }
+                } else if (!unresolvedRoles.contains(rawRole)) {
+                    unresolvedRoles.add(rawRole);
+                }
             }
         });
         result.setFound(resolvedRoles);
@@ -331,9 +395,42 @@ public class ServerSideResolver
         rawChannelsList.forEach((rawChannel) -> {
             Optional<ServerChannel> mayBeChannel = ServerSideResolver.resolveServerChannel(server, rawChannel);
             if (mayBeChannel.isPresent()) {
-                resolvedChannels.add(mayBeChannel.get());
-            } else {
+                ServerChannel channel = mayBeChannel.get();
+                if (!resolvedChannels.contains(channel)) {
+                    resolvedChannels.add(channel);
+                }
+            } else if (!unresolvedChannels.contains(rawChannel)) {
                 unresolvedChannels.add(rawChannel);
+            }
+        });
+        result.setFound(resolvedChannels);
+        result.setNotFound(unresolvedChannels);
+        return result;
+    }
+
+    @NotNull
+    public static ParseResult<ServerChannel> resolveAnyChannelListWithAllKeyword(@NotNull final Server server,
+                                                                                 @NotNull final List<String> rawChannelsList) {
+        ParseResult<ServerChannel> result = new ParseResult<>();
+        List<ServerChannel> resolvedChannels = new ArrayList<>(rawChannelsList.size());
+        List<String> unresolvedChannels = new ArrayList<>(rawChannelsList.size());
+        rawChannelsList.forEach((rawChannel) -> {
+            Optional<ServerChannel> mayBeChannel = ServerSideResolver.resolveServerChannel(server, rawChannel);
+            if (mayBeChannel.isPresent()) {
+                ServerChannel channel = mayBeChannel.get();
+                if (!resolvedChannels.contains(channel)) {
+                    resolvedChannels.add(channel);
+                }
+            } else {
+                if (rawChannel.equalsIgnoreCase("all")) {
+                    for (ServerChannel channel : server.getChannels()) {
+                        if (!resolvedChannels.contains(channel)) {
+                            resolvedChannels.add(channel);
+                        }
+                    }
+                } else if (!unresolvedChannels.contains(rawChannel)) {
+                    unresolvedChannels.add(rawChannel);
+                }
             }
         });
         result.setFound(resolvedChannels);

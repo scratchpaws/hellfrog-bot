@@ -25,7 +25,9 @@ import java.util.concurrent.locks.ReentrantLock;
 public class AccessControlService {
 
     private List<String> allCommandPrefix = null;
+    private List<String> nonAdminPrefix = null;
     private final ReentrantLock prefixLoadLock = new ReentrantLock();
+    private final ReentrantLock nonAdminLoadLock = new ReentrantLock();
 
     private final UserRightsDAO userRightsDAO;
     private final RoleRightsDAO roleRightsDAO;
@@ -319,6 +321,37 @@ public class AccessControlService {
             }
         }
         return allCommandPrefix;
+    }
+
+    public List<String> getNonAdminCommands() {
+        if (nonAdminPrefix == null) {
+            nonAdminLoadLock.lock();
+            try {
+                if (nonAdminPrefix == null) {
+                    List<String> nonAdminCommands = new ArrayList<>();
+                    for (MsgCreateReaction reaction : MsgCreateReaction.all()) {
+                        if (reaction.isAccessControl() && !reaction.isAdminCommand()) {
+                            nonAdminCommands.add(reaction.getCommandPrefix());
+                        }
+                    }
+                    for (BotCommand command : BotCommand.all()) {
+                        if (!command.isAdminCommand()) {
+                            nonAdminCommands.add(command.getPrefix());
+                        }
+                    }
+                    for (Scenario scenario : Scenario.all()) {
+                        if (!scenario.isAdminCommand()) {
+                            nonAdminCommands.add(scenario.getPrefix());
+                        }
+                    }
+                    Collections.sort(nonAdminCommands);
+                    nonAdminPrefix = Collections.unmodifiableList(nonAdminCommands);
+                }
+            } finally {
+                nonAdminLoadLock.unlock();
+            }
+        }
+        return nonAdminPrefix;
     }
 
     public boolean isStrictByChannelsOnServer(@NotNull final Server server,

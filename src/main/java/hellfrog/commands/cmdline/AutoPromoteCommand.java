@@ -69,6 +69,7 @@ public class AutoPromoteCommand
         super.setFooter(FOOTER);
         super.addCmdlineOption(ROLE_OPTION, TIMEOUT_OPTION, SHOW_OPTION, ADD_OPTION, DEL_OPTION);
         super.enableOnlyServerCommandStrict();
+        super.setAdminCommand();
     }
 
     /**

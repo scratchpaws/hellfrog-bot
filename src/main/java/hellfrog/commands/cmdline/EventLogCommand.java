@@ -50,6 +50,7 @@ public class EventLogCommand
         super(BOT_PREFIX, DESCRIPTION);
         super.enableOnlyServerCommandStrict();
 
+        super.setAdminCommand();
         super.addCmdlineOption(channelOption, enableOption, disableOption, statusOption);
         super.setFooter(FOOTER);
     }

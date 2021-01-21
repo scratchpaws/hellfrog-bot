@@ -51,6 +51,7 @@ public class PrefixScenario
 
     public PrefixScenario() {
         super(PREFIX, DESCRIPTION);
+        super.setAdminCommand();
     }
 
     @Override

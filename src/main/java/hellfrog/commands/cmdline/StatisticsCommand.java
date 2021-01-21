@@ -78,6 +78,7 @@ public class StatisticsCommand
                 .build();
 
         super.enableOnlyServerCommandStrict();
+        super.setAdminCommand();
         super.addCmdlineOption(enable, disable, show, reset, status, smilesOnly, textChat, userStats);
     }
 

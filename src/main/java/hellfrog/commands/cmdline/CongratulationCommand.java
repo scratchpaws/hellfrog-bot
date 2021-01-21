@@ -55,6 +55,7 @@ public class CongratulationCommand
         super.setFooter(FOOTER);
 
         super.enableOnlyServerCommandStrict();
+        super.setAdminCommand();
         super.addCmdlineOption(channelOption, timezone, status);
     }
 

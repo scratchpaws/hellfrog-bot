@@ -30,6 +30,7 @@ public abstract class MsgCreateReaction
     private boolean accessControl = false;
     private boolean strictByChannel = false;
     private boolean rateLimitEnabled = true;
+    private boolean adminCommand = false;
     private String commandPrefix = "";
     private String commandDescription = "";
 
@@ -58,7 +59,15 @@ public abstract class MsgCreateReaction
         this.rateLimitEnabled = false;
     }
 
+    void setAdminCommand() {
+        this.adminCommand = true;
+    }
+
     public abstract boolean canReact(MessageCreateEvent event);
+
+    public boolean isAdminCommand() {
+        return adminCommand;
+    }
 
     @Override
     public void onMessageCreate(@NotNull MessageCreateEvent event) {
