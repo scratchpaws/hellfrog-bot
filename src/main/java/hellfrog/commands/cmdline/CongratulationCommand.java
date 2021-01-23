@@ -70,6 +70,11 @@ public class CongratulationCommand
                                                    MessageCreateEvent event,
                                                    ArrayList<String> anotherLines) {
 
+        if (!super.canExecuteServerCommand(event, server)) {
+            showAccessDeniedServerMessage(event);
+            return;
+        }
+
         final SettingsController settingsController = SettingsController.getInstance();
         final ServerPreferences serverPreferences = settingsController.getServerPreferences(server.getId());
         final DiscordApi api = settingsController.getDiscordApi();

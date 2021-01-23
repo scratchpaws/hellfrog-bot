@@ -1,4 +1,4 @@
-package hellfrog.commands.scenes.ddgentity;
+package hellfrog.common.ddgentity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

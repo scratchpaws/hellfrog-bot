@@ -1,10 +1,9 @@
-package hellfrog.commands.scenes.ddgentity;
+package hellfrog.common.ddgentity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.Arrays;
-import java.util.Collections;
 
 /**
  * DuckDuckGo webpage result (reverse engineering)
