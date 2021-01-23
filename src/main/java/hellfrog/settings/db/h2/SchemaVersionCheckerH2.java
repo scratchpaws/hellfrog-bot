@@ -47,6 +47,8 @@ class SchemaVersionCheckerH2 {
 
     private final Pattern OLD_LAST_KNOWN_DISCRIMINATE_DETECTOR = Pattern.compile("\\(.{2,32}#\\d{4}\\)", Pattern.UNICODE_CHARACTER_CLASS);
 
+    private final Map<Long, String> MIGRATION_FILES = Map.of(1L, "sql/h2/schema/001_schema_create_query.sql");
+
     SchemaVersionCheckerH2(@NotNull final String connectionURL,
                            @NotNull final String connectionUser,
                            @NotNull final String connectionPassword) {
@@ -61,7 +63,7 @@ class SchemaVersionCheckerH2 {
             long latestSchemaQuery = getLatestSchemaQueryNumber(connection);
             migrationRequired = latestSchemaQuery == 0L;
             log.info("Current DB schema version is: {}", latestSchemaQuery);
-            Map<Long, String> migrationFiles = decodeNames(getMigrationFileNames());
+            Map<Long, String> migrationFiles = MIGRATION_FILES;
             for (Map.Entry<Long, String> migrationFile : migrationFiles.entrySet()) {
                 long schemaVersion = migrationFile.getKey();
                 String schemaQueriesFileName = migrationFile.getValue();
