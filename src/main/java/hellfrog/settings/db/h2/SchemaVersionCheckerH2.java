@@ -45,6 +45,8 @@ class SchemaVersionCheckerH2 {
     private final String connectionPassword;
     private final Logger log = LogManager.getLogger("Schema version checker");
 
+    private final Map<Long, String> MIGRATION_SCRIPTS = Map.of(1L, "sql/h2/schema/001_schema_create_query.sql");
+
     private final Pattern OLD_LAST_KNOWN_DISCRIMINATE_DETECTOR = Pattern.compile("\\(.{2,32}#\\d{4}\\)", Pattern.UNICODE_CHARACTER_CLASS);
 
     SchemaVersionCheckerH2(@NotNull final String connectionURL,
@@ -61,8 +63,7 @@ class SchemaVersionCheckerH2 {
             long latestSchemaQuery = getLatestSchemaQueryNumber(connection);
             migrationRequired = latestSchemaQuery == 0L;
             log.info("Current DB schema version is: {}", latestSchemaQuery);
-            Map<Long, String> migrationFiles = decodeNames(getMigrationFileNames());
-            for (Map.Entry<Long, String> migrationFile : migrationFiles.entrySet()) {
+            for (Map.Entry<Long, String> migrationFile : MIGRATION_SCRIPTS.entrySet()) {
                 long schemaVersion = migrationFile.getKey();
                 String schemaQueriesFileName = migrationFile.getValue();
                 if (schemaVersion > latestSchemaQuery) {
@@ -104,34 +105,6 @@ class SchemaVersionCheckerH2 {
         } catch (RuntimeException err) {
             String errMsg = String.format("Unable to load migration script from resource file \"%s\": %s",
                     schemaQueriesFileName, err.getMessage());
-            log.error(errMsg, err);
-            throw new SQLException(errMsg, err);
-        }
-    }
-
-    private Map<Long, String> decodeNames(@NotNull final List<String> migrationFileNames) {
-        final Map<Long, String> result = new TreeMap<>(Comparator.naturalOrder());
-        for (String item : migrationFileNames) {
-            if (CommonUtils.isTrStringEmpty(item)) {
-                continue;
-            }
-            String[] parts = item.split("_", 2);
-            if (parts.length != 2 || !CommonUtils.isLong(parts[0])) {
-                continue;
-            }
-            long index = CommonUtils.onlyNumbersToLong(parts[0]);
-            String resourceFileName = RESOURCES_DIRECTORY + '/' + item;
-            result.put(index, resourceFileName);
-        }
-        return Collections.unmodifiableMap(result);
-    }
-
-    private List<String> getMigrationFileNames() throws SQLException {
-        try {
-            return ResourcesLoader.getFilenamesInResourceDir(RESOURCES_DIRECTORY);
-        } catch (RuntimeException err) {
-            String errMsg = String.format("Unable to load migration scripts directory \"%s\": %s",
-                    RESOURCES_DIRECTORY, err.getMessage());
             log.error(errMsg, err);
             throw new SQLException(errMsg, err);
         }
