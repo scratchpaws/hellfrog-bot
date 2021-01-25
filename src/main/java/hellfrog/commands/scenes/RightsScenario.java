@@ -749,7 +749,7 @@ public class RightsScenario
                                                  @NotNull ServerTextChannel serverTextChannel,
                                                  @NotNull User user) {
 
-        LongEmbedMessage descriptionText = LongEmbedMessage.withTitleInfoStyle(TITLE);
+        LongEmbedMessage descriptionText = LongEmbedMessage.withTitleScenarioStyle(TITLE);
 
         descriptionText.append("The following commands have any specified permission on the server `")
                 .append(ServerSideResolver.getReadableContent(server.getName(), Optional.of(server)))
@@ -910,7 +910,7 @@ public class RightsScenario
         if (rightType.equals(RightType.TYPE_NONE)) {
             return false;
         }
-        LongEmbedMessage descriptionText = LongEmbedMessage.withTitleInfoStyle(TITLE);
+        LongEmbedMessage descriptionText = LongEmbedMessage.withTitleScenarioStyle(TITLE);
         addRightAddDelDescription(descriptionText, rightType, true);
 
         return super.displayMessage(descriptionText, serverTextChannel).map(message -> {
@@ -959,7 +959,7 @@ public class RightsScenario
                     canDeleteThisType = true;
                 break;
         }
-        LongEmbedMessage descriptionText = LongEmbedMessage.withTitleInfoStyle(TITLE);
+        LongEmbedMessage descriptionText = LongEmbedMessage.withTitleScenarioStyle(TITLE);
         if (!canDeleteThisType) {
             descriptionText.append("Unfortunately, but the list of ");
             switch (rightType) {

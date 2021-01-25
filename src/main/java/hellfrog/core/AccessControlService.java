@@ -454,19 +454,19 @@ public class AccessControlService {
                 .appendNewLine());
 
         allowedRoles.ifPresent(rolesList ->
-                message.append("  * Allowed for roles:", MessageDecoration.UNDERLINE)
+                message.append("  * Allowed for roles:")
                         .appendNewLine()
                         .append(rolesList)
                         .appendNewLine());
 
         allowedChannels.ifPresent(channelsList ->
-                message.append("  * Allowed for channels:", MessageDecoration.UNDERLINE)
+                message.append("  * Allowed for channels:")
                         .appendNewLine()
                         .append(channelsList)
                         .appendNewLine());
 
         allowedCategories.ifPresent(categoryList ->
-                message.append("  * Allowed for categories (and all it's channels):", MessageDecoration.UNDERLINE)
+                message.append("  * Allowed for categories (and all it's channels):")
                         .appendNewLine()
                         .append(categoryList)
                         .appendNewLine());
