@@ -3,8 +3,7 @@ package hellfrog.commands.cmdline;
 import groovy.lang.GroovyShell;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
-import hellfrog.common.MessageUtils;
-import hellfrog.core.ServerSideResolver;
+import hellfrog.common.LongEmbedMessage;
 import hellfrog.settings.SettingsController;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -28,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Управление и диагностика бота
@@ -52,6 +53,10 @@ public class ServiceCommand
                     import org.javacord.api.entity.channel.*
                     def api = SettingsController.getInstance().getDiscordApi()\s
                     """;
+
+    private final PrintStream defaultOut = System.out;
+    private final PrintStream defaultErr = System.err;
+    private final ReentrantLock debugLock = new ReentrantLock();
 
     private final Option stopBot = Option.builder("s")
             .longOpt("stop")
@@ -134,7 +139,7 @@ public class ServiceCommand
                                                    CommandLine cmdline, ArrayList<String> cmdlineArgs,
                                                    TextChannel channel, MessageCreateEvent event,
                                                    ArrayList<String> anotherLines) {
-        executeCommand(cmdline, channel, event, anotherLines);
+        executeCommand(cmdline, event, anotherLines);
     }
 
     /**
@@ -149,11 +154,11 @@ public class ServiceCommand
     protected void executeCreateMessageEventDirect(CommandLine cmdline, ArrayList<String> cmdlineArgs,
                                                    TextChannel channel, MessageCreateEvent event,
                                                    ArrayList<String> anotherLines) {
-        executeCommand(cmdline, channel, event, anotherLines);
+        executeCommand(cmdline, event, anotherLines);
     }
 
     private void executeCommand(CommandLine cmdline,
-                                TextChannel channel, MessageCreateEvent event,
+                                MessageCreateEvent event,
                                 ArrayList<String> anotherLines) {
         if (!canExecuteGlobalCommand(event)) {
             showAccessDeniedGlobalMessage(event);
@@ -352,7 +357,9 @@ public class ServiceCommand
                         .getDiscordApi()).flatMap(api ->
                         api.getTextChannelById(channelId)).ifPresent(channel -> {
                     String result = SettingsController.getInstance().getMainDBController().executeRawQuery(queryTest);
-                    MessageUtils.sendLongMessage(result, channel);
+                    LongEmbedMessage.withTitleInfoStyle("Database SQL query output")
+                            .append(result, MessageDecoration.CODE_LONG)
+                            .send(channel);
                 }));
     }
 
@@ -406,7 +413,9 @@ public class ServiceCommand
                         .getDiscordApi()).flatMap(api ->
                         api.getTextChannelById(channelId)).ifPresent(channel -> {
                     String result = SettingsController.getInstance().getMainDBController().executeRawJPQL(queryText);
-                    MessageUtils.sendLongMessage(result, channel);
+                    LongEmbedMessage.withTitleInfoStyle("Database JPQL query output")
+                            .append(result, MessageDecoration.CODE_LONG)
+                            .send(channel);
                 }));
     }
 
@@ -435,101 +444,109 @@ public class ServiceCommand
                 .addUnsafeUsageCE("call remote debug shell module", event)
                 .send();
 
-        final SettingsController settingsController = SettingsController.getInstance();
         final long channelId = event.getChannel().getId();
+        Optional<String> shellCmd = anotherLines.stream()
+                .reduce(CommonUtils::reduceNewLine);
 
-        if (settingsController.isEnableRemoteDebug()) {
-            Optional<String> shellCmd = anotherLines.stream()
-                    .reduce(CommonUtils::reduceNewLine);
-
-            shellCmd.ifPresentOrElse(cmd -> {
-                final String command = cmd.replaceAll("`{3}", "");
-                CompletableFuture.runAsync(() -> executeDebugCommand(command, channelId));
-            }, () -> {
-                List<MessageAttachment> attachmentList = event.getMessage()
-                        .getAttachments();
-                if (attachmentList.size() > 0) {
-                    attachmentList.forEach((attachment) -> {
-                        try {
-                            byte[] attach = attachment.downloadAsByteArray()
-                                    .join();
-                            String buff;
-                            StringBuilder execScript = new StringBuilder();
-                            try (BufferedReader textReader = new BufferedReader(
-                                    new InputStreamReader(new ByteArrayInputStream(attach), StandardCharsets.UTF_8))) {
-                                while ((buff = textReader.readLine()) != null) {
-                                    execScript.append(buff)
-                                            .append('\n');
-                                }
+        shellCmd.ifPresentOrElse(cmd -> {
+            final String command = cmd.replaceAll("`{3}", "");
+            executeDebugCommand(command, channelId);
+        }, () -> {
+            List<MessageAttachment> attachmentList = event.getMessage()
+                    .getAttachments();
+            if (attachmentList.size() > 0) {
+                attachmentList.forEach((attachment) -> {
+                    try {
+                        byte[] attach = attachment.downloadAsByteArray()
+                                .join();
+                        String buff;
+                        StringBuilder execScript = new StringBuilder();
+                        try (BufferedReader textReader = new BufferedReader(
+                                new InputStreamReader(new ByteArrayInputStream(attach), StandardCharsets.UTF_8))) {
+                            while ((buff = textReader.readLine()) != null) {
+                                execScript.append(buff)
+                                        .append('\n');
                             }
-                            executeDebugCommand(execScript.toString(), event.getChannel().getId());
-                        } catch (Exception err) {
-                            new MessageBuilder()
-                                    .append("Exception reached while attachment downloading:", MessageDecoration.BOLD)
-                                    .appendNewLine()
-                                    .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
-                                    .send(event.getChannel());
                         }
-                    });
-                } else {
-                    showErrorMessage("Debug script required", event);
-                }
-            });
-
-        } else {
-            showErrorMessage("Remote debug not allowed", event);
-        }
+                        executeDebugCommand(execScript.toString(), event.getChannel().getId());
+                    } catch (Exception err) {
+                        LongEmbedMessage.withTitleErrorStyle("Debug shell")
+                                .append("Exception reached while attachment downloading:", MessageDecoration.BOLD)
+                                .appendNewLine()
+                                .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
+                                .send(event.getChannel());
+                    }
+                });
+            } else {
+                showErrorMessage("Debug script required", event);
+            }
+        });
     }
 
-    private synchronized void executeDebugCommand(String cmd, long channelId) {
+    private void executeDebugCommand(final String cmd, final long channelId) {
 
-        DiscordApi discordApi = SettingsController.getInstance().getDiscordApi();
-        if (discordApi == null)
-            return;
-        Optional<TextChannel> mayBeChannel = discordApi.getTextChannelById(channelId);
-        if (mayBeChannel.isEmpty())
-            return;
-        TextChannel channel = mayBeChannel.get();
+        CompletableFuture.runAsync(() -> {
+            debugLock.lock();
+            try {
+                final DiscordApi discordApi = SettingsController.getInstance().getDiscordApi();
+                if (discordApi == null)
+                    return;
+                Optional<TextChannel> mayBeChannel = discordApi.getTextChannelById(channelId);
+                if (mayBeChannel.isEmpty())
+                    return;
+                final TextChannel channel = mayBeChannel.get();
 
-        PrintStream defaultOut = System.out;
-        PrintStream defaultErr = System.err;
+                final CompletableFuture<String> execFuture = new CompletableFuture<>();
 
-        try {
-            ByteArrayOutputStream outCache = new ByteArrayOutputStream();
-            Object result;
-            try (PrintStream overrideOut = new PrintStream(outCache, true)) {
-                System.setOut(overrideOut);
-                System.setErr(overrideOut);
-                cmd = SHELL_IMPORTS + cmd;
-                result = groovyShell.evaluate(cmd);
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        ByteArrayOutputStream outCache = new ByteArrayOutputStream();
+                        Object result;
+                        try (PrintStream overrideOut = new PrintStream(outCache, true)) {
+                            System.setOut(overrideOut);
+                            System.setErr(overrideOut);
+                            final String fullCmd = SHELL_IMPORTS + '\n' + cmd;
+                            result = groovyShell.evaluate(fullCmd);
+                        }
+                        StringBuilder resultOut = new StringBuilder();
+                        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
+                                new ByteArrayInputStream(outCache.toByteArray())
+                        ))) {
+                            String buff;
+                            while ((buff = bufferedReader.readLine()) != null)
+                                resultOut.append(buff);
+                        }
+                        if (result != null) {
+                            resultOut.append('\n')
+                                    .append("Returned value: ")
+                                    .append(result.toString());
+                        }
+                        if (resultOut.length() == 0)
+                            resultOut.append(" ");
+                        execFuture.complete(resultOut.toString());
+                    } catch (Exception err) {
+                        execFuture.completeExceptionally(err);
+                    } finally {
+                        System.setErr(defaultErr);
+                        System.setOut(defaultOut);
+                    }
+                });
+
+                try {
+                    String result = execFuture.get(60_000L, TimeUnit.MILLISECONDS);
+                    LongEmbedMessage.withTitleInfoStyle("Debug shell output")
+                            .append(result, MessageDecoration.CODE_LONG)
+                            .send(channel);
+                } catch (Exception err) {
+                    LongEmbedMessage.withTitleErrorStyle("Debug shell output")
+                            .append("Exception reached while script execution:")
+                            .appendNewLine()
+                            .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
+                            .send(channel);
+                }
+            } finally {
+                debugLock.unlock();
             }
-            StringBuilder resultOut = new StringBuilder();
-            try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-                    new ByteArrayInputStream(outCache.toByteArray())
-            ))) {
-                String buff;
-                while ((buff = bufferedReader.readLine()) != null)
-                    resultOut.append(buff);
-            }
-            if (result != null) {
-                resultOut.append('\n')
-                        .append("Returned value: ")
-                        .append(result.toString());
-            }
-            if (resultOut.length() == 0)
-                resultOut.append(" ");
-            new MessageBuilder()
-                    .append(resultOut.toString(), MessageDecoration.CODE_LONG)
-                    .send(channel);
-        } catch (Exception err) {
-            new MessageBuilder()
-                    .append("Exception reached while script execution:", MessageDecoration.BOLD)
-                    .appendNewLine()
-                    .append(ExceptionUtils.getStackTrace(err), MessageDecoration.CODE_LONG)
-                    .send(channel);
-        } finally {
-            System.setErr(defaultErr);
-            System.setOut(defaultOut);
-        }
+        });
     }
 }

@@ -40,6 +40,12 @@ public class LongEmbedMessage
                 .setTitle(title);
     }
 
+    public static LongEmbedMessage withTitleErrorStyle(@NotNull final String title) {
+        return new LongEmbedMessage()
+                .setErrorStyle()
+                .setTitle(title);
+    }
+
     public static LongEmbedMessage withTitleScenarioStyle(@Nullable final String title) {
         return new LongEmbedMessage()
                 .setScenarioStyle()
