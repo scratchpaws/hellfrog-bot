@@ -160,6 +160,24 @@ class TotalStatisticDAOImpl
     }
 
     @Override
+    public void removeEmojiStats(long serverId, long emojiId) {
+        try (AutoSession session = sessionFactory.openSession()) {
+            EmojiTotalStatistic statistic = session.createQuery(FIND_EMOJI_USAGES_QUERY, EmojiTotalStatistic.class)
+                    .setParameter("serverId", serverId)
+                    .setParameter("emojiId", emojiId)
+                    .uniqueResult();
+            if (statistic != null) {
+                session.remove(statistic);
+            }
+        } catch (Exception err) {
+            String errMsg = String.format("Unable to delete emoji from total statistic, server id - %d, emoji id - %d: %s",
+                    serverId, emojiId, err.getMessage());
+            log.error(errMsg, err);
+            LogsStorage.addErrorMessage(errMsg);
+        }
+    }
+
+    @Override
     public void insertChannelStats(long serverId,
                                    long textChannelId,
                                    long userId,

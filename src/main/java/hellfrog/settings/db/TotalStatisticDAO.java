@@ -11,6 +11,8 @@ public interface TotalStatisticDAO {
 
     void reset(long serverId);
 
+    void removeEmojiStats(long serverId, long emojiId);
+
     void insertEmojiStats(long serverId, long emojiId, long usagesCount, @NotNull Instant lastUsage);
 
     void incrementEmoji(long serverId, long emojiId);

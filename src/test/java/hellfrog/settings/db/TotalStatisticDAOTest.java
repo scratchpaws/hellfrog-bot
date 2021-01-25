@@ -206,6 +206,15 @@ public class TotalStatisticDAOTest
                     }
                 }
             }
+
+            // Вычищаем статистику
+            for (TestServer testServer : testServers) {
+                for (TestEmoji testEmoji : testServer.testEmojis) {
+                    statisticDAO.removeEmojiStats(testServer.serverId, testEmoji.emojiId);
+                }
+                List<EmojiTotalStatistic> afterDelete = statisticDAO.getEmojiUsagesStatistic(testServer.serverId);
+                TestUtils.assertEmpty(afterDelete, "After removeEmojiStats() on all emoji list must be empty");
+            }
         }
 
         Assertions.assertTrue(LogsStorage.isErrorsEmpty(), "Errors log must be empty");
