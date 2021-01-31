@@ -15,10 +15,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Основные функции команд бота
@@ -199,6 +196,13 @@ public abstract class BotCommand
 
     List<String> getOptionalArgsList(CommandLine cmdline, char arg) {
         String[] values = cmdline.getOptionValues(arg);
+        return values != null && values.length > 0
+                ? Arrays.asList(values)
+                : new ArrayList<>(0);
+    }
+
+    List<String> getOptionalArgsList(CommandLine cmdline, Option opt) {
+        String[] values = cmdline.getOptionValues(opt.getOpt());
         return values != null && values.length > 0
                 ? Arrays.asList(values)
                 : new ArrayList<>(0);

@@ -32,6 +32,8 @@ public class LongEmbedMessage
     private String authorUrl = null;
     private String authorIconUrl = null;
 
+    private boolean plainMessage = false;
+
     private final List<LongEmbedField> fields = new ArrayList<>();
 
     public static LongEmbedMessage withTitleInfoStyle(@NotNull final String title) {
@@ -52,17 +54,22 @@ public class LongEmbedMessage
                 .setTitle(title);
     }
 
+    public LongEmbedMessage setPlain() {
+        plainMessage = true;
+        return this;
+    }
+
     public LongEmbedMessage append(String str) {
         messageBuffer.append(str);
         return this;
     }
 
-    public<T> LongEmbedMessage appendIfPresent(Optional<T> optional) {
+    public <T> LongEmbedMessage appendIfPresent(Optional<T> optional) {
         optional.ifPresent(this::append);
         return this;
     }
 
-    public<T> LongEmbedMessage append(T value) {
+    public <T> LongEmbedMessage append(T value) {
         messageBuffer.append(value);
         return this;
     }
@@ -119,7 +126,7 @@ public class LongEmbedMessage
 
     public LongEmbedMessage append(LongEmbedMessage another) {
         if (another == null) {
-            messageBuffer.append((Object)null);
+            messageBuffer.append((Object) null);
         } else {
             messageBuffer.append(another.messageBuffer);
         }
@@ -232,7 +239,38 @@ public class LongEmbedMessage
         return color;
     }
 
+    private CompletableFuture<Message> sendPlainText(Messageable target) {
+
+        final CompletableFuture<Message> future = new CompletableFuture<>();
+
+        CompletableFuture.runAsync(() -> {
+
+            List<String> texts = getTexts();
+            if (texts.isEmpty()) {
+                BroadCast.getLogger()
+                        .addErrorMessage(LongEmbedMessage.class.getSimpleName() + ": message length is empty");
+                future.completeExceptionally(new RuntimeException("Message length is empty"));
+                return;
+            }
+
+            final List<MessageBuilder> messageBuilders = new ArrayList<>();
+            for (String text : texts) {
+                MessageBuilder messageBuilder = new MessageBuilder();
+                messageBuilder.setContent(text);
+                messageBuilders.add(messageBuilder);
+            }
+
+            sendMessageChain(future, null, target, messageBuilders, 0);
+        });
+
+        return future;
+    }
+
     public CompletableFuture<Message> send(Messageable target) {
+
+        if (plainMessage) {
+            return sendPlainText(target);
+        }
 
         final CompletableFuture<Message> future = new CompletableFuture<>();
 
@@ -292,18 +330,18 @@ public class LongEmbedMessage
         });
         return future;
     }
-    
+
     private void sendMessageChain(@NotNull final CompletableFuture<Message> resultFuture,
                                   @Nullable final Message previousResult,
                                   @NotNull final Messageable target,
                                   @NotNull final List<MessageBuilder> messagesList,
                                   final int currentIndex) {
-        
+
         if (currentIndex >= messagesList.size()) {
             resultFuture.complete(previousResult);
             return;
         }
-        
+
         MessageBuilder nextMessage = messagesList.get(currentIndex);
         nextMessage.send(target)
                 .thenAccept(message -> sendMessageChain(resultFuture, message, target, messagesList, currentIndex + 1))

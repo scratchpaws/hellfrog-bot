@@ -8,6 +8,7 @@ import hellfrog.common.CommonUtils;
 import hellfrog.common.Congratulation;
 import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
+import hellfrog.settings.db.ServerPreferencesDAO;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
@@ -220,11 +221,16 @@ public class CongratulationsController
 
             event.getServer().ifPresent(server -> {
                 event.getServerTextChannel().ifPresent(ch -> {
-                    final SettingsController settingsController = SettingsController.getInstance();
-                    final ServerPreferences serverPreferences = settingsController.getServerPreferences(server.getId());
 
-                    Long congratulationChannelId = serverPreferences.getCongratulationChannel();
-                    if (congratulationChannelId != null && congratulationChannelId > 0L) {
+                    final ServerPreferencesDAO serverPreferencesDAO = SettingsController.getInstance()
+                            .getMainDBController()
+                            .getServerPreferencesDAO();
+                    if (!serverPreferencesDAO.isCongratulationsEnabled(server.getId())) {
+                        return;
+                    }
+
+                    long congratulationChannelId = serverPreferencesDAO.getCongratulationChannel(server.getId());
+                    if (congratulationChannelId > 0L) {
                         server.getTextChannelById(congratulationChannelId).ifPresent(sourceChannel -> {
                             if (ch.getId() == sourceChannel.getId()) {
                                 final Message message = event.getMessage();

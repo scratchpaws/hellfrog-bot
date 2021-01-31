@@ -151,6 +151,7 @@ class TotalStatisticDAOImpl
             RESET_QUERIES.forEach(query -> session.createQuery(query)
                     .setParameter("serverId", serverId)
                     .executeUpdate());
+            session.success();
         } catch (Exception err) {
             String errMsg = String.format("Unable to reset total statistic for server with id %d: %s",
                     serverId, err.getMessage());

@@ -55,6 +55,7 @@ public class SettingsController {
     private final NameCacheService nameCacheService;
     private final AccessControlService accessControlService;
     private final AutoPromoteService autoPromoteService;
+    private final StatisticService statisticService;
 
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
@@ -90,6 +91,9 @@ public class SettingsController {
         autoPromoteService = new AutoPromoteService(mainDBController.getAutoPromoteRolesDAO(),
                 mainDBController.getRoleAssignDAO(),
                 mainDBController.getServerPreferencesDAO());
+
+        statisticService = new StatisticService(mainDBController.getTotalStatisticDAO(),
+                mainDBController.getServerPreferencesDAO(), nameCacheService);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
                 SettingsController.getInstance().mainDBController.close()));
@@ -242,15 +246,13 @@ public class SettingsController {
         throw new RuntimeException("Bot stopped");
     }
 
-    @Deprecated
     public String getGlobalCommonPrefix() {
-        return this.commonPreferences.getCommonBotPrefix();
+        return mainDBController.getCommonPreferencesDAO().getBotPrefix();
     }
 
     @Deprecated
     public void setGlobalCommonPrefix(String globalCommonPrefix) {
-        this.commonPreferences.setCommonBotPrefix(globalCommonPrefix);
-        saveCommonPreferences();
+        mainDBController.getCommonPreferencesDAO().setBotPrefix(globalCommonPrefix);
     }
 
     @Deprecated
@@ -293,15 +295,8 @@ public class SettingsController {
         return this.commonPreferences.getApiKey();
     }
 
-    @Deprecated
     public String getBotPrefix(long serverId) {
-        return getServerPreferences(serverId).getBotPrefix();
-    }
-
-    @Deprecated
-    public void setBotPrefix(long serverId, String botPrefix) {
-        getServerPreferences(serverId).setBotPrefix(botPrefix);
-        saveServerSideParameters(serverId);
+        return mainDBController.getServerPreferencesDAO().getPrefix(serverId);
     }
 
     @Deprecated
@@ -506,5 +501,9 @@ public class SettingsController {
 
     public AccessControlService getAccessControlService() {
         return accessControlService;
+    }
+
+    public StatisticService getStatisticService() {
+        return statisticService;
     }
 }

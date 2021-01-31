@@ -1,7 +1,6 @@
 package hellfrog.core;
 
 import com.vdurmont.emoji.EmojiParser;
-import hellfrog.common.CommonConstants;
 import hellfrog.settings.SettingsController;
 import hellfrog.settings.db.EntityNameCacheDAO;
 import hellfrog.settings.db.entity.EntityNameCache;
@@ -225,34 +224,20 @@ public class NameCacheService
         return "";
     }
 
-    private String getLastKnownUser(@NotNull final Server server,
-                                    final long userId) {
+    @Nullable
+    public String printEntityDetailed(final long entityId,
+                                      @Nullable final Server server) {
 
-        Optional<User> mayBeMember = server.getMemberById(userId);
-        if (mayBeMember.isPresent()) {
-            return mayBeMember.get().getMentionTag();
-        }
-        final StringBuilder result = new StringBuilder()
-                .append("(member not present on server) ");
-        findLastKnownName(server, userId).ifPresent(lastKnownNick ->
-                result.append("Nickname: ").append(lastKnownNick).append(", "));
-        boolean foundDiscriminatedName = false;
-        try {
-            User user = server.getApi().getUserById(userId).get(CommonConstants.OP_WAITING_TIMEOUT, CommonConstants.OP_TIME_UNIT);
-            if (user != null && !isDeletedUserDiscriminatedName(user.getDiscriminatedName())) {
-                update(user);
-                result.append(ServerSideResolver.getReadableContent(user.getDiscriminatedName(), Optional.of(server))).append(", ");
-                foundDiscriminatedName = true;
-            }
-        } catch (Exception ignore) {
-        }
-        if (!foundDiscriminatedName) {
-            findLastKnownName(userId).ifPresentOrElse(cachedName ->
-                            result.append(ServerSideResolver.getReadableContent(cachedName, Optional.of(server))).append(", "),
-                    () -> result.append("[discriminated name is unknown], "));
-        }
-        result.append("ID: ").append(userId);
-        return result.toString();
+        return entityNameCacheDAO.find(entityId).map(entityNameCache ->
+                switch (entityNameCache.getEntityType()) {
+                    case ROLE -> '@' + entityNameCache.getName();
+                    case USER -> server != null ? entityNameCacheDAO.find(server.getId(), entityId)
+                            .map(ServerNameCache::getName).orElse(null) : null;
+                    case SERVER -> entityNameCache.getName();
+                    case CHANNEL_CATEGORY -> CATEGORY_EMOJI + entityNameCache.getName();
+                    case SERVER_TEXT_CHANNEL -> '#' + entityNameCache.getName();
+                    case VOICE_CHANNEL -> SPEAKER_EMOJI + entityNameCache.getName();
+                }).orElse(null);
     }
 
     public void deepServerUpdate(@Nullable Server server) {

@@ -66,9 +66,7 @@ public class EventsListener
 
     private static final String VERSION_STRING = "2021-01-07";
 
-    private final ReactReaction reactReaction = new ReactReaction();
     private final VoteReactFilter asVoteReaction = new VoteReactFilter();
-    private final MessageStats messageStats = new MessageStats();
     private final CommunityControlReaction communityControlReaction = new CommunityControlReaction();
     private static final Logger log = LogManager.getLogger(EventsListener.class.getSimpleName());
     private static final Logger cmdlog = LogManager.getLogger("Commands debug");
@@ -80,8 +78,9 @@ public class EventsListener
 
         boolean isPlainMessage = true;
 
-        messageStats.onMessageCreate(event);
-        SettingsController.getInstance().getNameCacheService().update(event);
+        SettingsController settingsController = SettingsController.getInstance();
+        settingsController.getStatisticService().onMessageCreate(event);
+        settingsController.getNameCacheService().update(event);
 
         String strMessage = event.getMessageContent();
         Optional<Server> mayBeServer = event.getServer();
@@ -116,7 +115,6 @@ public class EventsListener
         }
 
         isPlainMessage &= MsgCreateReaction.all().stream()
-                .filter(r -> !(r instanceof CustomEmojiReaction))
                 .noneMatch(r -> r.canReact(event));
 
         MsgCreateReaction.all().stream()
@@ -264,7 +262,7 @@ public class EventsListener
 
     @Override
     public void onMessageDelete(MessageDeleteEvent event) {
-        messageStats.onMessageDelete(event);
+        SettingsController.getInstance().getStatisticService().onMessageDelete(event);
     }
 
     @Override
@@ -274,7 +272,9 @@ public class EventsListener
 
     @Override
     public void onReactionAdd(ReactionAddEvent event) {
-        reactReaction.parseReaction(event, true);
+        SettingsController settingsController = SettingsController.getInstance();
+        settingsController.getStatisticService().onReactionAdd(event);
+
         asVoteReaction.parseAction(event);
         communityControlReaction.parseReaction(event);
         if (event.getUser().isPresent() && !event.getUser().get().isBot()) {
@@ -293,7 +293,7 @@ public class EventsListener
                 }
             }
         }
-        SettingsController.getInstance().getNameCacheService().update(event);
+        settingsController.getNameCacheService().update(event);
     }
 
     @Override
@@ -336,7 +336,9 @@ public class EventsListener
 
     @Override
     public void onReactionRemove(ReactionRemoveEvent event) {
-        reactReaction.parseReaction(event, false);
+        SettingsController settingsController = SettingsController.getInstance();
+        settingsController.getStatisticService().onReactionRemove(event);
+
         communityControlReaction.parseReaction(event);
         if (event.getUser().isPresent() && !event.getUser().get().isBot()) {
             for (SessionState sessionState : SessionState.all()) {
@@ -347,7 +349,7 @@ public class EventsListener
                 }
             }
         }
-        SettingsController.getInstance().getNameCacheService().update(event);
+        settingsController.getNameCacheService().update(event);
     }
 
     void onReady() {
