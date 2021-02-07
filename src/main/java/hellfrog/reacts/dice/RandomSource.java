@@ -39,7 +39,9 @@ public class RandomSource {
                 if (pool.isEmpty()) {
                     final List<Long> values = new ArrayList<>();
                     for (long i = 1; i <= numOfFaces; i++) {
-                        values.add(i);
+                        for (int j = 0; j < 3; j++) {
+                            values.add(i);
+                        }
                     }
                     Collections.shuffle(values);
                     pool.addAll(values);
