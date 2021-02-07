@@ -5,6 +5,7 @@ import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.MessageUtils;
 import hellfrog.core.ServerSideResolver;
+import hellfrog.reacts.dice.*;
 import hellfrog.settings.SettingsController;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
@@ -21,7 +22,6 @@ import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnmodifiableView;
@@ -168,7 +168,7 @@ public class DiceReaction
 
                         MessageBuilder dicesOutput = new MessageBuilder();
                         long totalSumResult = 0;
-                        ThreadLocalRandom currRnd = ThreadLocalRandom.current();
+                        RandomSource randomSource = RandomSource.getInstance();
                         int success = 0;
 
                         final List<SumModifier> diceModifiers = parseModifiers(diceValue, false);
@@ -186,7 +186,7 @@ public class DiceReaction
                         final MutableDoubleList allDices = new DoubleArrayList((int)numOfDice);
 
                         for (long d = 1; d <= numOfDice; d++) {
-                            long tr = currRnd.nextLong(1L, numOfFaces + 1);
+                            long tr = randomSource.getDice(numOfFaces);
                             final long origin = tr;
                             if (modifyDices) {
                                 for (SumModifier diceModifier : diceModifiers) {
@@ -406,75 +406,4 @@ public class DiceReaction
         return messagesLogger;
     }
 
-    private static class SumModifier {
-
-        private final long value;
-        private final ModifierType modifierType;
-        private final String printable;
-
-        @Contract(pure = true)
-        SumModifier(long value, @NotNull ModifierType modifierType) {
-            this.value = value;
-            this.modifierType = modifierType;
-            this.printable = switch (modifierType) {
-                case ADD -> "+" + value;
-                case SUB -> "-" + value;
-                case MUL -> "x" + value;
-            };
-        }
-
-        long modify(final long currentSum) {
-            if (value > 0) {
-                return switch (modifierType) {
-                    case ADD -> currentSum + value;
-                    case SUB -> currentSum - value;
-                    case MUL -> currentSum * value;
-                };
-            }
-            return currentSum;
-        }
-
-        String getPrintable() {
-            return printable;
-        }
-    }
-
-    private static class ResultFilter {
-
-        private final FilterType filterType;
-        private final long filterValue;
-
-        @Contract(pure = true)
-        ResultFilter(FilterType filterType, long filterValue) {
-            this.filterType = filterType != null ? filterType : FilterType.NOP;
-            this.filterValue = filterValue;
-        }
-
-        boolean isOk(final long value) {
-            if (filterValue > 0) {
-                return switch (filterType) {
-                    case EQ -> value == filterValue;
-                    case LT -> value < filterValue;
-                    case GT -> value > filterValue;
-                    case LE -> value <= filterValue;
-                    case GE -> value >= filterValue;
-                    case NE -> value != filterValue;
-                    case NOP -> true;
-                };
-            }
-            return true;
-        }
-
-        boolean notOk(final long value) {
-            return !isOk(value);
-        }
-    }
-
-    private enum FilterType {
-        EQ, LT, GT, LE, GE, NE, NOP
-    }
-
-    private enum ModifierType {
-        ADD, SUB, MUL
-    }
 }
