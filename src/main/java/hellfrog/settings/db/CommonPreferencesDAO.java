@@ -12,6 +12,18 @@ public interface CommonPreferencesDAO {
     long HIGH_ROLL_CHANNEL_KEY_DEFAULT = 612654844679028736L;
     long LOW_ROLL_CHANNEL_DEFAULT = 612654929219158021L;
 
+    long FUN_BLUSH_CHANNEL = 0L;
+    long FUN_HUG_CHANNEL = 0L;
+    long FUN_KISS_CHANNEL = 0L;
+    long FUN_LOVE_CHANNEL = 0L;
+    long FUN_PAT_CHANNEL = 0L;
+    long FUN_SHOCK_CHANNEL = 0L;
+    long FUN_SLAP_CHANNEL = 0L;
+    long FUN_CUDDLE_CHANNEL = 0L;
+    long FUN_DANCE_CHANNEL = 0L;
+    long FUN_LICK_CHANNEL = 0L;
+    long FUN_BITE_CHANNEL = 0L;
+
     String PREFIX_DEFAULT = ">>";
     String API_KEY_DEFAULT = "";
     String BOT_NAME_DEFAULT = "HellFrog";
@@ -26,6 +38,18 @@ public interface CommonPreferencesDAO {
     String HIGH_ROLL_CHANNEL_KEY_DEFAULT_STR = String.valueOf(HIGH_ROLL_CHANNEL_KEY_DEFAULT);
     String LOW_ROLL_CHANNEL_KEY = "bot.low.channel";
     String LOW_ROLL_CHANNEL_DEFAULT_STR = String.valueOf(LOW_ROLL_CHANNEL_DEFAULT);
+
+    String FUN_BLUSH_CHANNEL_KEY = "bot.fun.blush.channel";
+    String FUN_HUG_CHANNEL_KEY = "bot.fun.hug.channel";
+    String FUN_KISS_CHANNEL_KEY = "bot.fun.kiss.channel";
+    String FUN_LOVE_CHANNEL_KEY = "bot.fun.love.channel";
+    String FUN_PAT_CHANNEL_KEY = "bot.fun.pat.channel";
+    String FUN_SHOCK_CHANNEL_KEY = "bot.fun.shock.channel";
+    String FUN_SLAP_CHANNEL_KEY = "bot.fun.slap.channel";
+    String FUN_CUDDLE_CHANNEL_KEY = "bot.fun.cuddle.channel";
+    String FUN_DANCE_CHANNEL_KEY = "bot.fun.dance.channel";
+    String FUN_LICK_CHANNEL_KEY = "bot.fun.lick.channel";
+    String FUN_BITE_CHANNEL_KEY = "bot.fun.bite.channel";
 
     String getApiKey();
 
@@ -55,4 +79,47 @@ public interface CommonPreferencesDAO {
 
     long setLowRollChannelId(long newLowRollChannelId);
 
+    long getFunBlushChannel();
+
+    long setFunBlushChannel(long newFunBlushChannelId);
+
+    long getFunHugChannel();
+
+    long setFunHugChannel(long newHugBlushChannelId);
+
+    long getFunKissChannel();
+
+    long setFunKissChannel(long newFunKissChannelId);
+
+    long getFunLoveChannel();
+
+    long setFunLoveChannel(long newFunLoveChannelId);
+
+    long getFunPatChannel();
+
+    long setFunPatChannel(long newFunPatChannelId);
+
+    long getFunShockChannel();
+
+    long setFunShockChannel(long newFunShockChannelId);
+
+    long getFunSlapChannel();
+
+    long setFunSlapChannel(long newFunSlapChannelId);
+
+    long getFunCuddleChannel();
+
+    long setFunCuddleChannel(long newFunCuddleChannelId);
+
+    long getFunDanceChannel();
+
+    long setFunDanceChannel(long newFunDanceChannelId);
+
+    long getFunLickChannel();
+
+    long setFunLickChannel(long newFunLickChannelId);
+
+    long getFunBiteChannel();
+
+    long setFunBiteChannel(long newFunBiteChannelId);
 }
