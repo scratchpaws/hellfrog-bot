@@ -1,6 +1,7 @@
 package hellfrog.common;
 
 import org.javacord.api.entity.server.invite.RichInvite;
+import org.javacord.api.entity.user.User;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,7 +39,7 @@ public class InviteInfo {
         final Instant expiredDate = richInvite.getMaxAgeInSeconds() > 0
                 ? richInvite.getCreationTimestamp().plusSeconds(richInvite.getMaxAgeInSeconds())
                 : null;
-        return new InviteInfo(richInvite.getInviter().getId(),
+        return new InviteInfo(richInvite.getInviter().map(User::getId).orElse(0L),
                 richInvite.getCode(),
                 richInvite.getUses(),
                 richInvite.getMaxUses(),
