@@ -38,7 +38,6 @@ public abstract class FunScenario
     protected static final List<String> BLUSH_URLS = new CopyOnWriteArrayList<>();
     protected static final List<String> HUG_URLS = new CopyOnWriteArrayList<>();
     protected static final List<String> KISS_URLS = new CopyOnWriteArrayList<>();
-    protected static final List<String> LOVE_URLS = new CopyOnWriteArrayList<>();
     protected static final List<String> PAT_URLS = new CopyOnWriteArrayList<>();
     protected static final List<String> SHOCK_URLS = new CopyOnWriteArrayList<>();
     protected static final List<String> SLAP_URLS = new CopyOnWriteArrayList<>();
@@ -65,7 +64,6 @@ public abstract class FunScenario
         final long blushChannelId = commonPreferencesDAO.getFunBlushChannel();
         final long hugChannelId = commonPreferencesDAO.getFunHugChannel();
         final long kissChannelId = commonPreferencesDAO.getFunKissChannel();
-        final long loveChannelId = commonPreferencesDAO.getFunLoveChannel();
         final long patChannelId = commonPreferencesDAO.getFunPatChannel();
         final long shockChannelId = commonPreferencesDAO.getFunShockChannel();
         final long slapChannelId = commonPreferencesDAO.getFunSlapChannel();
@@ -78,7 +76,6 @@ public abstract class FunScenario
             rebuildUrlsList(api, BLUSH_URLS, messagesLogger, blushChannelId, "pictures for \"blush\" command");
             rebuildUrlsList(api, HUG_URLS, messagesLogger, hugChannelId, "pictures for \"hug\" command");
             rebuildUrlsList(api, KISS_URLS, messagesLogger, kissChannelId, "pictures for \"kiss\" command");
-            rebuildUrlsList(api, LOVE_URLS, messagesLogger, loveChannelId, "pictures for \"love\" command");
             rebuildUrlsList(api, PAT_URLS, messagesLogger, patChannelId, "pictures for \"pat\" command");
             rebuildUrlsList(api, SHOCK_URLS, messagesLogger, shockChannelId, "pictures for \"shock\" command");
             rebuildUrlsList(api, SLAP_URLS, messagesLogger, slapChannelId, "pictures for \"slap\" command");
@@ -86,9 +83,7 @@ public abstract class FunScenario
             rebuildUrlsList(api, DANCE_URLS, messagesLogger, danceChannelId, "pictures for \"dance\" command");
             rebuildUrlsList(api, LICK_URLS, messagesLogger, lickChannelId, "pictures for \"lick\" command");
             rebuildUrlsList(api, BITE_URLS, messagesLogger, biteChannelId, "pictures for \"bite\" command");
-        }, () -> {
-            messagesLogger.addErrorMessage("(Unable to get Discord API for search fun command pictures)");
-        });
+        }, () -> messagesLogger.addErrorMessage("(Unable to get Discord API for search fun command pictures)"));
 
         if (sendBroadcastSeparately) {
             messagesLogger.send();
@@ -126,12 +121,10 @@ public abstract class FunScenario
         checkChannelListeners(channel);
         if (channel.canYouSee() && channel.canYouReadMessageHistory()) {
             List<String> result = new ArrayList<>();
-            channel.getMessagesAsStream().forEach(message -> {
-                result.addAll(message.getAttachments().stream()
-                        .map(MessageAttachment::getUrl)
-                        .map(URL::toString)
-                        .collect(Collectors.toList()));
-            });
+            channel.getMessagesAsStream().forEach(message -> result.addAll(message.getAttachments().stream()
+                    .map(MessageAttachment::getUrl)
+                    .map(URL::toString)
+                    .collect(Collectors.toList())));
             return Collections.unmodifiableList(result);
         } else {
             throw new Exception(String.format("(Unable to load URLS from channel \"%s\" by id %d: bot cannot read messages history)",
