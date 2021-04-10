@@ -2,6 +2,7 @@ package hellfrog.core;
 
 import hellfrog.commands.ACLCommand;
 import hellfrog.commands.cmdline.BotCommand;
+import hellfrog.commands.scenes.FunScenario;
 import hellfrog.commands.scenes.Scenario;
 import hellfrog.common.*;
 import hellfrog.reacts.*;
@@ -370,6 +371,7 @@ public class EventsListener
                 textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes(true));
                 textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes(true));
             });
+            messagesLogger.add(FunScenario.rebuildUrlIndexes(false));
             botInviteUrl = discordApi.createBotInvite(Permissions.fromBitmask(335932481));
 
             String invite = "Invite url: " + botInviteUrl + " ";
