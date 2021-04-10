@@ -204,7 +204,8 @@ public class NameCacheService
             return role.getMentionTag() + ", (id: " + role.getId() + ")";
         } else if (entity instanceof PrivateChannel) {
             PrivateChannel channel = (PrivateChannel) entity;
-            return printEntityDetailed(channel.getRecipient(), server);
+            return channel.getRecipient().map(recipient -> printEntityDetailed(recipient, server))
+                    .orElse("(unknown or service channel)");
         } else if (entity instanceof ServerTextChannel) {
             ServerTextChannel channel = (ServerTextChannel) entity;
             return channel.getMentionTag() + ", (id: " + channel.getId() + ")";

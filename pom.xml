@@ -6,7 +6,7 @@
 
     <groupId>pub.funforge.scratchypaws</groupId>
     <artifactId>hellfrog-bot</artifactId>
-    <version>2021-01-07</version>
+    <version>2021-04-10</version>
     <packaging>jar</packaging>
     <name>hellfrog</name>
 
@@ -22,7 +22,7 @@
         <dependency>
             <groupId>org.javacord</groupId>
             <artifactId>javacord-core</artifactId>
-            <version>3.1.2</version>
+            <version>3.3.0</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -30,7 +30,7 @@
         <dependency>
             <groupId>org.javacord</groupId>
             <artifactId>javacord-api</artifactId>
-            <version>3.1.2</version>
+            <version>3.3.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
@@ -194,21 +194,21 @@
         <dependency>
             <groupId>org.languagetool</groupId>
             <artifactId>language-en</artifactId>
-            <version>5.2</version>
+            <version>5.3</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.languagetool/language-ru -->
         <dependency>
             <groupId>org.languagetool</groupId>
             <artifactId>language-ru</artifactId>
-            <version>5.2</version>
+            <version>5.3</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.languagetool/language-uk -->
         <dependency>
             <groupId>org.languagetool</groupId>
             <artifactId>language-uk</artifactId>
-            <version>5.2</version>
+            <version>5.3</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12 -->
