@@ -375,7 +375,7 @@ public class EventsListener
                 textChannel.addMessageEditListener(event -> DiceReaction.rebuildRoflIndexes(true));
                 textChannel.addMessageDeleteListener(event -> DiceReaction.rebuildRoflIndexes(true));
             });
-            messagesLogger.add(FunScenario.rebuildUrlIndexes(false));
+            messagesLogger.add(FunScenario.InitUrlIndexes());
             botInviteUrl = discordApi.createBotInvite(Permissions.fromBitmask(335932481));
 
             String invite = "Invite url: " + botInviteUrl + " ";
