@@ -15,7 +15,6 @@ public interface CommonPreferencesDAO {
     long FUN_BLUSH_CHANNEL_DEFAULT = 830465884245065759L;
     long FUN_HUG_CHANNEL_DEFAULT = 830465929258205254L;
     long FUN_KISS_CHANNEL_DEFAULT = 830465967883812916L;
-    long FUN_LOVE_CHANNEL_DEFAULT = 830466027283415060L;
     long FUN_PAT_CHANNEL_DEFAULT = 830466071348904007L;
     long FUN_SHOCK_CHANNEL_DEFAULT = 830466112231178261L;
     long FUN_SLAP_CHANNEL_DEFAULT = 830466148280565790L;
@@ -42,7 +41,6 @@ public interface CommonPreferencesDAO {
     String FUN_BLUSH_CHANNEL_KEY = "bot.fun.blush.channel";
     String FUN_HUG_CHANNEL_KEY = "bot.fun.hug.channel";
     String FUN_KISS_CHANNEL_KEY = "bot.fun.kiss.channel";
-    String FUN_LOVE_CHANNEL_KEY = "bot.fun.love.channel";
     String FUN_PAT_CHANNEL_KEY = "bot.fun.pat.channel";
     String FUN_SHOCK_CHANNEL_KEY = "bot.fun.shock.channel";
     String FUN_SLAP_CHANNEL_KEY = "bot.fun.slap.channel";
@@ -90,10 +88,6 @@ public interface CommonPreferencesDAO {
     long getFunKissChannel();
 
     long setFunKissChannel(long newFunKissChannelId);
-
-    long getFunLoveChannel();
-
-    long setFunLoveChannel(long newFunLoveChannelId);
 
     long getFunPatChannel();
 

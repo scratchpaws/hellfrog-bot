@@ -227,16 +227,6 @@ class CommonPreferencesDAOImpl
     }
 
     @Override
-    public long getFunLoveChannel() {
-        return getLong(FUN_LOVE_CHANNEL_KEY, FUN_LOVE_CHANNEL_DEFAULT);
-    }
-
-    @Override
-    public long setFunLoveChannel(long newFunLoveChannelId) {
-        return setLong(FUN_LOVE_CHANNEL_KEY, newFunLoveChannelId, FUN_LOVE_CHANNEL_DEFAULT);
-    }
-
-    @Override
     public long getFunPatChannel() {
         return getLong(FUN_PAT_CHANNEL_KEY, FUN_PAT_CHANNEL_DEFAULT);
     }

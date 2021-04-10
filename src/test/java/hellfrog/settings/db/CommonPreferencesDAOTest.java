@@ -48,7 +48,6 @@ public class CommonPreferencesDAOTest {
             long oldFunBlushChannelId = preferencesDAO.getFunBlushChannel();
             long oldFunHugChannelId = preferencesDAO.getFunHugChannel();
             long oldFunKissChannelId = preferencesDAO.getFunKissChannel();
-            long oldFunLoveChannelId = preferencesDAO.getFunLoveChannel();
             long oldFunPatChannelId = preferencesDAO.getFunPatChannel();
             long oldFunShockChannelId = preferencesDAO.getFunShockChannel();
             long oldFunSlapChannelId = preferencesDAO.getFunSlapChannel();
@@ -69,7 +68,6 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(CommonPreferencesDAO.FUN_BLUSH_CHANNEL_DEFAULT, oldFunBlushChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_HUG_CHANNEL_DEFAULT, oldFunHugChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_KISS_CHANNEL_DEFAULT, oldFunKissChannelId);
-            Assertions.assertEquals(CommonPreferencesDAO.FUN_LOVE_CHANNEL_DEFAULT, oldFunLoveChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_PAT_CHANNEL_DEFAULT, oldFunPatChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_SHOCK_CHANNEL_DEFAULT, oldFunShockChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_SLAP_CHANNEL_DEFAULT, oldFunSlapChannelId);
@@ -91,7 +89,6 @@ public class CommonPreferencesDAOTest {
             oldFunBlushChannelId = preferencesDAO.setFunBlushChannel(funBlushChannelId);
             oldFunHugChannelId = preferencesDAO.setFunHugChannel(funHugChannelId);
             oldFunKissChannelId = preferencesDAO.setFunKissChannel(funKissChannelId);
-            oldFunLoveChannelId = preferencesDAO.setFunLoveChannel(funLoveChannelId);
             oldFunPatChannelId = preferencesDAO.setFunPatChannel(funPatChannelId);
             oldFunShockChannelId = preferencesDAO.setFunShockChannel(funShockChannelId);
             oldFunSlapChannelId = preferencesDAO.setFunSlapChannel(funSlapChannelId);
@@ -112,7 +109,6 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(CommonPreferencesDAO.FUN_BLUSH_CHANNEL_DEFAULT, oldFunBlushChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_HUG_CHANNEL_DEFAULT, oldFunHugChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_KISS_CHANNEL_DEFAULT, oldFunKissChannelId);
-            Assertions.assertEquals(CommonPreferencesDAO.FUN_LOVE_CHANNEL_DEFAULT, oldFunLoveChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_PAT_CHANNEL_DEFAULT, oldFunPatChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_SHOCK_CHANNEL_DEFAULT, oldFunShockChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_SLAP_CHANNEL_DEFAULT, oldFunSlapChannelId);
@@ -134,7 +130,6 @@ public class CommonPreferencesDAOTest {
             long newFunBlushChannelId = preferencesDAO.getFunBlushChannel();
             long newFunHugChannelId = preferencesDAO.getFunHugChannel();
             long newFunKissChannelId = preferencesDAO.getFunKissChannel();
-            long newFunLoveChannelId = preferencesDAO.getFunLoveChannel();
             long newFunPatChannelId = preferencesDAO.getFunPatChannel();
             long newFunShockChannelId = preferencesDAO.getFunShockChannel();
             long newFunSlapChannelId = preferencesDAO.getFunSlapChannel();
@@ -155,7 +150,6 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(funBlushChannelId, newFunBlushChannelId);
             Assertions.assertEquals(funHugChannelId, newFunHugChannelId);
             Assertions.assertEquals(funKissChannelId, newFunKissChannelId);
-            Assertions.assertEquals(funLoveChannelId, newFunLoveChannelId);
             Assertions.assertEquals(funPatChannelId, newFunPatChannelId);
             Assertions.assertEquals(funShockChannelId, newFunShockChannelId);
             Assertions.assertEquals(funSlapChannelId, newFunSlapChannelId);
@@ -177,7 +171,6 @@ public class CommonPreferencesDAOTest {
             newFunBlushChannelId = preferencesDAO.getFunBlushChannel();
             newFunHugChannelId = preferencesDAO.getFunHugChannel();
             newFunKissChannelId = preferencesDAO.getFunKissChannel();
-            newFunLoveChannelId = preferencesDAO.getFunLoveChannel();
             newFunPatChannelId = preferencesDAO.getFunPatChannel();
             newFunShockChannelId = preferencesDAO.getFunShockChannel();
             newFunSlapChannelId = preferencesDAO.getFunSlapChannel();
@@ -198,7 +191,6 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(funBlushChannelId, newFunBlushChannelId);
             Assertions.assertEquals(funHugChannelId, newFunHugChannelId);
             Assertions.assertEquals(funKissChannelId, newFunKissChannelId);
-            Assertions.assertEquals(funLoveChannelId, newFunLoveChannelId);
             Assertions.assertEquals(funPatChannelId, newFunPatChannelId);
             Assertions.assertEquals(funShockChannelId, newFunShockChannelId);
             Assertions.assertEquals(funSlapChannelId, newFunSlapChannelId);
@@ -232,7 +224,6 @@ public class CommonPreferencesDAOTest {
             long newFunBlushChannelId = preferencesDAO.getFunBlushChannel();
             long newFunHugChannelId = preferencesDAO.getFunHugChannel();
             long newFunKissChannelId = preferencesDAO.getFunKissChannel();
-            long newFunLoveChannelId = preferencesDAO.getFunLoveChannel();
             long newFunPatChannelId = preferencesDAO.getFunPatChannel();
             long newFunShockChannelId = preferencesDAO.getFunShockChannel();
             long newFunSlapChannelId = preferencesDAO.getFunSlapChannel();
@@ -244,7 +235,6 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(funBlushChannelId, newFunBlushChannelId);
             Assertions.assertEquals(funHugChannelId, newFunHugChannelId);
             Assertions.assertEquals(funKissChannelId, newFunKissChannelId);
-            Assertions.assertEquals(funLoveChannelId, newFunLoveChannelId);
             Assertions.assertEquals(funPatChannelId, newFunPatChannelId);
             Assertions.assertEquals(funShockChannelId, newFunShockChannelId);
             Assertions.assertEquals(funSlapChannelId, newFunSlapChannelId);
