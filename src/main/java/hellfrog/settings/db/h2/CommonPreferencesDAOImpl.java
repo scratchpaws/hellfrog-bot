@@ -198,111 +198,111 @@ class CommonPreferencesDAOImpl
 
     @Override
     public long getFunBlushChannel() {
-        return getLong(FUN_BLUSH_CHANNEL_KEY, FUN_BLUSH_CHANNEL);
+        return getLong(FUN_BLUSH_CHANNEL_KEY, FUN_BLUSH_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunBlushChannel(long newFunBlushChannelId) {
-        return setLong(FUN_BLUSH_CHANNEL_KEY, newFunBlushChannelId, FUN_BLUSH_CHANNEL);
+        return setLong(FUN_BLUSH_CHANNEL_KEY, newFunBlushChannelId, FUN_BLUSH_CHANNEL_DEFAULT);
     }
 
     @Override
     public long getFunHugChannel() {
-        return getLong(FUN_HUG_CHANNEL_KEY, FUN_HUG_CHANNEL);
+        return getLong(FUN_HUG_CHANNEL_KEY, FUN_HUG_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunHugChannel(long newHugBlushChannelId) {
-        return setLong(FUN_HUG_CHANNEL_KEY, newHugBlushChannelId, FUN_HUG_CHANNEL);
+        return setLong(FUN_HUG_CHANNEL_KEY, newHugBlushChannelId, FUN_HUG_CHANNEL_DEFAULT);
     }
 
     @Override
     public long getFunKissChannel() {
-        return getLong(FUN_KISS_CHANNEL_KEY, FUN_KISS_CHANNEL);
+        return getLong(FUN_KISS_CHANNEL_KEY, FUN_KISS_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunKissChannel(long newFunKissChannelId) {
-        return setLong(FUN_KISS_CHANNEL_KEY, newFunKissChannelId, FUN_KISS_CHANNEL);
+        return setLong(FUN_KISS_CHANNEL_KEY, newFunKissChannelId, FUN_KISS_CHANNEL_DEFAULT);
     }
 
     @Override
     public long getFunLoveChannel() {
-        return getLong(FUN_LOVE_CHANNEL_KEY, FUN_LOVE_CHANNEL);
+        return getLong(FUN_LOVE_CHANNEL_KEY, FUN_LOVE_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunLoveChannel(long newFunLoveChannelId) {
-        return setLong(FUN_LOVE_CHANNEL_KEY, newFunLoveChannelId, FUN_LOVE_CHANNEL);
+        return setLong(FUN_LOVE_CHANNEL_KEY, newFunLoveChannelId, FUN_LOVE_CHANNEL_DEFAULT);
     }
 
     @Override
     public long getFunPatChannel() {
-        return getLong(FUN_PAT_CHANNEL_KEY, FUN_PAT_CHANNEL);
+        return getLong(FUN_PAT_CHANNEL_KEY, FUN_PAT_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunPatChannel(long newFunPatChannelId) {
-        return setLong(FUN_PAT_CHANNEL_KEY, newFunPatChannelId, FUN_PAT_CHANNEL);
+        return setLong(FUN_PAT_CHANNEL_KEY, newFunPatChannelId, FUN_PAT_CHANNEL_DEFAULT);
     }
 
     @Override
     public long getFunShockChannel() {
-        return getLong(FUN_SHOCK_CHANNEL_KEY, FUN_SHOCK_CHANNEL);
+        return getLong(FUN_SHOCK_CHANNEL_KEY, FUN_SHOCK_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunShockChannel(long newFunShockChannelId) {
-        return setLong(FUN_SHOCK_CHANNEL_KEY, newFunShockChannelId, FUN_SHOCK_CHANNEL);
+        return setLong(FUN_SHOCK_CHANNEL_KEY, newFunShockChannelId, FUN_SHOCK_CHANNEL_DEFAULT);
     }
 
     @Override
     public long getFunSlapChannel() {
-        return getLong(FUN_SLAP_CHANNEL_KEY, FUN_SLAP_CHANNEL);
+        return getLong(FUN_SLAP_CHANNEL_KEY, FUN_SLAP_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunSlapChannel(long newFunSlapChannelId) {
-        return setLong(FUN_SLAP_CHANNEL_KEY, newFunSlapChannelId, FUN_SLAP_CHANNEL);
+        return setLong(FUN_SLAP_CHANNEL_KEY, newFunSlapChannelId, FUN_SLAP_CHANNEL_DEFAULT);
     }
 
     @Override
     public long getFunCuddleChannel() {
-        return getLong(FUN_CUDDLE_CHANNEL_KEY, FUN_CUDDLE_CHANNEL);
+        return getLong(FUN_CUDDLE_CHANNEL_KEY, FUN_CUDDLE_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunCuddleChannel(long newFunCuddleChannelId) {
-        return setLong(FUN_CUDDLE_CHANNEL_KEY, newFunCuddleChannelId, FUN_CUDDLE_CHANNEL);
+        return setLong(FUN_CUDDLE_CHANNEL_KEY, newFunCuddleChannelId, FUN_CUDDLE_CHANNEL_DEFAULT);
     }
 
     @Override
     public long getFunDanceChannel() {
-        return getLong(FUN_DANCE_CHANNEL_KEY, FUN_DANCE_CHANNEL);
+        return getLong(FUN_DANCE_CHANNEL_KEY, FUN_DANCE_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunDanceChannel(long newFunDanceChannelId) {
-        return setLong(FUN_DANCE_CHANNEL_KEY, newFunDanceChannelId, FUN_DANCE_CHANNEL);
+        return setLong(FUN_DANCE_CHANNEL_KEY, newFunDanceChannelId, FUN_DANCE_CHANNEL_DEFAULT);
     }
 
     @Override
     public long getFunLickChannel() {
-        return getLong(FUN_LICK_CHANNEL_KEY, FUN_LICK_CHANNEL);
+        return getLong(FUN_LICK_CHANNEL_KEY, FUN_LICK_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunLickChannel(long newFunLickChannelId) {
-        return setLong(FUN_LICK_CHANNEL_KEY, newFunLickChannelId, FUN_LICK_CHANNEL);
+        return setLong(FUN_LICK_CHANNEL_KEY, newFunLickChannelId, FUN_LICK_CHANNEL_DEFAULT);
     }
 
     @Override
     public long getFunBiteChannel() {
-        return getLong(FUN_BITE_CHANNEL_KEY, FUN_BITE_CHANNEL);
+        return getLong(FUN_BITE_CHANNEL_KEY, FUN_BITE_CHANNEL_DEFAULT);
     }
 
     @Override
     public long setFunBiteChannel(long newFunBiteChannelId) {
-        return setLong(FUN_BITE_CHANNEL_KEY, newFunBiteChannelId, FUN_BITE_CHANNEL);
+        return setLong(FUN_BITE_CHANNEL_KEY, newFunBiteChannelId, FUN_BITE_CHANNEL_DEFAULT);
     }
 }
