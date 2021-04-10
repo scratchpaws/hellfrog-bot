@@ -20,7 +20,6 @@ import org.javacord.api.listener.message.MessageCreateListener;
 import org.javacord.api.listener.message.MessageDeleteListener;
 import org.javacord.api.listener.message.MessageEditListener;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.UnmodifiableView;
 
 import java.awt.*;
 import java.net.URL;
@@ -56,7 +55,8 @@ public abstract class FunScenario
         super.enableStrictByChannels();
     }
 
-    public static BroadCast.MessagesLogger rebuildUrlIndexes(final boolean sendBroadcastSeparately) {
+    public static BroadCast.MessagesLogger InitUrlIndexes() {
+
         final BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
         final SettingsController settingsController = SettingsController.getInstance();
         final CommonPreferencesDAO commonPreferencesDAO = settingsController.getMainDBController().getCommonPreferencesDAO();
@@ -72,81 +72,74 @@ public abstract class FunScenario
         final long lickChannelId = commonPreferencesDAO.getFunLickChannel();
         final long biteChannelId = commonPreferencesDAO.getFunBiteChannel();
 
-        Optional.ofNullable(settingsController.getDiscordApi()).ifPresentOrElse(api -> {
-            rebuildUrlsList(api, BLUSH_URLS, messagesLogger, blushChannelId, "pictures for \"blush\" command");
-            rebuildUrlsList(api, HUG_URLS, messagesLogger, hugChannelId, "pictures for \"hug\" command");
-            rebuildUrlsList(api, KISS_URLS, messagesLogger, kissChannelId, "pictures for \"kiss\" command");
-            rebuildUrlsList(api, PAT_URLS, messagesLogger, patChannelId, "pictures for \"pat\" command");
-            rebuildUrlsList(api, SHOCK_URLS, messagesLogger, shockChannelId, "pictures for \"shock\" command");
-            rebuildUrlsList(api, SLAP_URLS, messagesLogger, slapChannelId, "pictures for \"slap\" command");
-            rebuildUrlsList(api, CUDDLE_URLS, messagesLogger, cuddleChannelId, "pictures for \"cuddle\" command");
-            rebuildUrlsList(api, DANCE_URLS, messagesLogger, danceChannelId, "pictures for \"dance\" command");
-            rebuildUrlsList(api, LICK_URLS, messagesLogger, lickChannelId, "pictures for \"lick\" command");
-            rebuildUrlsList(api, BITE_URLS, messagesLogger, biteChannelId, "pictures for \"bite\" command");
-        }, () -> messagesLogger.addErrorMessage("(Unable to get Discord API for search fun command pictures)"));
+        messagesLogger.add(rebuildUrlsList(BLUSH_URLS, blushChannelId, "pictures for \"blush\" command", false));
+        messagesLogger.add(rebuildUrlsList(HUG_URLS, hugChannelId, "pictures for \"hug\" command", false));
+        messagesLogger.add(rebuildUrlsList(KISS_URLS, kissChannelId, "pictures for \"kiss\" command", false));
+        messagesLogger.add(rebuildUrlsList(PAT_URLS, patChannelId, "pictures for \"pat\" command", false));
+        messagesLogger.add(rebuildUrlsList(SHOCK_URLS, shockChannelId, "pictures for \"shock\" command", false));
+        messagesLogger.add(rebuildUrlsList(SLAP_URLS, slapChannelId, "pictures for \"slap\" command", false));
+        messagesLogger.add(rebuildUrlsList(CUDDLE_URLS, cuddleChannelId, "pictures for \"cuddle\" command", false));
+        messagesLogger.add(rebuildUrlsList(DANCE_URLS, danceChannelId, "pictures for \"dance\" command", false));
+        messagesLogger.add(rebuildUrlsList(LICK_URLS, lickChannelId, "pictures for \"lick\" command", false));
+        messagesLogger.add(rebuildUrlsList(BITE_URLS, biteChannelId, "pictures for \"bite\" command", false));
+
+        return messagesLogger;
+    }
+
+    private static BroadCast.MessagesLogger rebuildUrlsList(@NotNull final List<String> targetList,
+                                                            final long channelId,
+                                                            @NotNull final String channelDescription,
+                                                            final boolean sendBroadcastSeparately) {
+
+        final BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
+        final DiscordApi api = SettingsController.getInstance().getDiscordApi();
+        if (api != null) {
+            Optional<ServerTextChannel> mayBeChannel = api.getServerTextChannelById(channelId);
+            if (mayBeChannel.isPresent()) {
+                ServerTextChannel channel = mayBeChannel.get();
+                if (channel.canYouSee() && channel.canYouReadMessageHistory()) {
+                    final List<String> result = new ArrayList<>();
+                    channel.getMessagesAsStream().forEach(message -> {
+                        result.addAll(message.getAttachments().stream()
+                                .map(MessageAttachment::getUrl)
+                                .map(URL::toString)
+                                .collect(Collectors.toList()));
+                        result.addAll(CommonUtils.detectAllUrls(message.getReadableContent()));
+                    });
+                    targetList.clear();
+                    targetList.addAll(result.stream().distinct().collect(Collectors.toList()));
+                    messagesLogger.addInfoMessage(String.format("Found %d URLs for \"%s\"", result.size(), channelDescription));
+                } else {
+                    messagesLogger.addErrorMessage(String.format("(Unable to load URLS from channel \"%s\" by id %d: bot cannot read messages history)",
+                            channelDescription, channelId));
+                }
+
+                List<MessageCreateListener> createListeners = channel.getMessageCreateListeners();
+                List<MessageEditListener> editListeners = channel.getMessageEditListeners();
+                List<MessageDeleteListener> deleteListeners = channel.getMessageDeleteListeners();
+
+                if (createListeners.isEmpty()) {
+                    channel.addMessageCreateListener(event -> rebuildUrlsList(targetList, channelId, channelDescription, true));
+                }
+                if (editListeners.isEmpty()) {
+                    channel.addMessageEditListener(event -> rebuildUrlsList(targetList, channelId, channelDescription, true));
+                }
+                if (deleteListeners.isEmpty()) {
+                    channel.addMessageDeleteListener(event -> rebuildUrlsList(targetList, channelId, channelDescription, true));
+                }
+            } else {
+                messagesLogger.addErrorMessage(String.format("(Unable to load URLs from channel \"%s\" by id %d)", channelDescription, channelId));
+            }
+        } else {
+            messagesLogger.addErrorMessage(String.format("(Unable to load/reload URLS from channel \"%s\" by id %d: Discord API is null)",
+                    channelDescription, channelId));
+        }
 
         if (sendBroadcastSeparately) {
             messagesLogger.send();
         }
+
         return messagesLogger;
-    }
-
-    private static void rebuildUrlsList(@NotNull final DiscordApi api,
-                                        @NotNull final List<String> targetList,
-                                        @NotNull final BroadCast.MessagesLogger messagesLogger,
-                                        final long channelId,
-                                        @NotNull final String channelDescription) {
-
-        try {
-            List<String> urls = loadUrlsFromChannel(api, channelId, channelDescription);
-            targetList.clear();
-            targetList.addAll(urls);
-            messagesLogger.addInfoMessage(String.format("Found %d URLs for \"%s\"", urls.size(), channelDescription));
-        } catch (Exception err) {
-            messagesLogger.addErrorMessage(err.getMessage());
-        }
-    }
-
-    @NotNull
-    @UnmodifiableView
-    private static List<String> loadUrlsFromChannel(@NotNull final DiscordApi api,
-                                                    final long channelId,
-                                                    @NotNull final String channelDescription) throws Exception {
-
-        Optional<ServerTextChannel> mayBeChannel = api.getServerTextChannelById(channelId);
-        if (mayBeChannel.isEmpty()) {
-            throw new Exception(String.format("(Unable to load URLs from channel \"%s\" by id %d)", channelDescription, channelId));
-        }
-        ServerTextChannel channel = mayBeChannel.get();
-        checkChannelListeners(channel);
-        if (channel.canYouSee() && channel.canYouReadMessageHistory()) {
-            List<String> result = new ArrayList<>();
-            channel.getMessagesAsStream().forEach(message -> result.addAll(message.getAttachments().stream()
-                    .map(MessageAttachment::getUrl)
-                    .map(URL::toString)
-                    .collect(Collectors.toList())));
-            return Collections.unmodifiableList(result);
-        } else {
-            throw new Exception(String.format("(Unable to load URLS from channel \"%s\" by id %d: bot cannot read messages history)",
-                    channelDescription, channelId));
-        }
-    }
-
-    private static void checkChannelListeners(@NotNull final ServerTextChannel channel) {
-
-        List<MessageCreateListener> createListeners = channel.getMessageCreateListeners();
-        List<MessageEditListener> editListeners = channel.getMessageEditListeners();
-        List<MessageDeleteListener> deleteListeners = channel.getMessageDeleteListeners();
-
-        if (createListeners.isEmpty()) {
-            channel.addMessageCreateListener(event -> rebuildUrlIndexes(true));
-        }
-        if (editListeners.isEmpty()) {
-            channel.addMessageEditListener(event -> rebuildUrlIndexes(true));
-        }
-        if (deleteListeners.isEmpty()) {
-            channel.addMessageDeleteListener(event -> rebuildUrlIndexes(true));
-        }
     }
 
     protected void setLonelyResultMessage(@NotNull String message) {
