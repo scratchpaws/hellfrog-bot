@@ -22,7 +22,6 @@ public class CommonPreferencesDAOTest {
         long funBlushChannelId = TestUtils.randomDiscordEntityId();
         long funHugChannelId = TestUtils.randomDiscordEntityId();
         long funKissChannelId = TestUtils.randomDiscordEntityId();
-        long funLoveChannelId = TestUtils.randomDiscordEntityId();
         long funPatChannelId = TestUtils.randomDiscordEntityId();
         long funShockChannelId = TestUtils.randomDiscordEntityId();
         long funSlapChannelId = TestUtils.randomDiscordEntityId();
@@ -30,6 +29,7 @@ public class CommonPreferencesDAOTest {
         long funDanceChannelId = TestUtils.randomDiscordEntityId();
         long funLickChannelId = TestUtils.randomDiscordEntityId();
         long funBiteChannelId = TestUtils.randomDiscordEntityId();
+        long funBonkChannelId = TestUtils.randomDiscordEntityId();
 
         MainDBController.destroyTestDatabase();
         try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
@@ -55,6 +55,7 @@ public class CommonPreferencesDAOTest {
             long oldFunDanceChannelId = preferencesDAO.getFunDanceChannel();
             long oldFunLickChannelId = preferencesDAO.getFunLickChannel();
             long oldFunBiteChannelId = preferencesDAO.getFunBiteChannel();
+            long oldFunBonkChannelId = preferencesDAO.getFunBonkChannel();
 
             Assertions.assertEquals(CommonPreferencesDAO.API_KEY_DEFAULT, oldKey);
             Assertions.assertEquals(CommonPreferencesDAO.BOT_NAME_DEFAULT, oldName);
@@ -75,6 +76,7 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(CommonPreferencesDAO.FUN_DANCE_CHANNEL_DEFAULT, oldFunDanceChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_LICK_CHANNEL_DEFAULT, oldFunLickChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_BITE_CHANNEL_DEFAULT, oldFunBiteChannelId);
+            Assertions.assertEquals(CommonPreferencesDAO.FUN_BONK_CHANNEL_DEFAULT, oldFunBonkChannelId);
 
             // проверяем замену данных, должны извлечься умолчания
             oldKey = preferencesDAO.setApiKey(botApi);
@@ -96,6 +98,7 @@ public class CommonPreferencesDAOTest {
             oldFunDanceChannelId = preferencesDAO.setFunDanceChannel(funDanceChannelId);
             oldFunLickChannelId = preferencesDAO.setFunLickChannel(funLickChannelId);
             oldFunBiteChannelId = preferencesDAO.setFunBiteChannel(funBiteChannelId);
+            oldFunBonkChannelId = preferencesDAO.setFunBonkChannel(funBonkChannelId);
 
             Assertions.assertEquals(CommonPreferencesDAO.API_KEY_DEFAULT, oldKey);
             Assertions.assertEquals(CommonPreferencesDAO.BOT_NAME_DEFAULT, oldName);
@@ -116,6 +119,7 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(CommonPreferencesDAO.FUN_DANCE_CHANNEL_DEFAULT, oldFunDanceChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_LICK_CHANNEL_DEFAULT, oldFunLickChannelId);
             Assertions.assertEquals(CommonPreferencesDAO.FUN_BITE_CHANNEL_DEFAULT, oldFunBiteChannelId);
+            Assertions.assertEquals(CommonPreferencesDAO.FUN_BONK_CHANNEL_DEFAULT, oldFunBonkChannelId);
 
             // проверяем, что данные сохранились
             String newKey = preferencesDAO.getApiKey();
@@ -137,6 +141,7 @@ public class CommonPreferencesDAOTest {
             long newFunDanceChannelId = preferencesDAO.getFunDanceChannel();
             long newFunLickChannelId = preferencesDAO.getFunLickChannel();
             long newFunBiteChannelId = preferencesDAO.getFunBiteChannel();
+            long newFunBonkChannelId = preferencesDAO.getFunBonkChannel();
 
             Assertions.assertEquals(botPrefix, newPrefix);
             Assertions.assertEquals(botName, newName);
@@ -157,6 +162,7 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(funDanceChannelId, newFunDanceChannelId);
             Assertions.assertEquals(funLickChannelId, newFunLickChannelId);
             Assertions.assertEquals(funBiteChannelId, newFunBiteChannelId);
+            Assertions.assertEquals(funBonkChannelId, newFunBonkChannelId);
 
             // проверяем, что данные сохранились при первичном чтении (not override)
             newKey = preferencesDAO.getApiKey();
@@ -178,6 +184,7 @@ public class CommonPreferencesDAOTest {
             newFunDanceChannelId = preferencesDAO.getFunDanceChannel();
             newFunLickChannelId = preferencesDAO.getFunLickChannel();
             newFunBiteChannelId = preferencesDAO.getFunBiteChannel();
+            newFunBonkChannelId = preferencesDAO.getFunBonkChannel();
 
             Assertions.assertEquals(botPrefix, newPrefix);
             Assertions.assertEquals(botName, newName);
@@ -198,6 +205,7 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(funDanceChannelId, newFunDanceChannelId);
             Assertions.assertEquals(funLickChannelId, newFunLickChannelId);
             Assertions.assertEquals(funBiteChannelId, newFunBiteChannelId);
+            Assertions.assertEquals(funBonkChannelId, newFunBonkChannelId);
         }
 
         try (MainDBController mainDBController = MainDBController.getInstance(InstanceType.TEST)) {
@@ -231,6 +239,7 @@ public class CommonPreferencesDAOTest {
             long newFunDanceChannelId = preferencesDAO.getFunDanceChannel();
             long newFunLickChannelId = preferencesDAO.getFunLickChannel();
             long newFunBiteChannelId = preferencesDAO.getFunBiteChannel();
+            long newFunBonkChannelId = preferencesDAO.getFunBonkChannel();
 
             Assertions.assertEquals(funBlushChannelId, newFunBlushChannelId);
             Assertions.assertEquals(funHugChannelId, newFunHugChannelId);
@@ -242,6 +251,7 @@ public class CommonPreferencesDAOTest {
             Assertions.assertEquals(funDanceChannelId, newFunDanceChannelId);
             Assertions.assertEquals(funLickChannelId, newFunLickChannelId);
             Assertions.assertEquals(funBiteChannelId, newFunBiteChannelId);
+            Assertions.assertEquals(funBonkChannelId, newFunBonkChannelId);
         }
 
         Assertions.assertTrue(LogsStorage.isErrorsEmpty(), "Errors log must be empty");

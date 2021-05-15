@@ -295,4 +295,14 @@ class CommonPreferencesDAOImpl
     public long setFunBiteChannel(long newFunBiteChannelId) {
         return setLong(FUN_BITE_CHANNEL_KEY, newFunBiteChannelId, FUN_BITE_CHANNEL_DEFAULT);
     }
+
+    @Override
+    public long getFunBonkChannel() {
+        return getLong(FUN_BONK_CHANNEL_KEY, FUN_BONK_CHANNEL_DEFAULT);
+    }
+
+    @Override
+    public long setFunBonkChannel(long newFunBonkChannelId) {
+        return setLong(FUN_BONK_CHANNEL_KEY, newFunBonkChannelId, FUN_BONK_CHANNEL_DEFAULT);
+    }
 }
