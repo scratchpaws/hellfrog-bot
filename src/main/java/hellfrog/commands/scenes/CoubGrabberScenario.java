@@ -22,6 +22,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -101,17 +102,20 @@ public class CoubGrabberScenario
                 .getHttpClientsPool()
                 .borrowClient();
         try {
-            List<String> jsonUrls;
+            ParsedCoubPage parsedCoubPage;
             try {
-                jsonUrls = CommonUtils.detectAllUrls(parseCoubPage(client, coubUrl));
+                parsedCoubPage = parseCoubPage(client, coubUrl);
             } catch (RuntimeException err) {
                 showErrorMessage(err.getMessage(), event);
                 return;
             }
-            final String description = String.format("<%s> (from %s)", coubUrl,
-                    event.getMessageAuthor().asUser().map(user ->
-                            event.getServer().map(user::getDisplayName).orElse(user.getName()))
-                            .orElse("<unknown>"));
+            final List<String> jsonUrls = CommonUtils.detectAllUrls(parsedCoubPage.coubSourcesJson);
+            final String userName = event.getMessageAuthor().asUser().map(user ->
+                    event.getServer().map(user::getDisplayName).orElse(user.getName()))
+                    .orElse("<unknown>");
+            final String uncleanDescription = "<" + coubUrl + "> (from " + userName + ")"
+                    + (CommonUtils.isTrStringNotEmpty(parsedCoubPage.audioTag) ? "\nTrack: " + parsedCoubPage.audioTag : "");
+            final String description = ServerSideResolver.getReadableContent(uncleanDescription, event.getServer());
             boolean found = false;
             String mp4Video = null;
             String mp4Audio = null;
@@ -193,8 +197,8 @@ public class CoubGrabberScenario
         return null;
     }
 
-    private String parseCoubPage(@NotNull final SimpleHttpClient client,
-                                 @NotNull final URI coubUrl) throws RuntimeException {
+    private ParsedCoubPage parseCoubPage(@NotNull final SimpleHttpClient client,
+                                         @NotNull final URI coubUrl) throws RuntimeException {
 
         final HttpGet request = new HttpGet(coubUrl);
         String responseText;
@@ -224,12 +228,26 @@ public class CoubGrabberScenario
             throw new RuntimeException(errMsg);
         }
         final Document parsedDom = Jsoup.parse(responseText, coubUrl.toString());
+        final Elements titles = parsedDom.getElementsByClass("musicTitle");
+        final Elements authors = parsedDom.getElementsByClass("musicAuthor");
+        final String title = getFirstContent(titles);
+        final String author = getFirstContent(authors);
+        final String audioTag = CommonUtils.isTrStringNotEmpty(title) || CommonUtils.isTrStringNotEmpty(author)
+                ? author + " - " + title : "";
         final Element coubPageCoubJson = parsedDom.getElementById("coubPageCoubJson");
         if (coubPageCoubJson == null) {
             String errMsg = String.format("Unable to find videos urls from page \"%s\"", coubUrl);
             throw new RuntimeException(errMsg);
         }
-        return coubPageCoubJson.outerHtml();
+        return new ParsedCoubPage(coubPageCoubJson.outerHtml(), audioTag);
+    }
+
+    private String getFirstContent(@NotNull final Elements elements) {
+        if (elements.size() == 0) {
+            return "";
+        } else {
+            return elements.get(0).text();
+        }
     }
 
     private byte[] mergeSeparatedSources(@NotNull final SimpleHttpClient client,
@@ -331,6 +349,16 @@ public class CoubGrabberScenario
                 String errMsg = String.format("Unable to delete temporary file \"%s\": %s", path, err.getMessage());
                 log.error(errMsg, err);
             }
+        }
+    }
+
+    private static class ParsedCoubPage {
+        final String coubSourcesJson;
+        final String audioTag;
+
+        public ParsedCoubPage(String coubSourcesJson, String audioTag) {
+            this.coubSourcesJson = coubSourcesJson;
+            this.audioTag = audioTag;
         }
     }
 }
