@@ -54,7 +54,8 @@ public class UpgradeCommand
                 .desc("Delete jar file library for name")
                 .build();
 
-        disableUpdateLastCommandUsage();
+        super.disableUpdateLastCommandUsage();
+        super.disableVisibleInHelp();
         addCmdlineOption(mainJar, showLibraries, updateLibrary, deleteLibrary);
     }
 

@@ -113,6 +113,7 @@ public class ServiceCommand
                 executeQuery, getDDL, executeJPQL);
 
         super.disableUpdateLastCommandUsage();
+        super.disableVisibleInHelp();
     }
 
     /**

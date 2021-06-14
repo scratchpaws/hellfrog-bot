@@ -40,6 +40,7 @@ public abstract class ACLCommand {
     private boolean onlyServerCommand = false;
     private boolean updateLastUsage = true;
     private boolean expertCommand = false;
+    private boolean visibleInHelp = true;
     protected final Logger log = LogManager.getLogger(this.getClass().getSimpleName());
     public static final List<Long> CURRENT_SERVER_WITH_ACL_BUG = List.of(
             780560871100252171L,
@@ -83,6 +84,14 @@ public abstract class ACLCommand {
 
     protected final void setCommandAsExpert() {
         this.expertCommand = true;
+    }
+
+    protected final void disableVisibleInHelp() {
+        this.visibleInHelp = false;
+    }
+
+    public boolean isVisibleInHelp() {
+        return visibleInHelp;
     }
 
     /**
