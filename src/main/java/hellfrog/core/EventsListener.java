@@ -190,12 +190,14 @@ public class EventsListener
 
                 Scenario.all().stream()
                         .filter(ACLCommand::isNotExpertCommand)
+                        .filter(ACLCommand::isVisibleInHelp)
                         .forEachOrdered(s -> embedMessageText.append(s.getPrefix())
                                 .append(" - ")
                                 .append(s.getCommandDescription())
                                 .appendNewLine());
                 BotCommand.all().stream()
                         .filter(ACLCommand::isNotExpertCommand)
+                        .filter(ACLCommand::isVisibleInHelp)
                         .forEach(c -> embedMessageText.append(c.getPrefix())
                                 .append(" - ")
                                 .append(c.getCommandDescription())
@@ -221,12 +223,14 @@ public class EventsListener
 
                 Scenario.all().stream()
                         .filter(ACLCommand::isExpertCommand)
+                        .filter(ACLCommand::isVisibleInHelp)
                         .forEachOrdered(s -> embedMessageText.append(s.getPrefix())
                                 .append(" - ")
                                 .append(s.getCommandDescription())
                                 .appendNewLine());
                 BotCommand.all().stream()
                         .filter(ACLCommand::isExpertCommand)
+                        .filter(ACLCommand::isVisibleInHelp)
                         .forEach(c -> embedMessageText.append(c.getPrefix())
                                 .append(" - ")
                                 .append(c.getCommandDescription())

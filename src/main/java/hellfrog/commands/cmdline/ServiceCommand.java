@@ -123,6 +123,7 @@ public class ServiceCommand
                 executeQuery, getDDL, executeJPQL, createBackup);
         super.setAdminCommand();
         super.disableUpdateLastCommandUsage();
+        super.disableVisibleInHelp();
     }
 
     /**

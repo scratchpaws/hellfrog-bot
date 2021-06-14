@@ -50,6 +50,7 @@ public abstract class ACLCommand {
     private boolean updateLastUsage = true;
     private boolean expertCommand = false;
     private boolean adminCommand = false;
+    private boolean visibleInHelp = true;
 
     protected ACLCommand(@NotNull String prefix, @NotNull String description) {
         if (CommonUtils.isTrStringEmpty(prefix))
@@ -83,6 +84,14 @@ public abstract class ACLCommand {
 
     protected final void setAdminCommand() {
         this.adminCommand = true;
+    }
+
+    protected final void disableVisibleInHelp() {
+        this.visibleInHelp = false;
+    }
+
+    public boolean isVisibleInHelp() {
+        return visibleInHelp;
     }
 
     /**
