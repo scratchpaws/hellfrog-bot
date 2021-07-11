@@ -35,7 +35,7 @@ public class MessageUtils
         } else if (cmdLine.startsWith(prefixNoSep)) {
             return CommonUtils.cutLeftString(cmdLine, prefixNoSep);
         } else {
-            return "";
+            return cmdLine;
         }
     }
 

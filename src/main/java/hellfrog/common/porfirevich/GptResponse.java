@@ -1,4 +1,4 @@
-package hellfrog.commands.scenes.gptentity;
+package hellfrog.common.porfirevich;
 
 import hellfrog.common.CommonUtils;
 
@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class GptResponse
-    implements Serializable {
+        implements Serializable {
 
     private List<String> replies = Collections.emptyList();
     private String detail = "";

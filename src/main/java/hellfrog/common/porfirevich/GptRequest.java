@@ -1,11 +1,11 @@
-package hellfrog.commands.scenes.gptentity;
+package hellfrog.common.porfirevich;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
 
 public class GptRequest
-    implements Serializable {
+        implements Serializable {
 
     private String prompt;
     private int length = 30;

@@ -1,21 +1,6 @@
 package hellfrog.commands.scenes;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import hellfrog.commands.scenes.gptentity.GptRequest;
-import hellfrog.commands.scenes.gptentity.GptResponse;
-import hellfrog.common.BroadCast;
-import hellfrog.common.CommonUtils;
-import hellfrog.common.SimpleHttpClient;
-import hellfrog.settings.SettingsController;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.util.EntityUtils;
+import hellfrog.common.*;
 import org.javacord.api.entity.channel.PrivateChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.Message;
@@ -25,26 +10,24 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.UnmodifiableView;
 
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 public class GptScenario
         extends OneShotScenario {
 
     private static final String PREFIX = "gpt";
     private static final String DESCRIPTION = "Randomly appends the specified text";
-    private static final URI GPT_URI = URI.create("https://pelevin.gpt.dobro.ai/generate/");
-    private final Bucket bucket;
+    private final GptProvider porfirevichGpt = new PorfirevichProvider();
+    private final GptProvider yalmGpt = new YalmProvider();
+    private final GptProvider sberGpt = new SberGPT3Provider();
 
     public GptScenario() {
         super(PREFIX, DESCRIPTION);
-        Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(3L));
-        bucket = Bucket4j.builder().addLimit(bandwidth).build();
         super.enableStrictByChannels();
         super.skipStrictByChannelWithAclBUg();
     }
@@ -60,125 +43,68 @@ public class GptScenario
     }
 
     private void detachRun(@NotNull MessageCreateEvent event) {
-        CompletableFuture.runAsync(() ->
-                requestExternalText(event));
-    }
 
-    private void requestExternalText(@NotNull final MessageCreateEvent event) {
-
-        final String messageWoCommandPrefix = super.getReadableMessageContentWithoutPrefix(event);
+        final Optional<String> replyMessage = super.getReplyAllAvailableReadableContentWithoutPrefix(event);
+        final String messageWoCommandPrefix = replyMessage.isPresent() && CommonUtils.isTrStringNotEmpty(replyMessage.get())
+                ? replyMessage.get().replace("**", "") : super.getReadableMessageContentWithoutPrefix(event);
         if (CommonUtils.isTrStringEmpty(messageWoCommandPrefix)) {
             showErrorMessage("Text required", event);
             return;
         }
 
-        try {
-            bucket.asScheduler().consume(1);
-        } catch (InterruptedException breakSignal) {
+        tryToAppend(event, messageWoCommandPrefix, getShuffled(), 0);
+    }
+
+    private void tryToAppend(@NotNull final MessageCreateEvent event,
+                             @NotNull final String messageWoCommandPrefix,
+                             @NotNull final List<GptProvider> providerList,
+                             final int currentIndex) {
+        if (currentIndex >= providerList.size()) {
             return;
         }
-
-        BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
-        ObjectMapper objectMapper = new ObjectMapper();
-        GptRequest gptRequest = new GptRequest();
-        gptRequest.setPrompt(messageWoCommandPrefix);
-        String postData;
-        try {
-            postData = objectMapper.writeValueAsString(gptRequest);
-        } catch (Exception err) {
-            showErrorMessage("Internal bot error", event);
-            String errMsg = String.format("Unable serialize \"%s\" to JSON: %s",
-                    gptRequest.toString(), err.getMessage());
-            messagesLogger.addErrorMessage(errMsg).send();
-            log.error(errMsg, err);
-            return;
-        }
-        SimpleHttpClient client = SettingsController.getInstance()
-                .getHttpClientsPool()
-                .borrowClient();
-        try {
-            HttpPost post = generatePost(postData);
-            String responseText;
-            try (CloseableHttpResponse httpResponse = client.execute(post)) {
-                HttpEntity entity = httpResponse.getEntity();
-                if (entity == null) {
-                    responseText = "";
-                } else {
-                    responseText = EntityUtils.toString(entity);
-                    EntityUtils.consume(entity);
-                }
-                int statusCode = httpResponse.getStatusLine().getStatusCode();
-                if (statusCode != HttpStatus.SC_OK) {
-                    String message = String.format("Service HTTP error: %d", statusCode);
-                    messagesLogger.addErrorMessage(message);
-                    new MessageBuilder()
-                            .setEmbed(new EmbedBuilder()
-                                    .setAuthor(event.getApi().getYourself())
-                                    .setDescription("The cortex chip does not response")
-                                    .setFooter(String.format("HTTP code: %d", statusCode))
-                                    .setTimestampToNow())
-                            .send(event.getChannel());
-                    return;
-                }
-            } catch (Exception err) {
-                String errMsg = String.format("Unable send request to GPT-server: %s", err.getMessage());
-                log.error(errMsg, err);
-                messagesLogger.addErrorMessage(errMsg);
-                new MessageBuilder()
-                        .setEmbed(new EmbedBuilder()
-                                .setAuthor(event.getApi().getYourself())
-                                .setDescription("The cortex chip does not response")
-                                .setFooter(err.getMessage())
-                                .setTimestampToNow())
-                        .send(event.getChannel());
-                return;
-            }
-
-            GptResponse gptResponse;
-            try {
-                gptResponse = objectMapper.readValue(responseText, GptResponse.class);
-            } catch (Exception err) {
-                String errMsg = String.format("Unable decode json \"%s\": %s", responseText,
-                        err.getMessage());
-                messagesLogger.addErrorMessage(errMsg);
-                log.error(errMsg, err);
-                return;
-            }
-
-            if (CommonUtils.isTrStringNotEmpty(gptResponse.getDetail())) {
-                messagesLogger.addErrorMessage("Fail to send request to GPT: " +
-                        gptResponse.getDetail());
-                return;
-            }
-            if (gptResponse.getReplies() == null || gptResponse.getReplies().isEmpty()) {
-                return;
-            }
-            List<String> listOfMessagesText = CommonUtils.splitEqually(
-                    "**" + messageWoCommandPrefix + "**" + gptResponse.getReplies().get(0), 1999);
-            for (String msgText : listOfMessagesText) {
-                EmbedBuilder embedBuilder = new EmbedBuilder()
-                        .setDescription(msgText);
-                Optional<Message> msg = super.displayMessage(embedBuilder, event.getChannel());
-                if (msg.isEmpty()) {
-                    return;
-                }
-            }
-        } finally {
-            SettingsController.getInstance()
-                    .getHttpClientsPool()
-                    .returnClient(client);
-            messagesLogger.send();
-        }
+        GptProvider provider = providerList.get(currentIndex);
+        provider.appendText(messageWoCommandPrefix)
+                .thenAccept(gptResult -> {
+                    String longText = "**" + messageWoCommandPrefix + "**" + gptResult.getResultText();
+                    List<String> listOfMessagesText = CommonUtils.splitEqually(longText, 1999);
+                    for (String msgText : listOfMessagesText) {
+                        EmbedBuilder embedBuilder = new EmbedBuilder()
+                                .setDescription(msgText)
+                                .setFooter(gptResult.getFooterText());
+                        Optional<Message> msg = super.displayMessage(embedBuilder, event.getChannel());
+                        if (msg.isEmpty()) {
+                            return;
+                        }
+                    }
+                })
+                .exceptionally(err -> {
+                    if (currentIndex < providerList.size() - 1) {
+                        tryToAppend(event, messageWoCommandPrefix, providerList, currentIndex + 1);
+                    } else {
+                        String footerMessage = null;
+                        if (err instanceof GptException) {
+                            footerMessage = ((GptException) err).getFooterMessage();
+                        }
+                        new MessageBuilder()
+                                .setEmbed(new EmbedBuilder()
+                                        .setAuthor(event.getApi().getYourself())
+                                        .setDescription(err.getMessage())
+                                        .setFooter(footerMessage)
+                                        .setTimestampToNow())
+                                .send(event.getChannel());
+                    }
+                    return null;
+                });
     }
 
     @NotNull
-    private HttpPost generatePost(@NotNull String postData) {
-        HttpPost post = new HttpPost(GPT_URI);
-        post.addHeader("Origin", "https://porfirevich.ru");
-        //post.addHeader("Referer", "https://porfirevich.ru/");
-        post.addHeader("Host", "pelevin.gpt.dobro.ai");
-        post.addHeader("Content-Type", "text/plain;charset=UTF-8");
-        post.setEntity(new StringEntity(postData, StandardCharsets.UTF_8));
-        return post;
+    @UnmodifiableView
+    private List<GptProvider> getShuffled() {
+        List<GptProvider> providers = new ArrayList<>();
+        providers.add(porfirevichGpt); // preferable, accepts any requests, but not always available
+        providers.add(yalmGpt); // on the capacity of the corporation, but does not take sensitive questions
+        Collections.shuffle(providers);
+        providers.add(sberGpt); // very slow, generates a lot of text, most of which is not related to the template
+        return Collections.unmodifiableList(providers);
     }
 }
