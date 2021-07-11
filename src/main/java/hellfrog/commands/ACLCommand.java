@@ -1,6 +1,7 @@
 package hellfrog.commands;
 
 import hellfrog.common.BroadCast;
+import hellfrog.common.CommonConstants;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.MessageUtils;
 import hellfrog.core.AccessControlCheck;
@@ -11,8 +12,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
+import org.javacord.api.entity.message.MessageType;
 import org.javacord.api.entity.message.Messageable;
+import org.javacord.api.entity.message.embed.Embed;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -27,6 +31,7 @@ import org.jetbrains.annotations.Nullable;
 import java.awt.*;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
@@ -297,6 +302,58 @@ public abstract class ACLCommand {
         String messageWoBotPrefix = MessageUtils.getEventMessageWithoutBotPrefix(eventMessage, event.getServer());
         messageWoBotPrefix = ServerSideResolver.getReadableContent(messageWoBotPrefix, event.getServer());
         return CommonUtils.cutLeftString(messageWoBotPrefix, prefix).trim();
+    }
+
+    @NotNull
+    protected String getReadableMessageContentWithoutPrefix(@NotNull final Message message) {
+        String messageWoBotPrefix = MessageUtils.getEventMessageWithoutBotPrefix(message.getContent(), message.getServer());
+        messageWoBotPrefix = ServerSideResolver.getReadableContent(messageWoBotPrefix, message.getServer());
+        return CommonUtils.cutLeftString(messageWoBotPrefix, prefix).trim();
+    }
+
+    @NotNull
+    protected String getAllAvailableReadableContentWithoutPrefix(@NotNull final Message message) {
+        StringBuilder result = new StringBuilder();
+        String messageContent = getReadableMessageContentWithoutPrefix(message);
+        if (CommonUtils.isTrStringNotEmpty(messageContent)) {
+            result.append(messageContent).append('\n');
+        }
+        String embedContents = message.getEmbeds()
+                .stream()
+                .filter(embed -> embed.getProvider().isEmpty())
+                .map(embed -> embed.getDescription().orElse(""))
+                .reduce(CommonUtils::reduceNewLine)
+                .orElse("");
+        result.append(embedContents);
+        return ServerSideResolver.getReadableContent(result.toString(), message.getServer());
+    }
+
+    @NotNull
+    protected Optional<String> getReplyAllAvailableReadableContentWithoutPrefix(@NotNull final MessageCreateEvent event) {
+
+        final boolean isReply = event.getMessage().getType().equals(MessageType.REPLY);
+        if (!isReply) {
+            return Optional.empty();
+        }
+
+        Message referencedMessage = event.getMessage().getReferencedMessage().orElse(null);
+        if (referencedMessage != null) {
+            return Optional.of(getAllAvailableReadableContentWithoutPrefix(referencedMessage));
+        }
+
+        CompletableFuture<Message> featuredReference = event.getMessage().requestReferencedMessage().orElse(null);
+        if (featuredReference == null) {
+            return Optional.empty();
+        }
+        try {
+            referencedMessage = featuredReference.get(CommonConstants.OP_WAITING_TIMEOUT, CommonConstants.OP_TIME_UNIT);
+            if (referencedMessage == null) {
+                return Optional.empty();
+            }
+            return Optional.of(getAllAvailableReadableContentWithoutPrefix(referencedMessage));
+        } catch (Exception ignore) {
+            return Optional.empty();
+        }
     }
 
     @NotNull
