@@ -46,13 +46,15 @@ public class GptScenario
 
         final Optional<String> replyMessage = super.getReplyAllAvailableReadableContentWithoutPrefix(event);
         final String messageWoCommandPrefix = replyMessage.isPresent() && CommonUtils.isTrStringNotEmpty(replyMessage.get())
-                ? replyMessage.get().replace("**", "") : super.getReadableMessageContentWithoutPrefix(event);
-        if (CommonUtils.isTrStringEmpty(messageWoCommandPrefix)) {
+                ? replyMessage.get() : super.getReadableMessageContentWithoutPrefix(event);
+        final String clearedMessage = messageWoCommandPrefix
+                .replace("**", "")
+                .replace("@", "");
+        if (CommonUtils.isTrStringEmpty(clearedMessage)) {
             showErrorMessage("Text required", event);
             return;
         }
-
-        tryToAppend(event, messageWoCommandPrefix, getShuffled(), 0);
+        tryToAppend(event, clearedMessage, getShuffled(), 0);
     }
 
     private void tryToAppend(@NotNull final MessageCreateEvent event,

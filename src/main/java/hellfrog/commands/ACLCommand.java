@@ -16,7 +16,6 @@ import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageType;
 import org.javacord.api.entity.message.Messageable;
-import org.javacord.api.entity.message.embed.Embed;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -315,16 +314,21 @@ public abstract class ACLCommand {
     protected String getAllAvailableReadableContentWithoutPrefix(@NotNull final Message message) {
         StringBuilder result = new StringBuilder();
         String messageContent = getReadableMessageContentWithoutPrefix(message);
-        if (CommonUtils.isTrStringNotEmpty(messageContent)) {
-            result.append(messageContent).append('\n');
-        }
         String embedContents = message.getEmbeds()
                 .stream()
                 .filter(embed -> embed.getProvider().isEmpty())
                 .map(embed -> embed.getDescription().orElse(""))
                 .reduce(CommonUtils::reduceNewLine)
                 .orElse("");
-        result.append(embedContents);
+        if (CommonUtils.isTrStringNotEmpty(messageContent)) {
+            result.append(messageContent);
+        }
+        if (CommonUtils.isTrStringNotEmpty(messageContent) && CommonUtils.isTrStringNotEmpty(embedContents)) {
+            result.append('\n');
+        }
+        if (CommonUtils.isTrStringNotEmpty(embedContents)) {
+            result.append(embedContents);
+        }
         return ServerSideResolver.getReadableContent(result.toString(), message.getServer());
     }
 
