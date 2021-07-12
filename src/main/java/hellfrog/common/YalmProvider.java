@@ -115,6 +115,8 @@ public class YalmProvider
                 if (gptResponse.getBadQuery() > 0) {
                     GptException gptException = new GptException("The cortex chip refuses to receive requests for this type");
                     future.completeExceptionally(gptException);
+                    String serviceMessage = String.format("%s, yandex gpt refuses request", this.getClass().getSimpleName());
+                    messagesLogger.addWarnMessage(serviceMessage);
                     return;
                 }
 
