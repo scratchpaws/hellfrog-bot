@@ -23,6 +23,7 @@ public interface CommonPreferencesDAO {
     long FUN_LICK_CHANNEL_DEFAULT = 830466360408539197L;
     long FUN_BITE_CHANNEL_DEFAULT = 830466389964881960L;
     long FUN_BONK_CHANNEL_DEFAULT = 843112586446503936L;
+    long FUN_SPANK_CHANNEL_DEFAULT = 878729076616093746L;
 
     String PREFIX_DEFAULT = ">>";
     String API_KEY_DEFAULT = "";
@@ -50,6 +51,7 @@ public interface CommonPreferencesDAO {
     String FUN_LICK_CHANNEL_KEY = "bot.fun.lick.channel";
     String FUN_BITE_CHANNEL_KEY = "bot.fun.bite.channel";
     String FUN_BONK_CHANNEL_KEY = "bot.fun.bonk.channel";
+    String FUN_SPANK_CHANNEL_KEY = "bot.fun.spank.channel";
 
     String getApiKey();
 
@@ -122,4 +124,8 @@ public interface CommonPreferencesDAO {
     long getFunBonkChannel();
 
     long setFunBonkChannel(long newFunBonkChannelId);
+
+    long getFunSpankChannel();
+
+    long setFunSpankChannel(long newFunSpankChannelId);
 }
