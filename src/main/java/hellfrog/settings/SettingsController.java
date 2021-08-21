@@ -56,6 +56,7 @@ public class SettingsController {
     private final AccessControlService accessControlService;
     private final AutoPromoteService autoPromoteService;
     private final StatisticService statisticService;
+    private final OutageDetector outageDetector;
 
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
@@ -97,6 +98,8 @@ public class SettingsController {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
                 SettingsController.getInstance().mainDBController.close()));
+
+        outageDetector = new OutageDetector();
     }
 
     @Contract(pure = true)
@@ -107,6 +110,35 @@ public class SettingsController {
     public void init() {
         // nothing to do
         log.info("Settings controller init OK");
+    }
+
+    public void shutdown() {
+
+        autoBackupService.stop();
+        httpClientsPool.stop();
+        voteController.stop();
+        congratulationsController.stop();
+        invitesController.stop();
+        autoSaveSettingsTask.stop();
+        sessionsCheckTask.stop();
+        serviceLogsNotificator.stop();
+        autoPromoteService.stop();
+        nameCacheService.stop();
+
+        getServerListWithStatistic().forEach(this::saveServerSideStatistic);
+        getServerListWithConfig().forEach(this::saveServerSideParameters);
+        saveCommonPreferences();
+
+        if (discordApi != null) {
+            discordApi.disconnect();
+        }
+        
+        try {
+            stopMainDatabase();
+        } catch (Exception err) {
+            log.fatal(err);
+        }
+        System.exit(0);
     }
 
     @Deprecated
