@@ -258,37 +258,11 @@ public class ServiceCommand
     }
 
     private void doStopAction(@NotNull MessageCreateEvent event) {
-
-        SettingsController settingsController = SettingsController.getInstance();
-
-        settingsController.getHttpClientsPool().stop();
-        settingsController.getVoteController().stop();
-        settingsController.getCongratulationsController().stop();
-        settingsController.getInvitesController().stop();
-        settingsController.getAutoSaveSettingsTask().stop();
-        settingsController.getSessionsCheckTask().stop();
-        settingsController.getServiceLogsNotificator().stop();
-        settingsController.saveCommonPreferences();
-        settingsController.getServerListWithConfig()
-                .forEach(settingsController::saveServerSideParameters);
-        settingsController.getServerListWithStatistic()
-                .forEach(settingsController::saveServerSideStatistic);
-
         BroadCast.getLogger()
                 .addUnsafeUsageCE("call bot stopping", event)
                 .addInfoMessage("Bot stopping NOW!")
                 .send();
-
-        if (settingsController.getDiscordApi() != null) {
-            settingsController.getDiscordApi().disconnect();
-        }
-
-        try {
-            settingsController.stopMainDatabase();
-        } catch (Exception err) {
-            log.fatal(err);
-        }
-        System.exit(0);
+        SettingsController.getInstance().shutdown();
     }
 
     private void doExecuteQuery(@NotNull ArrayList<String> anotherLines,

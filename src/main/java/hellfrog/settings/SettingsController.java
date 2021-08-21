@@ -2,6 +2,7 @@ package hellfrog.settings;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
 import hellfrog.common.HttpClientsPool;
 import hellfrog.core.*;
@@ -51,6 +52,7 @@ public class SettingsController {
     private final SessionsCheckTask sessionsCheckTask;
     private final CongratulationsController congratulationsController;
     private final ServiceLogsNotificator serviceLogsNotificator;
+    private final OutageDetector outageDetector;
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
     private volatile Instant lastCommandUsage = null;
@@ -89,6 +91,7 @@ public class SettingsController {
         sessionsCheckTask = new SessionsCheckTask();
         congratulationsController = new CongratulationsController();
         serviceLogsNotificator = new ServiceLogsNotificator();
+        outageDetector = new OutageDetector();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
                 SettingsController.getInstance().mainDBController.close()));
@@ -232,6 +235,28 @@ public class SettingsController {
         System.err.println("Please fill apiKey field and restart.");
         System.err.println("Also, you can check and fix another parameters.");
         throw new RuntimeException("Bot stopped");
+    }
+
+    public void shutdown() {
+        httpClientsPool.stop();
+        voteController.stop();
+        congratulationsController.stop();
+        invitesController.stop();
+        autoSaveSettingsTask.stop();
+        sessionsCheckTask.stop();
+        serviceLogsNotificator.stop();
+        if (discordApi != null) {
+            discordApi.disconnect();
+        }
+        getServerListWithStatistic().forEach(this::saveServerSideStatistic);
+        getServerListWithConfig().forEach(this::saveServerSideParameters);
+        saveCommonPreferences();
+        try {
+            stopMainDatabase();
+        } catch (Exception err) {
+            log.fatal(err);
+        }
+        System.exit(0);
     }
 
     public String getGlobalCommonPrefix() {
