@@ -132,7 +132,7 @@ public class SettingsController {
         if (discordApi != null) {
             discordApi.disconnect();
         }
-        
+
         try {
             stopMainDatabase();
         } catch (Exception err) {
