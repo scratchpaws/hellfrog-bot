@@ -305,4 +305,14 @@ class CommonPreferencesDAOImpl
     public long setFunBonkChannel(long newFunBonkChannelId) {
         return setLong(FUN_BONK_CHANNEL_KEY, newFunBonkChannelId, FUN_BONK_CHANNEL_DEFAULT);
     }
+
+    @Override
+    public long getFunSpankChannel() {
+        return getLong(FUN_SPANK_CHANNEL_KEY, FUN_SPANK_CHANNEL_DEFAULT);
+    }
+
+    @Override
+    public long setFunSpankChannel(long newFunSpankChannelId) {
+        return setLong(FUN_SPANK_CHANNEL_KEY, newFunSpankChannelId, FUN_SPANK_CHANNEL_DEFAULT);
+    }
 }

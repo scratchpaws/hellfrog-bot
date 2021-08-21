@@ -45,6 +45,7 @@ public abstract class FunScenario
     protected static final List<String> LICK_URLS = new CopyOnWriteArrayList<>();
     protected static final List<String> BITE_URLS = new CopyOnWriteArrayList<>();
     protected static final List<String> BONK_URLS = new CopyOnWriteArrayList<>();
+    protected static final List<String> SPANK_URLS = new CopyOnWriteArrayList<>();
 
     private String lonelyResultMessage = "";
     private String withSomeoneResultMessage = "";
@@ -73,6 +74,7 @@ public abstract class FunScenario
         final long lickChannelId = commonPreferencesDAO.getFunLickChannel();
         final long biteChannelId = commonPreferencesDAO.getFunBiteChannel();
         final long bonkChannelId = commonPreferencesDAO.getFunBonkChannel();
+        final long spankChannelId = commonPreferencesDAO.getFunSpankChannel();
 
         messagesLogger.add(rebuildUrlsList(BLUSH_URLS, blushChannelId, "pictures for \"blush\" command", false));
         messagesLogger.add(rebuildUrlsList(HUG_URLS, hugChannelId, "pictures for \"hug\" command", false));
@@ -85,6 +87,7 @@ public abstract class FunScenario
         messagesLogger.add(rebuildUrlsList(LICK_URLS, lickChannelId, "pictures for \"lick\" command", false));
         messagesLogger.add(rebuildUrlsList(BITE_URLS, biteChannelId, "pictures for \"bite\" command", false));
         messagesLogger.add(rebuildUrlsList(BONK_URLS, bonkChannelId, "pictures for \"bonk\" command", false));
+        messagesLogger.add(rebuildUrlsList(SPANK_URLS, spankChannelId, "pictures for \"spank\" command", false));
 
         return messagesLogger;
     }
