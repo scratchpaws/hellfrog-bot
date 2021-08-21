@@ -15,7 +15,7 @@
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>20.1.0</version>
+            <version>22.0.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.javacord/javacord-core -->
@@ -117,7 +117,7 @@
         <dependency>
             <groupId>org.eclipse.collections</groupId>
             <artifactId>eclipse-collections</artifactId>
-            <version>11.0.0.M2</version>
+            <version>11.0.0.M3</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.eclipse.collections/eclipse-collections-api -->
@@ -138,7 +138,7 @@
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.111</version>
+            <version>4.8.115</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.nibor.autolink/autolink -->
