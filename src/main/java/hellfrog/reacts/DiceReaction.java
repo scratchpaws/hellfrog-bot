@@ -41,6 +41,7 @@ public class DiceReaction
     private static final String SHORT_ROLL_PREFIX = "([lLдД]{2})";
     private static final Pattern DICE_PATTERN = Pattern.compile(
             "([rр]\\s?)?" +
+                    "((-\\s?)?\\d+\\s?(\\+{1,2}|-{1,2}))?" +
                     "([dд]?\\s?\\d+\\s?[dд]\\s?\\d+|[lд]{2})" +
                     "([mм]|[aа])?" +
                     "(\\s?([=<>]{1,2}|(\\+{1,2}|-{1,2}|[xх]{1,2}))\\s?\\d+)*",
@@ -48,6 +49,7 @@ public class DiceReaction
     private static final Pattern SEARCH_PATTERN = Pattern.compile(
             "^\\s*" +
                     "([rр]\\s?)?" +
+                    "((-\\s?)?\\d+\\s?(\\+{1,2}|-{1,2}))?" +
                     "([dд]?\\s?\\d+\\s?[dд]\\s?\\d+|[lд]{2})" +
                     "([mм]|[aа])?" +
                     "(\\s?([=<>]{1,2}|(\\+{1,2}|-{1,2}|[xх]{1,2}))\\s?\\d+)*",
@@ -72,11 +74,17 @@ public class DiceReaction
     private static final Pattern FILTER_PATTERN = Pattern.compile(
             "[=<>]{1,2}\\s?\\d{1,5}",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern INITIAL_VALUE_PATTERN = Pattern.compile(
+            "^([rр]\\s?)?" +
+                    "(-\\s?)?\\d+\\s?(\\+{1,2}|-{1,2})",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     private static final List<String> LOW_ROFL_LIST = new CopyOnWriteArrayList<>();
     private static final List<String> HIGH_ROFL_LIST = new CopyOnWriteArrayList<>();
     private static final long MAX_DICES = 100L;
     private static final long MAX_FACES = 1000L;
+    private static final long MIN_INITIAL_VALUE = -10_000L;
+    private static final long MAX_INITIAL_VALUE = 10_000L;
 
     private static final String PREFIX = "dice";
     private static final String DESCRIPTION = "roll dices (use NdN or ll for roll, " +
@@ -142,6 +150,32 @@ public class DiceReaction
                     if (numOfDice > 0 && numOfDice <= MAX_DICES
                             && numOfFaces > 0 && numOfFaces <= MAX_FACES) {
 
+                        Matcher rawInitialMatcher = INITIAL_VALUE_PATTERN.matcher(diceValue);
+                        long initialValue = 0L;
+                        InitialModifierType initialModifierType = InitialModifierType.NONE;
+                        if (rawInitialMatcher.find()) {
+                            String rawInitialExpression = rawInitialMatcher.group().replaceAll("[^\\d-+]", "");
+                            String rawInitialValue = rawInitialExpression.replaceAll("[-+]+$", "");
+                            String rawInitialModifier = rawInitialExpression.replaceAll("^-?\\d+", "");
+                            long override = 0L;
+                            try {
+                                override = Long.parseLong(rawInitialValue);
+                            } catch (NumberFormatException ignore) {}
+                            if (override != 0L && override >= MIN_INITIAL_VALUE && override <= MAX_INITIAL_VALUE) {
+                                initialValue = override;
+                                if (rawInitialModifier.startsWith("++")) {
+                                    initialModifierType = InitialModifierType.ADD_VAL;
+                                } else if (rawInitialModifier.startsWith("--")) {
+                                    initialModifierType = InitialModifierType.SUB_VAL;
+                                } else if (rawInitialModifier.startsWith("+")) {
+                                    initialModifierType = InitialModifierType.ADD_SUM;
+                                } else if (rawInitialModifier.startsWith("-")) {
+                                    initialModifierType = InitialModifierType.SUB_SUM;
+                                }
+                            }
+                        }
+                        diceValue = diceValue.replaceAll(INITIAL_VALUE_PATTERN.pattern(), "");
+
                         List<ResultFilter> resultFilters = new ArrayList<>();
                         Matcher filterModifiers = FILTER_PATTERN.matcher(diceValue);
                         while (filterModifiers.find()) {
@@ -174,8 +208,10 @@ public class DiceReaction
                         final List<SumModifier> diceModifiers = parseModifiers(diceValue, false);
                         final List<SumModifier> summaryModifiers = parseModifiers(diceValue, true);
 
-                        final boolean modifyDices = !diceModifiers.isEmpty();
-                        final boolean modifyTotalSum = !summaryModifiers.isEmpty();
+                        final boolean modifyInitialDices = initialValue != 0L && !initialModifierType.summary;
+                        final boolean modifyInitialSum = initialValue != 0L && initialModifierType.summary;
+                        final boolean modifyDices = !diceModifiers.isEmpty() || modifyInitialDices;
+                        final boolean modifyTotalSum = !summaryModifiers.isEmpty() || modifyInitialSum;
 
                         final String diceModifiersString = generatePrintable(diceModifiers);
                         final String summaryModifiersString = generatePrintable(summaryModifiers);
@@ -191,6 +227,12 @@ public class DiceReaction
                             if (modifyDices) {
                                 for (SumModifier diceModifier : diceModifiers) {
                                     tr = diceModifier.modify(tr);
+                                }
+                            }
+                            if (modifyInitialDices) {
+                                switch (initialModifierType) {
+                                    case ADD_VAL -> tr = initialValue + tr;
+                                    case SUB_VAL -> tr = initialValue - tr;
                                 }
                             }
                             boolean strike = false;
@@ -214,10 +256,23 @@ public class DiceReaction
                                 dicesOutput.append(String.valueOf(tr), MessageDecoration.STRIKEOUT);
                             }
                             if (modifyDices) {
-                                dicesOutput.append(" (")
-                                        .append(origin)
+                                dicesOutput.append(" (");
+                                if (modifyInitialDices) {
+                                    dicesOutput.append(initialValue);
+                                    switch (initialModifierType) {
+                                        case ADD_VAL -> dicesOutput.append("+");
+                                        case SUB_VAL -> dicesOutput.append("-");
+                                    }
+                                    if (CommonUtils.isTrStringNotEmpty(diceModifiersString)) {
+                                        dicesOutput.append("(");
+                                    }
+                                }
+                                dicesOutput.append(origin)
                                         .append(diceModifiersString)
                                         .append(")");
+                                if (modifyInitialDices && CommonUtils.isTrStringNotEmpty(diceModifiersString)) {
+                                    dicesOutput.append(")");
+                                }
                             }
                             dicesOutput.append("]");
                             if (d < numOfDice) {
@@ -228,6 +283,12 @@ public class DiceReaction
                         final long origTotalSum = totalSumResult;
                         for (SumModifier summaryModifier : summaryModifiers) {
                             totalSumResult = summaryModifier.modify(totalSumResult);
+                        }
+                        if (initialValue != 0L && initialModifierType.summary) {
+                            switch (initialModifierType) {
+                                case ADD_SUM -> totalSumResult = initialValue + totalSumResult;
+                                case SUB_SUM -> totalSumResult = initialValue - totalSumResult;
+                            }
                         }
 
                         final Median medianCalculator = new Median();
@@ -261,10 +322,23 @@ public class DiceReaction
                         if (!showAverage && !showMedian) {
                             msg.append(String.valueOf(totalSumResult), MessageDecoration.BOLD);
                             if (modifyTotalSum) {
-                                msg.append(" (")
-                                        .append(origTotalSum)
+                                msg.append(" (");
+                                if (modifyInitialSum) {
+                                    msg.append(initialValue);
+                                    switch (initialModifierType) {
+                                        case ADD_SUM -> msg.append("+");
+                                        case SUB_SUM -> msg.append("-");
+                                    }
+                                    if (CommonUtils.isTrStringNotEmpty(summaryModifiersString)) {
+                                        msg.append("(");
+                                    }
+                                }
+                                msg.append(origTotalSum)
                                         .append(summaryModifiersString)
                                         .append(")");
+                                if (CommonUtils.isTrStringNotEmpty(summaryModifiersString)) {
+                                    msg.append(")");
+                                }
                             }
                         } else if (showAverage) {
                             msg.append(String.valueOf(average), MessageDecoration.BOLD)
