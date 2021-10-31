@@ -45,6 +45,7 @@ public class SettingsController {
     private final ReentrantLock commonPrefSaveLock = new ReentrantLock();
     private final ReentrantLock serverStatCreateLock = new ReentrantLock();
     private final ReentrantLock serverStatSaveLock = new ReentrantLock();
+    private final MessagesForwarder messagesForwarder = new MessagesForwarder();
     private final VoteController voteController;
     private final InvitesController invitesController;
     private final HttpClientsPool httpClientsPool;
@@ -482,5 +483,9 @@ public class SettingsController {
 
     public ServiceLogsNotificator getServiceLogsNotificator() {
         return serviceLogsNotificator;
+    }
+
+    public MessagesForwarder getMessagesForwarder() {
+        return messagesForwarder;
     }
 }

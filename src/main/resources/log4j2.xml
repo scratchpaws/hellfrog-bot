@@ -117,6 +117,9 @@
         <Logger name="org.languagetool" level="info" additivity="false">
             <AppenderRef ref="plainLogger"/>
         </Logger>
+        <Logger name="Message forwarder" level="info" additivity="false">
+            <AppenderRef ref="plainLogger"/>
+        </Logger>
         <Root level="info">
             <AppenderRef ref="plainLogger"/>
         </Root>

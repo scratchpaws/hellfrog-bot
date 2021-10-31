@@ -79,6 +79,9 @@ public class EventsListener
         boolean isPlainMessage = true;
 
         messageStats.onMessageCreate(event);
+        SettingsController.getInstance()
+                .getMessagesForwarder()
+                .onMessageCreate(event);
 
         String strMessage = event.getMessageContent();
         Optional<Server> mayBeServer = event.getServer();
@@ -386,6 +389,7 @@ public class EventsListener
                     .addInfoMessage(readyMsg);
             settingsController.getInvitesController().updateInvitesList();
             messagesLogger.send();
+            SettingsController.getInstance().getMessagesForwarder().readSettingsFromMessage();
         }, () -> log.fatal("Unable to start - api is null!"));
     }
 
