@@ -8,6 +8,7 @@ import hellfrog.core.SessionState;
 import hellfrog.core.SessionsCheckTask;
 import hellfrog.settings.ServerStatistic;
 import hellfrog.settings.SettingsController;
+import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
@@ -37,6 +38,7 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.*;
 import java.util.List;
@@ -537,5 +539,78 @@ public class Bd
         } else {
             return "File \"" + filePath + "\" does not exists of not a file";
         }
+    }
+
+    @MethodInfo("Add one-way messages forwards from one (source) channel to another (target).")
+    @NotNull
+    public static String addForward(long fromChannelId, long toChannelId) {
+        SettingsController.getInstance().getMessagesForwarder().addForward(fromChannelId, toChannelId);
+        return "OK";
+    }
+
+    @MethodInfo("Remove one-way messages forwards from channel if exists.")
+    @NotNull
+    public static String removeForward(long fromChannelId) {
+        SettingsController.getInstance().getMessagesForwarder().removeForward(fromChannelId);
+        return "OK";
+    }
+
+    @MethodInfo("Return list of all one-way messages forwards if exists.")
+    @NotNull
+    public static String getForwards() {
+        return SettingsController.getInstance().getMessagesForwarder().getForwards();
+    }
+
+    @MethodInfo("Grab messages from source and send to target channel, with start and end dates.")
+    @NotNull
+    public static String forward(long fromChannelId, long toChannelId, String fromDate, String toDate) {
+        SimpleDateFormat dateOnly = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat withTime = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        SimpleDateFormat withSecond = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        if (CommonUtils.isTrStringEmpty(fromDate)) {
+            return "From date required";
+        }
+        DiscordApi api = SettingsController.getInstance().getDiscordApi();
+        TextChannel fromChannel = api.getTextChannelById(fromChannelId).orElse(null);
+        if (fromChannel == null) {
+            return "Source channel is not exists or unavailable";
+        }
+        TextChannel targetChannel = api.getTextChannelById(toChannelId).orElse(null);
+        if (targetChannel == null) {
+            return "Destination channel is not exists or unavailable";
+        }
+        Instant startDate;
+        Instant endDate = Instant.now();
+        try {
+            startDate = withSecond.parse(fromDate).toInstant();
+        } catch (java.text.ParseException wsErr) {
+            try {
+                startDate = withTime.parse(fromDate).toInstant();
+            } catch (java.text.ParseException wtErr) {
+                try {
+                    startDate = dateOnly.parse(fromDate).toInstant();
+                } catch (java.text.ParseException err) {
+                    return "Unable to parse from date, must be YYYY-MM-DD HH:MM:SS";
+                }
+            }
+        }
+        if (CommonUtils.isTrStringNotEmpty(toDate)) {
+            try {
+                endDate = withSecond.parse(toDate).toInstant();
+            } catch (java.text.ParseException wsErr) {
+                try {
+                    endDate = withTime.parse(toDate).toInstant();
+                } catch (java.text.ParseException wtErr) {
+                    try {
+                        endDate = withSecond.parse(toDate).toInstant();
+                    } catch (java.text.ParseException err) {
+                        return "Unable to parse to date, must be YYYY-MM-DD HH:MM:SS";
+                    }
+                }
+            }
+        }
+        SettingsController.getInstance().getMessagesForwarder()
+                .forwardHistory(fromChannel, targetChannel, startDate, endDate);
+        return "Started";
     }
 }

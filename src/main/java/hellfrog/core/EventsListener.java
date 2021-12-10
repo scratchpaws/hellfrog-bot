@@ -83,6 +83,9 @@ public class EventsListener
         settingsController.getStatisticService().onMessageCreate(event);
         settingsController.getNameCacheService().update(event);
 
+        settingsController.getMessagesForwarder()
+                .onMessageCreate(event);
+
         String strMessage = event.getMessageContent();
         Optional<Server> mayBeServer = event.getServer();
         Optional<User> mayBeUser = event.getMessageAuthor().asUser();
@@ -390,6 +393,7 @@ public class EventsListener
                     .addInfoMessage(readyMsg);
             settingsController.getInvitesController().updateInvitesList();
             messagesLogger.send();
+            SettingsController.getInstance().getMessagesForwarder().readSettingsFromMessage();
         }, () -> log.fatal("Unable to start - api is null!"));
     }
 

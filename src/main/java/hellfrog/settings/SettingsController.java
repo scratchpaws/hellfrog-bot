@@ -58,6 +58,8 @@ public class SettingsController {
     private final StatisticService statisticService;
     private final OutageDetector outageDetector;
 
+    private final MessagesForwarder messagesForwarder = new MessagesForwarder();
+
     private CommonPreferences commonPreferences = new CommonPreferences();
     private DiscordApi discordApi = null;
     private volatile Instant lastCommandUsage = null;
@@ -537,5 +539,9 @@ public class SettingsController {
 
     public StatisticService getStatisticService() {
         return statisticService;
+    }
+
+    public MessagesForwarder getMessagesForwarder() {
+        return messagesForwarder;
     }
 }

@@ -5,18 +5,14 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import hellfrog.common.CommonConstants;
 import hellfrog.common.InMemoryAttach;
 import hellfrog.common.MessageUtils;
-import hellfrog.common.UserCachedData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.embed.Embed;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.listener.message.MessageCreateListener;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +28,7 @@ public class MessagesForwarder
     private static final Logger log = LogManager.getLogger("Message forwarder");
 
     private final Map<Long, Long> remapMap = new ConcurrentHashMap<>();
-    private static final String TEST_SETTINGS_PRESET = "https://discord.com/channels/626495007297372182/904100848748068885/904101369592565810";
+    private static final String TEST_SETTINGS_PRESET = "https://discord.com/channels/612645599132778517/904681292635971664/904681605535252531";
     private static final long OP_LARGE_TIMEOUT = 600_000L;
 
     public MessagesForwarder() {
@@ -200,31 +196,7 @@ public class MessagesForwarder
         List<InMemoryAttach> inMemoryAttaches = MessageUtils.extractAttaches(sourceMessage.getAttachments());
         List<String> extractedUrls = MessageUtils.extractAllUrls(sourceMessage.getContent());
 
-        EmbedBuilder embedBuilder = new EmbedBuilder();
-        embedBuilder.setTimestamp(sourceMessage.getLastEditTimestamp()
-                .orElse(sourceMessage.getCreationTimestamp()));
-        embedBuilder.setDescription(sourceMessage.getContent());
-        sourceMessage.getUserAuthor().ifPresent(user -> {
-            UserCachedData userCachedData = new UserCachedData(user, sourceMessage.getServer().orElse(null));
-            String serverChannelInfo = "";
-            if (sourceMessage.getServerTextChannel().isPresent()) {
-                ServerTextChannel sourceChannel = sourceMessage.getServerTextChannel().get();
-                serverChannelInfo = " from " + sourceChannel.getServer().getName() + "#" + sourceChannel.getName();
-            }
-            String authorString = userCachedData.getDisplayUserName() + " (" + userCachedData.getDiscriminatorName() + ")"
-                    + serverChannelInfo;
-            embedBuilder.setAuthor(authorString,
-                    null, userCachedData.getAvatarBytes(),
-                    userCachedData.getAvatarExtension());
-        });
-        String footer = determinateFooter(inMemoryAttaches, extractedUrls, sourceMessage.getEmbeds());
-        embedBuilder.setFooter(footer);
-
         try {
-            new MessageBuilder()
-                    .setEmbed(embedBuilder)
-                    .send(targetChannel).get(OP_LARGE_TIMEOUT, OP_TIME_UNIT);
-
             List<Embed> quotedEmbeds = sourceMessage.getEmbeds().stream()
                     .filter(embed -> embed.getProvider().isEmpty())
                     .collect(Collectors.toList());
@@ -255,34 +227,6 @@ public class MessagesForwarder
                 } catch (Exception ignore) {
                 }
             }
-        }
-    }
-
-    @Nullable
-    @Contract("null, _, _ -> fail; !null, null, _ -> fail; !null, !null, null -> fail")
-    private String determinateFooter(List<InMemoryAttach> attaches, List<String> links, List<Embed> embeds) {
-
-        if (attaches == null || links == null || embeds == null)
-            throw new IllegalArgumentException("Attaches or urls links cannot be null");
-
-        List<String> that = new ArrayList<>(3);
-
-        if (!attaches.isEmpty()) {
-            that.add("attaches");
-        }
-        if (!links.isEmpty()) {
-            that.add("links");
-        }
-        if (!embeds.isEmpty()) {
-            that.add("embeds");
-        }
-
-        if (!attaches.isEmpty() || !links.isEmpty() || !embeds.isEmpty()) {
-            return "Message contains "
-                    + that.stream().reduce((s1, s2) -> s1 + ", " + s2).orElse("")
-                    + ". See below";
-        } else {
-            return null;
         }
     }
 
