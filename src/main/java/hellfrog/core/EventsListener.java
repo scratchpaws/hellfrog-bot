@@ -166,7 +166,7 @@ public class EventsListener
         }
 
         String[] rawCmdline = translateCommandline(withoutCommonPrefix);
-        cmdlog.info(Arrays.toString(rawCmdline));
+        cmdlog.info("{}", Arrays.toString(rawCmdline));
 
         if (rawCmdline.length >= 1) {
             String commandPrefix = rawCmdline[0].toLowerCase();
