@@ -5,7 +5,10 @@ import hellfrog.commands.cmdline.BotCommand;
 import hellfrog.commands.scenes.FunScenario;
 import hellfrog.commands.scenes.Scenario;
 import hellfrog.common.*;
-import hellfrog.reacts.*;
+import hellfrog.reacts.CommunityControlReaction;
+import hellfrog.reacts.DiceReaction;
+import hellfrog.reacts.MsgCreateReaction;
+import hellfrog.reacts.VoteReactFilter;
 import hellfrog.settings.ServerPreferences;
 import hellfrog.settings.SettingsController;
 import org.apache.logging.log4j.LogManager;
@@ -51,9 +54,12 @@ import org.javacord.api.listener.server.role.RoleChangePermissionsListener;
 import org.javacord.api.listener.server.role.RoleDeleteListener;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.ocpsoft.prettytime.PrettyTime;
 
 import java.awt.*;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.*;
 
@@ -467,8 +473,11 @@ public class EventsListener
                 final Instant currentStamp = Instant.now();
                 final String stampAsString = CommonUtils.getCurrentGmtTimeAsString();
                 final UserCachedData userCachedData = new UserCachedData(user, event.getServer());
+                final PrettyTime prettyTime = new PrettyTime(new Locale("en"));
+                final LocalDateTime creationDate = LocalDateTime.ofInstant(user.getCreationTimestamp(), ZoneId.of("UTC"));
+                final String accountCreatedAgo = prettyTime.format(creationDate);
 
-                final String userName = userCachedData.getDisplayUserName()
+                final String userName = user.getMentionTag()
                         + " (" + user.getDiscriminatedName() + ")";
                 final int newlineBreak = 20;
                 final EmbedBuilder embedBuilder = new EmbedBuilder()
@@ -479,12 +488,13 @@ public class EventsListener
                         .addField("At",
                                 CommonUtils.addLinebreaks(stampAsString, newlineBreak), true)
                         .addField("Action", code.toString(), true)
-                        .addField("Server",
-                                CommonUtils.addLinebreaks(event.getServer().getName(), newlineBreak), true);
+                        .addField("Created",
+                                CommonUtils.addLinebreaks(accountCreatedAgo, newlineBreak), true);
                 if (code.equals(MemberEventCode.JOIN)) {
                     invitesController.tryIdentifyInviter(event.getServer()).ifPresent(inviter ->
                             embedBuilder.addField("May be invited by", inviter, true)
                     );
+                    embedBuilder.setFooter("ID:" + user.getId());
                 }
                 if (userCachedData.isHasAvatar()) {
                     userCachedData.setThumbnail(embedBuilder);
