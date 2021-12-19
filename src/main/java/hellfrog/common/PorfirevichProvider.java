@@ -7,7 +7,6 @@ import hellfrog.common.porfirevich.GptResponse;
 import hellfrog.settings.SettingsController;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -22,6 +21,8 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class PorfirevichProvider
         implements GptProvider {
@@ -30,10 +31,11 @@ public class PorfirevichProvider
     private static final String FOOTER_TEXT = "by Porfirevich";
     private final Bucket bucket;
     private final Logger log = LogManager.getLogger(this.getClass().getSimpleName());
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     public PorfirevichProvider() {
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(3L));
-        bucket = Bucket4j.builder().addLimit(bandwidth).build();
+        bucket = Bucket.builder().addLimit(bandwidth).build();
     }
 
     @Override
@@ -41,12 +43,7 @@ public class PorfirevichProvider
         final CompletableFuture<GptResult> future = new CompletableFuture<>();
         CompletableFuture.runAsync(() -> {
 
-            try {
-                bucket.asScheduler().consume(1);
-            } catch (InterruptedException err) {
-                future.completeExceptionally(err);
-                return;
-            }
+            bucket.asScheduler().consume(1, scheduler);
 
             BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
             ObjectMapper objectMapper = new ObjectMapper();
