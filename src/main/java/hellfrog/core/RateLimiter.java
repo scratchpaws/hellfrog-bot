@@ -3,7 +3,6 @@ package hellfrog.core;
 import hellfrog.common.CommonConstants;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
@@ -108,18 +107,18 @@ public class RateLimiter
     @NotNull
     private static Bucket createUserLimiter() {
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(3L));
-        return Bucket4j.builder().addLimit(bandwidth).build();
+        return Bucket.builder().addLimit(bandwidth).build();
     }
 
     @NotNull
     private static Bucket createServerLimiter() {
         Bandwidth bandwidth = Bandwidth.simple(2L, Duration.ofSeconds(1L));
-        return Bucket4j.builder().addLimit(bandwidth).build();
+        return Bucket.builder().addLimit(bandwidth).build();
     }
 
     @NotNull
     private static Bucket createUserNotifyLimiter() {
         Bandwidth bandwidth = Bandwidth.simple(3L, Duration.ofSeconds(10L));
-        return Bucket4j.builder().addLimit(bandwidth).build();
+        return Bucket.builder().addLimit(bandwidth).build();
     }
 }

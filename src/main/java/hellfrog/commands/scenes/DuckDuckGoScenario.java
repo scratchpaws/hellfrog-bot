@@ -7,7 +7,6 @@ import hellfrog.common.ddgentity.DDGSearchResult;
 import hellfrog.core.ServerSideResolver;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
 import org.apache.commons.lang3.StringUtils;
 import org.javacord.api.entity.channel.PrivateChannel;
 import org.javacord.api.entity.channel.ServerTextChannel;
@@ -24,6 +23,8 @@ import java.awt.*;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * DuckDuckGo search scenario. Based by DDG API (https://duckduckgo.com/api)
@@ -34,11 +35,12 @@ public class DuckDuckGoScenario
     private static final String PREFIX = "ddg";
     private static final String DESCRIPTION = "Search by DuckDuckGo";
     private final Bucket bucket;
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     public DuckDuckGoScenario() {
         super(PREFIX, DESCRIPTION);
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(1L));
-        bucket = Bucket4j.builder().addLimit(bandwidth).build();
+        bucket = Bucket.builder().addLimit(bandwidth).build();
         super.enableStrictByChannels();
         super.skipStrictByChannelWithAclBUg();
     }
@@ -66,11 +68,7 @@ public class DuckDuckGoScenario
     }
 
     private void requestDDGRequest(@NotNull final MessageCreateEvent event) {
-        try {
-            bucket.asScheduler().consume(1);
-        } catch (InterruptedException breakSignal) {
-            return;
-        }
+        bucket.asScheduler().consume(1, scheduler);
 
         final String messageWoCommandPrefix =
                 super.getReadableMessageContentWithoutPrefix(event);

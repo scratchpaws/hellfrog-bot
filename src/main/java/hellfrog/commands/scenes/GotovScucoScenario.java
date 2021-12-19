@@ -6,7 +6,6 @@ import hellfrog.common.Tuple;
 import hellfrog.settings.SettingsController;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -33,6 +32,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class GotovScucoScenario
         extends OneShotScenario {
@@ -41,11 +42,12 @@ public class GotovScucoScenario
     private static final String DESCRIPTION = "Get a custom recipe from gotov-suka.ru";
     private static final URI SERVICE_URI = URI.create("https://gotov-suka.ru/get_recipe/-1/-1/");
     private final Bucket bucket;
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     public GotovScucoScenario() {
         super(PREFIX, DESCRIPTION);
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(1L));
-        bucket = Bucket4j.builder().addLimit(bandwidth).build();
+        bucket = Bucket.builder().addLimit(bandwidth).build();
         super.enableStrictByChannels();
         super.skipStrictByChannelWithAclBUg();
     }
@@ -66,11 +68,7 @@ public class GotovScucoScenario
     }
 
     private void requestExternalText(@NotNull final MessageCreateEvent event) {
-        try {
-            bucket.asScheduler().consume(1);
-        } catch (InterruptedException breakSignal) {
-            return;
-        }
+        bucket.asScheduler().consume(1, scheduler);
 
         SimpleHttpClient client = SettingsController.getInstance()
                 .getHttpClientsPool()

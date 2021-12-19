@@ -15,7 +15,7 @@
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>22.0.0</version>
+            <version>23.0.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.javacord/javacord-core -->
@@ -37,28 +37,28 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.16.0</version>
+            <version>2.17.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>2.16.0</version>
+            <version>2.17.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
         <dependency>
             <groupId>commons-cli</groupId>
             <artifactId>commons-cli</artifactId>
-            <version>1.4</version>
+            <version>1.5.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.8.0-M1</version>
+            <version>5.8.2</version>
             <scope>test</scope>
         </dependency>
 
@@ -67,14 +67,14 @@
         <dependency>
             <groupId>org.junit.platform</groupId>
             <artifactId>junit-platform-launcher</artifactId>
-            <version>1.8.0-M1</version>
+            <version>1.8.2</version>
             <scope>test</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.8.0-M1</version>
+            <version>5.8.2</version>
             <scope>test</scope>
         </dependency>
 
@@ -82,7 +82,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.12.4</version>
+            <version>2.13.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.vdurmont/emoji-java -->
@@ -117,28 +117,28 @@
         <dependency>
             <groupId>org.eclipse.collections</groupId>
             <artifactId>eclipse-collections</artifactId>
-            <version>11.0.0.M3</version>
+            <version>11.0.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.eclipse.collections/eclipse-collections-api -->
         <dependency>
             <groupId>org.eclipse.collections</groupId>
             <artifactId>eclipse-collections-api</artifactId>
-            <version>11.0.0.M3</version>
+            <version>11.0.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.codehaus.groovy/groovy -->
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy</artifactId>
-            <version>3.0.8</version>
+            <version>3.0.9</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/io.github.classgraph/classgraph -->
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.115</version>
+            <version>4.8.138</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.nibor.autolink/autolink -->
@@ -166,14 +166,14 @@
         <dependency>
             <groupId>com.github.vladimir-bukhtoyarov</groupId>
             <artifactId>bucket4j-core</artifactId>
-            <version>6.2.0</version>
+            <version>7.0.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.14.1</version>
+            <version>1.14.3</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
@@ -187,28 +187,28 @@
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
-            <version>5.5.6.Final</version>
+            <version>5.6.3.Final</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.languagetool/language-en -->
         <dependency>
             <groupId>org.languagetool</groupId>
             <artifactId>language-en</artifactId>
-            <version>5.4</version>
+            <version>5.5</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.languagetool/language-ru -->
         <dependency>
             <groupId>org.languagetool</groupId>
             <artifactId>language-ru</artifactId>
-            <version>5.4</version>
+            <version>5.5</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.languagetool/language-uk -->
         <dependency>
             <groupId>org.languagetool</groupId>
             <artifactId>language-uk</artifactId>
-            <version>5.4</version>
+            <version>5.5</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12 -->
@@ -238,7 +238,7 @@
                 <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-dependency-plugin -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.1.2</version>
+                <version>3.2.0</version>
                 <executions>
                     <execution>
                         <id>download-sources</id>
@@ -282,7 +282,7 @@
                 <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-javadoc-plugin -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.3.1</version>
             </plugin>
 
             <!-- https://junit.org/junit5/docs/current/user-guide/#running-tests-build-maven -->

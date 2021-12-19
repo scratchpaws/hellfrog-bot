@@ -7,7 +7,6 @@ import hellfrog.common.yalmgpt.GptResponse;
 import hellfrog.settings.SettingsController;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -22,6 +21,8 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class YalmProvider
         implements GptProvider {
@@ -30,22 +31,18 @@ public class YalmProvider
     private static final String FOOTER_TEXT = "by Yandex.Balaboba";
     private final Bucket bucket;
     private final Logger log = LogManager.getLogger(this.getClass().getSimpleName());
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     public YalmProvider() {
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(3L));
-        bucket = Bucket4j.builder().addLimit(bandwidth).build();
+        bucket = Bucket.builder().addLimit(bandwidth).build();
     }
 
     @Override
     public CompletableFuture<GptResult> appendText(final String sourceText) {
         final CompletableFuture<GptResult> future = new CompletableFuture<>();
         CompletableFuture.runAsync(() -> {
-            try {
-                bucket.asScheduler().consume(1);
-            } catch (InterruptedException err) {
-                future.completeExceptionally(err);
-                return;
-            }
+            bucket.asScheduler().consume(1, scheduler);
 
             BroadCast.MessagesLogger messagesLogger = BroadCast.getLogger();
             ObjectMapper objectMapper = new ObjectMapper();

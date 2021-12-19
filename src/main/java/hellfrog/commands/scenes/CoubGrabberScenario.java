@@ -5,7 +5,6 @@ import hellfrog.core.ServerSideResolver;
 import hellfrog.settings.SettingsController;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -33,6 +32,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,12 +48,13 @@ public class CoubGrabberScenario
     private final Pattern MP4_VIDEO = Pattern.compile("mp4_.*_size.*\\.mp4", Pattern.CASE_INSENSITIVE);
     private final Pattern MP4_AUDIO = Pattern.compile("m4a_.*\\.m4a", Pattern.CASE_INSENSITIVE);
     private final Pattern MP3_AUDIO = Pattern.compile(".*\\.mp3$", Pattern.CASE_INSENSITIVE);
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
     public CoubGrabberScenario() {
         super(PREFIX, DESCRIPTION);
         super.enableStrictByChannels();
         Bandwidth bandwidth = Bandwidth.simple(1L, Duration.ofSeconds(1L));
-        bucket = Bucket4j.builder().addLimit(bandwidth).build();
+        bucket = Bucket.builder().addLimit(bandwidth).build();
     }
 
     @Override
@@ -92,11 +94,7 @@ public class CoubGrabberScenario
             return;
         }
 
-        try {
-            bucket.asScheduler().consume(1);
-        } catch (InterruptedException breakSignal) {
-            return;
-        }
+        bucket.asScheduler().consume(1, executor);
 
         final SimpleHttpClient client = SettingsController.getInstance()
                 .getHttpClientsPool()
