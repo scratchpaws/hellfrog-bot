@@ -12,10 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.Message;
-import org.javacord.api.entity.message.MessageBuilder;
-import org.javacord.api.entity.message.MessageType;
-import org.javacord.api.entity.message.Messageable;
+import org.javacord.api.entity.message.*;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -310,9 +307,43 @@ public abstract class ACLCommand {
         return CommonUtils.cutLeftString(messageWoBotPrefix, prefix).trim();
     }
 
+    protected String getFullMessagesContentFromAuthorMessage(@NotNull final Message message, final long toExcludeMessageId) {
+        StringBuilder result = new StringBuilder();
+        extractMessageTextWithEmbed(result, message);
+        final long authorId = message.getAuthor().getId();
+        final int maxCount = 9; // 10 total with start
+        try {
+            MessageSet nextMessages = message.getMessagesAfter(maxCount)
+                    .get(CommonConstants.OP_WAITING_TIMEOUT, CommonConstants.OP_TIME_UNIT);
+            if (nextMessages != null && !nextMessages.isEmpty()) {
+                for (Message msg : nextMessages) {
+                    if (msg.getAuthor().getId() != authorId) {
+                        break;
+                    }
+                    if (msg.getId() == toExcludeMessageId) {
+                        break;
+                    }
+                    result.append(" ");
+                    extractMessageTextWithEmbed(result, msg);
+                }
+            }
+        } catch (Exception extrErr) {
+            BroadCast.getLogger()
+                    .addErrorMessage("Unable to fetch next 10 messages after ID " + message.getId() + ": " + extrErr.getMessage())
+                    .send();
+        }
+        return ServerSideResolver.getReadableContent(result.toString(), message.getServer());
+    }
+
     @NotNull
     protected String getAllAvailableReadableContentWithoutPrefix(@NotNull final Message message) {
         StringBuilder result = new StringBuilder();
+        extractMessageTextWithEmbed(result, message);
+        return ServerSideResolver.getReadableContent(result.toString(), message.getServer());
+    }
+
+    private void extractMessageTextWithEmbed(@NotNull final StringBuilder text,
+                                             @NotNull final Message message) {
         String messageContent = getReadableMessageContentWithoutPrefix(message);
         String embedContents = message.getEmbeds()
                 .stream()
@@ -321,15 +352,14 @@ public abstract class ACLCommand {
                 .reduce(CommonUtils::reduceNewLine)
                 .orElse("");
         if (CommonUtils.isTrStringNotEmpty(messageContent)) {
-            result.append(messageContent);
+            text.append(messageContent);
         }
         if (CommonUtils.isTrStringNotEmpty(messageContent) && CommonUtils.isTrStringNotEmpty(embedContents)) {
-            result.append('\n');
+            text.append('\n');
         }
         if (CommonUtils.isTrStringNotEmpty(embedContents)) {
-            result.append(embedContents);
+            text.append(embedContents);
         }
-        return ServerSideResolver.getReadableContent(result.toString(), message.getServer());
     }
 
     @NotNull
@@ -342,7 +372,7 @@ public abstract class ACLCommand {
 
         Message referencedMessage = event.getMessage().getReferencedMessage().orElse(null);
         if (referencedMessage != null) {
-            return Optional.of(getAllAvailableReadableContentWithoutPrefix(referencedMessage));
+            return Optional.of(getFullMessagesContentFromAuthorMessage(referencedMessage, event.getMessageId()));
         }
 
         CompletableFuture<Message> featuredReference = event.getMessage().requestReferencedMessage().orElse(null);
@@ -354,7 +384,7 @@ public abstract class ACLCommand {
             if (referencedMessage == null) {
                 return Optional.empty();
             }
-            return Optional.of(getAllAvailableReadableContentWithoutPrefix(referencedMessage));
+            return Optional.of(getFullMessagesContentFromAuthorMessage(referencedMessage, event.getMessageId()));
         } catch (Exception ignore) {
             return Optional.empty();
         }
