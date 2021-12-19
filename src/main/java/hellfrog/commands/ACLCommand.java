@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
+import org.javacord.api.entity.message.MessageSet;
 import org.javacord.api.entity.message.MessageType;
 import org.javacord.api.entity.message.Messageable;
 import org.javacord.api.entity.server.Server;
