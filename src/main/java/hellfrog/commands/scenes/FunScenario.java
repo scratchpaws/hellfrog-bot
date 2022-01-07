@@ -27,8 +27,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public abstract class FunScenario
@@ -50,6 +54,9 @@ public abstract class FunScenario
     private String lonelyResultMessage = "";
     private String withSomeoneResultMessage = "";
     private List<String> urlPicturesSet = Collections.emptyList();
+    private final ConcurrentHashMap<Long, Queue<Integer>> prebuildPool = new ConcurrentHashMap<>();
+    private final AtomicInteger previousSetSize = new AtomicInteger(0);
+    private final Object lock = new Object();
 
     public FunScenario(String prefix, String description) {
         super(prefix, description);
@@ -193,9 +200,7 @@ public abstract class FunScenario
                         .map(target -> user.getMentionTag() + " " + withSomething + " " + target.getMentionTag())
                         .orElse(user.getMentionTag() + " " + lonelyMessage));
 
-        final ThreadLocalRandom tlr = ThreadLocalRandom.current();
-        final int index = tlr.nextInt(0, urlPicturesSet.size());
-        final String imageUrl = urlPicturesSet.get(index);
+        final String imageUrl = getShuffleUrl(server.getId());
 
         new MessageBuilder()
                 .setEmbed(new EmbedBuilder()
@@ -203,6 +208,42 @@ public abstract class FunScenario
                         .setImage(imageUrl)
                         .setColor(Color.GREEN))
                 .send(serverTextChannel);
+    }
+
+    private String getShuffleUrl(final long serverId) {
+        final ThreadLocalRandom tlr = ThreadLocalRandom.current();
+        int previousSize = previousSetSize.get();
+        boolean resetShuffle = previousSize != urlPicturesSet.size();
+        Queue<Integer> currentQueue = prebuildPool.get(serverId);
+        if (resetShuffle || currentQueue == null || currentQueue.isEmpty()) {
+            synchronized (lock) {
+                previousSize = previousSetSize.get();
+                resetShuffle = previousSize != urlPicturesSet.size();
+                currentQueue = prebuildPool.get(serverId);
+                if (resetShuffle || currentQueue == null || currentQueue.isEmpty()) {
+                    if (resetShuffle) {
+                        prebuildPool.clear();
+                        previousSetSize.set(urlPicturesSet.size());
+                    }
+                    List<Integer> values = new ArrayList<>();
+                    for (int i = 0; i < urlPicturesSet.size(); i++) {
+                        values.add(i);
+                    }
+                    Collections.shuffle(values, tlr);
+                    currentQueue = new ConcurrentLinkedQueue<>(values);
+                    prebuildPool.put(serverId, currentQueue);
+                }
+            }
+        }
+        Integer urlIndex = currentQueue.poll();
+        if (urlIndex == null || urlPicturesSet.size() < urlIndex) {
+            urlIndex = tlr.nextInt(0, urlPicturesSet.size());
+        }
+        try {
+            return urlPicturesSet.size() > 0 ? urlPicturesSet.get(urlIndex) : "";
+        } catch (IndexOutOfBoundsException err) {
+            return "";
+        }
     }
 
     @Override
