@@ -3,6 +3,7 @@ package hellfrog.common;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.UnmodifiableView;
 import org.nibor.autolink.LinkExtractor;
 import org.nibor.autolink.LinkSpan;
 import org.nibor.autolink.LinkType;
@@ -123,6 +124,43 @@ public class CommonUtils {
             ret.add(text.substring(start, Math.min(text.length(), start + size)));
         }
         return ret;
+    }
+
+    @NotNull
+    @UnmodifiableView
+    public static List<String> splitPreserveWords(@NotNull String text, int maxLineLength) {
+        List<String> result = new ArrayList<>();
+        StringTokenizer tok = new StringTokenizer(text, " ");
+        StringBuilder builder = new StringBuilder();
+        int lineLen = 0;
+        while (tok.hasMoreTokens()) {
+            String word = tok.nextToken();
+            if (lineLen + 1 + word.length() > maxLineLength) {
+                if (!builder.isEmpty()) {
+                    result.add(builder.toString());
+                }
+                builder = new StringBuilder();
+                lineLen = 0;
+            } else if (lineLen > 0) {
+                builder.append(' ');
+                lineLen++;
+            }
+            if (word.length() <= maxLineLength) {
+                builder.append(word);
+                lineLen += word.length();
+            } else {
+                if (!builder.isEmpty()) {
+                    result.add(builder.toString());
+                }
+                builder = new StringBuilder();
+                lineLen = 0;
+                result.addAll(splitEqually(word, maxLineLength));
+            }
+        }
+        if (!builder.isEmpty()) {
+            result.add(builder.toString());
+        }
+        return Collections.unmodifiableList(result);
     }
 
     @NotNull

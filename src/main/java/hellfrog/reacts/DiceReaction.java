@@ -3,6 +3,7 @@ package hellfrog.reacts;
 import com.vdurmont.emoji.EmojiParser;
 import hellfrog.common.BroadCast;
 import hellfrog.common.CommonUtils;
+import hellfrog.common.LongEmbedMessage;
 import hellfrog.common.MessageUtils;
 import hellfrog.core.ServerSideResolver;
 import hellfrog.reacts.dice.*;
@@ -234,7 +235,7 @@ public class DiceReaction
                         final boolean showAverage = AVERAGE_PATTERN.matcher(diceValue).find();
                         final boolean showMedian = MEDIAN_PATTERN.matcher(diceValue).find();
 
-                        MessageBuilder resultMessage = new MessageBuilder();
+                        LongEmbedMessage resultMessage = new LongEmbedMessage();
                         long registeredTotalSum = 0L;
                         long registeredMax = 0L;
 
@@ -382,13 +383,11 @@ public class DiceReaction
                             registeredTotalSum += totalSumResult;
                             registeredMax += max;
                         }
-                        
-                        new MessageBuilder()
-                                .setEmbed(new EmbedBuilder()
-                                        .setTitle(anotherString)
-                                        .setColor(Color.CYAN)
-                                        .setDescription(resultMessage.getStringBuilder().toString()))
+
+                        resultMessage.setTitle(anotherString)
+                                .setColor(Color.CYAN)
                                 .send(textChannel);
+
                         if (doRofl && !showAverage && !showMedian) {
                             rofling(textChannel, registeredTotalSum, registeredTotalSum < registeredMax ?
                                     registeredMax - 1 : registeredTotalSum);
