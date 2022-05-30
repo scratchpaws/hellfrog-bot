@@ -8,8 +8,8 @@ create table `common_preferences`
     `KEY`          varchar(60) not null primary key,
     `string_value` varchar(64) not null,
     `long_value`   bigint      not null,
-    `create_date`  timestamp   not null default sysdate,
-    `update_date`  timestamp   not null default sysdate
+    `create_date`  timestamp   not null default localtimestamp,
+    `update_date`  timestamp   not null default localtimestamp
 );
 
 comment on table `common_preferences` is 'Common bot settings';
@@ -30,8 +30,8 @@ create table `server_preferences`
     `long_value`   bigint      not null,
     `bool_value`   bigint      not null,
     `date_value`   timestamp   not null,
-    `create_date`  timestamp   not null default sysdate,
-    `update_date`  timestamp   not null default sysdate,
+    `create_date`  timestamp   not null default localtimestamp,
+    `update_date`  timestamp   not null default localtimestamp,
     constraint `uniq_serv_key` unique (`KEY`, `server_id`)
 );
 
@@ -62,8 +62,8 @@ create table `active_votes`
     `is_exceptional` bigint    not null default 0,
     `has_default`    bigint    not null default 0,
     `win_threshold`  bigint    not null default 0,
-    `create_date`    timestamp not null default sysdate,
-    `update_date`    timestamp not null default sysdate
+    `create_date`    timestamp not null default localtimestamp,
+    `update_date`    timestamp not null default localtimestamp
 );
 
 comment on table `active_votes` is 'Current active voices';
@@ -91,8 +91,8 @@ create table `vote_points`
     `point_text`      varchar(2000) not null,
     `unicode_emoji`   varchar(12),
     `custom_emoji_id` bigint,
-    `create_date`     timestamp     not null default sysdate,
-    `update_date`     timestamp     not null default sysdate,
+    `create_date`     timestamp     not null default localtimestamp,
+    `update_date`     timestamp     not null default localtimestamp,
     constraint `vote_point_fk` foreign key (`vote_id`) references `active_votes` (`id`)
 );
 
@@ -115,8 +115,8 @@ create table `vote_roles`
     `vote_id`     bigint    not null,
     `message_id`  bigint    not null default 0,
     `role_id`     bigint    not null,
-    `create_date` timestamp not null default sysdate,
-    `update_date` timestamp not null default sysdate,
+    `create_date` timestamp not null default localtimestamp,
+    `update_date` timestamp not null default localtimestamp,
     constraint `uniq_vote_role` unique (`vote_id`,
                                         `role_id`),
     constraint `vote_role_fk` foreign key (`vote_id`) references `active_votes` (`id`)
@@ -138,7 +138,7 @@ create sequence `vote_role_ids` start with 1 increment by 50;
 create table `bot_owners`
 (
     `user_id`     bigint    not null primary key,
-    `create_date` timestamp not null default sysdate
+    `create_date` timestamp not null default localtimestamp
 );
 
 comment on table `bot_owners` is 'Users who can control the bot with the same rights as the creator-owner';
@@ -153,7 +153,7 @@ create table `user_rights`
     `server_id`      bigint      not null,
     `user_id`        bigint      not null,
     `command_prefix` varchar(20) not null,
-    `create_date`    timestamp   not null default sysdate,
+    `create_date`    timestamp   not null default localtimestamp,
     constraint `uniq_user_right` unique (`server_id`, `command_prefix`, `user_id`)
 );
 
@@ -174,7 +174,7 @@ create table `role_rights`
     `server_id`      bigint      not null,
     `role_id`        bigint      not null,
     `command_prefix` varchar(20) not null,
-    `create_date`    timestamp   not null default sysdate,
+    `create_date`    timestamp   not null default localtimestamp,
     constraint `uniq_role_right` unique (`server_id`, `command_prefix`, `role_id`)
 );
 
@@ -195,7 +195,7 @@ create table `channel_rights`
     `server_id`      bigint      not null,
     `channel_id`     bigint      not null,
     `command_prefix` varchar(20) not null,
-    `create_date`    timestamp   not null default sysdate,
+    `create_date`    timestamp   not null default localtimestamp,
     constraint `uniq_channel_right` unique (`server_id`, `command_prefix`, `channel_id`)
 );
 
@@ -216,7 +216,7 @@ create table `category_rights`
     `server_id`      bigint      not null,
     `category_id`    bigint      not null,
     `command_prefix` varchar(20) not null,
-    `create_date`    timestamp   not null default sysdate,
+    `create_date`    timestamp   not null default localtimestamp,
     constraint `uniq_category_right` unique (`server_id`, `command_prefix`, `category_id`)
 );
 
@@ -238,8 +238,8 @@ create table `wtf_assigns`
     `author_id`   bigint    not null,
     `target_id`   bigint    not null,
     `description` varchar(2000),
-    `create_date` timestamp not null default sysdate,
-    `update_date` timestamp not null default sysdate,
+    `create_date` timestamp not null default localtimestamp,
+    `update_date` timestamp not null default localtimestamp,
     constraint `uniq_wft_assign` unique (`server_id`,
                                        `author_id`,
                                        `target_id`)
@@ -263,7 +263,7 @@ create table `wtf_assigns_attaches`
     `id`          bigint        not null primary key,
     `entry_id`    bigint        not null,
     `uri`         varchar(2000) not null,
-    `create_date` timestamp     not null default sysdate,
+    `create_date` timestamp     not null default localtimestamp,
     constraint `wtf_attach_fk` foreign key (`entry_id`) references `wtf_assigns` (`id`),
     constraint `wtf_assigns_attaches` unique (`entry_id`, `uri`)
 );
@@ -284,9 +284,9 @@ create table `emoji_total_statistics`
     `server_id`    bigint    not null,
     `emoji_id`     bigint    not null,
     `usages_count` bigint    not null default 0,
-    `last_usage`   timestamp not null default sysdate,
-    `create_date`  timestamp not null default sysdate,
-    `update_date`  timestamp not null default sysdate,
+    `last_usage`   timestamp not null default localtimestamp,
+    `create_date`  timestamp not null default localtimestamp,
+    `update_date`  timestamp not null default localtimestamp,
     constraint `uniq_total_emoji_stat` unique (server_id,
                                              emoji_id)
 );
@@ -311,11 +311,11 @@ create table `text_channel_total_stats`
     `text_channel_id`   bigint    not null,
     `user_id`           bigint    not null,
     `messages_count`    bigint    not null default 0,
-    `last_message_date` timestamp not null default sysdate,
+    `last_message_date` timestamp not null default localtimestamp,
     `symbols_count`     bigint    not null default 0,
     `bytes_count`       bigint    not null default 0,
-    `create_date`       timestamp not null default sysdate,
-    `update_date`       timestamp not null default sysdate,
+    `create_date`       timestamp not null default localtimestamp,
+    `update_date`       timestamp not null default localtimestamp,
     constraint `uniq_text_channel_total_stat` unique (`server_id`, `text_channel_id`, `user_id`)
 );
 
@@ -341,7 +341,7 @@ create table `auto_promote_configs`
     `server_id`   bigint    not null,
     `role_id`     bigint    not null,
     `timeout`     bigint    not null default 0,
-    `create_date` timestamp not null default sysdate,
+    `create_date` timestamp not null default localtimestamp,
     constraint `uniq_auto_promote_role_cfg` unique (`server_id`, `role_id`)
 );
 
@@ -363,7 +363,7 @@ create table `role_assign_queue`
     `user_id`     bigint    not null,
     `role_id`     bigint    not null,
     `assign_date` timestamp not null,
-    `create_date` timestamp not null default sysdate
+    `create_date` timestamp not null default localtimestamp
 );
 
 comment on table `role_assign_queue` is 'A queue of assigned roles for server members';
@@ -383,8 +383,8 @@ create table `names_cache`
     `entity_id`   bigint       not null primary key,
     `entity_name` varchar(120) not null,
     `entity_type` varchar(30)  not null,
-    `create_date` timestamp    not null default sysdate,
-    `update_date` timestamp    not null default sysdate
+    `create_date` timestamp    not null default localtimestamp,
+    `update_date` timestamp    not null default localtimestamp
 );
 
 comment on table `names_cache` is 'Discord entity names global cache';
@@ -402,8 +402,8 @@ create table `server_names_cache`
     `server_id` bigint not null,
     `entity_id` bigint not null,
     `entity_name` varchar(120) not null,
-    `create_date` timestamp    not null default sysdate,
-    `update_date` timestamp    not null default sysdate,
+    `create_date` timestamp    not null default localtimestamp,
+    `update_date` timestamp    not null default localtimestamp,
     constraint `uniq_server_name` unique (`server_id`, `entity_id`)
 );
 
@@ -427,8 +427,8 @@ create table `community_control_settings`
     `threshold`          bigint       not null    default 0,
     `unicode_emoji`      varchar(12),
     `custom_emoji_id`    bigint       not null    default 0,
-    `create_date`        timestamp    not null    default sysdate,
-    `update_date`        timestamp    not null    default sysdate,
+    `create_date`        timestamp    not null    default localtimestamp,
+    `update_date`        timestamp    not null    default localtimestamp,
     constraint `uniq_community_control` unique (`server_id`)
 );
 
@@ -451,7 +451,7 @@ create table `community_control_users`
     `id`             bigint       not null    primary key,
     `server_id`      bigint       not null,
     `user_id`        bigint       not null,
-    `create_date`    timestamp    not null    default sysdate,
+    `create_date`    timestamp    not null    default localtimestamp,
     constraint `uniq_community_control_user` unique (`server_id`, `user_id`)
 );
 
@@ -472,7 +472,7 @@ create table `schema_versions`
 (
     `version`     bigint not null primary key,
     `script_name` varchar(120),
-    `apply_date`  timestamp default sysdate,
+    `apply_date`  timestamp default localtimestamp,
     constraint `schema_ver_uniq_script` unique (`script_name`)
 );
 
