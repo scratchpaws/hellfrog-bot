@@ -40,7 +40,7 @@ public class DiceReaction
 
     private static final String SHORT_ROLL_PREFIX = "([lLдД]{2})";
     private static final Pattern DICE_PATTERN = Pattern.compile(
-            "([rр]\\s?)?" +
+            "([rр]\\s?|\\d{1,2}\\s?[xх]\\s?)?" +
                     "((-\\s?)?\\d+\\s?(\\+{1,2}|-{1,2}))?" +
                     "([dд]?\\s?\\d+\\s?[dд]\\s?\\d+|[lд]{2})" +
                     "([mм]|[aа])?" +
@@ -48,7 +48,7 @@ public class DiceReaction
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern SEARCH_PATTERN = Pattern.compile(
             "^\\s*" +
-                    "([rр]\\s?)?" +
+                    "([rр]\\s?|\\d{1,2}\\s?[xх]\\s?)?" +
                     "((-\\s?)?\\d+\\s?(\\+{1,2}|-{1,2}))?" +
                     "([dд]?\\s?\\d+\\s?[dд]\\s?\\d+|[lд]{2})" +
                     "([mм]|[aа])?" +
@@ -57,6 +57,9 @@ public class DiceReaction
     private static final String DEFAULT_ROLL = "1d20";
 
     private static final Pattern ROFL_PATTERN = Pattern.compile("^[rр]",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    private static final Pattern MULTIPLIER_PATTERN = Pattern.compile("^\\d{1,2}\\s?[xх]\\s?",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern VALUE_PATTERN = Pattern.compile(
             "\\d{1,5}\\s?[dд]\\s?\\d{1,5}",
@@ -85,6 +88,8 @@ public class DiceReaction
     private static final long MAX_FACES = 1000L;
     private static final long MIN_INITIAL_VALUE = -10_000L;
     private static final long MAX_INITIAL_VALUE = 10_000L;
+    private static final long MIN_LINES_COUNT = 1L;
+    private static final long MAX_LINES_COUNT = 15;
 
     private static final String PREFIX = "dice";
     private static final String DESCRIPTION = "roll dices (use NdN or ll for roll, " +
@@ -147,6 +152,18 @@ public class DiceReaction
                             ? CommonUtils.onlyNumbersToLong(rawDiceArrayValues[1])
                             : 20L;
 
+                    Matcher multiplierMatcher = MULTIPLIER_PATTERN.matcher(diceValue);
+                    long linesCount = 1L;
+                    if (multiplierMatcher.find()) {
+                        linesCount = CommonUtils.onlyNumbersToLong(multiplierMatcher.group());
+                        if (linesCount < MIN_LINES_COUNT) {
+                            linesCount = MIN_LINES_COUNT;
+                        } else if (linesCount > MAX_LINES_COUNT) {
+                            linesCount = MAX_LINES_COUNT;
+                        }
+                    }
+                    diceValue = diceValue.replaceAll(MULTIPLIER_PATTERN.pattern(), "");
+
                     if (numOfDice > 0 && numOfDice <= MAX_DICES
                             && numOfFaces > 0 && numOfFaces <= MAX_FACES) {
 
@@ -160,7 +177,8 @@ public class DiceReaction
                             long override = 0L;
                             try {
                                 override = Long.parseLong(rawInitialValue);
-                            } catch (NumberFormatException ignore) {}
+                            } catch (NumberFormatException ignore) {
+                            }
                             if (override != 0L && override >= MIN_INITIAL_VALUE && override <= MAX_INITIAL_VALUE) {
                                 initialValue = override;
                                 if (rawInitialModifier.startsWith("++")) {
@@ -200,10 +218,7 @@ public class DiceReaction
                             }
                         }
 
-                        MessageBuilder dicesOutput = new MessageBuilder();
-                        long totalSumResult = 0;
                         RandomSource randomSource = RandomSource.getInstance();
-                        int success = 0;
 
                         final List<SumModifier> diceModifiers = parseModifiers(diceValue, false);
                         final List<SumModifier> summaryModifiers = parseModifiers(diceValue, true);
@@ -219,144 +234,164 @@ public class DiceReaction
                         final boolean showAverage = AVERAGE_PATTERN.matcher(diceValue).find();
                         final boolean showMedian = MEDIAN_PATTERN.matcher(diceValue).find();
 
-                        final MutableDoubleList allDices = new DoubleArrayList((int)numOfDice);
+                        MessageBuilder resultMessage = new MessageBuilder();
+                        long registeredTotalSum = 0L;
+                        long registeredMax = 0L;
 
-                        for (long d = 1; d <= numOfDice; d++) {
-                            long tr = randomSource.getDice(numOfFaces);
-                            final long origin = tr;
-                            if (modifyDices) {
-                                for (SumModifier diceModifier : diceModifiers) {
-                                    tr = diceModifier.modify(tr);
-                                }
+                        for (long lineNum = 1L; lineNum <= linesCount; lineNum++) {
+                            int success = 0;
+                            long totalSumResult = 0;
+                            MessageBuilder dicesOutput = new MessageBuilder();
+                            final MutableDoubleList allDices = new DoubleArrayList((int) numOfDice);
+
+                            if (lineNum > 1L) {
+                                resultMessage.append('\n');
                             }
-                            if (modifyInitialDices) {
-                                switch (initialModifierType) {
-                                    case ADD_VAL -> tr = initialValue + tr;
-                                    case SUB_VAL -> tr = initialValue - tr;
-                                }
+                            if (linesCount > 1L) {
+                                resultMessage.append(lineNum).append(": ");
                             }
-                            boolean strike = false;
-                            if (!resultFilters.isEmpty()) {
-                                for (ResultFilter resultFilter : resultFilters) {
-                                    if (resultFilter.notOk(tr)) {
-                                        strike = true;
-                                        break;
+
+                            for (long d = 1; d <= numOfDice; d++) {
+                                long tr = randomSource.getDice(numOfFaces);
+                                final long origin = tr;
+                                if (modifyDices) {
+                                    for (SumModifier diceModifier : diceModifiers) {
+                                        tr = diceModifier.modify(tr);
                                     }
                                 }
-                            }
-                            if (!strike) {
-                                success++;
-                                totalSumResult += tr;
-                                allDices.add((double)tr);
-                            }
-                            dicesOutput.append("[");
-                            if (!strike) {
-                                dicesOutput.append(tr);
-                            } else {
-                                dicesOutput.append(String.valueOf(tr), MessageDecoration.STRIKEOUT);
-                            }
-                            if (modifyDices) {
-                                dicesOutput.append(" (");
                                 if (modifyInitialDices) {
-                                    dicesOutput.append(initialValue);
                                     switch (initialModifierType) {
-                                        case ADD_VAL -> dicesOutput.append("+");
-                                        case SUB_VAL -> dicesOutput.append("-");
-                                    }
-                                    if (CommonUtils.isTrStringNotEmpty(diceModifiersString)) {
-                                        dicesOutput.append("(");
+                                        case ADD_VAL -> tr = initialValue + tr;
+                                        case SUB_VAL -> tr = initialValue - tr;
                                     }
                                 }
-                                dicesOutput.append(origin)
-                                        .append(diceModifiersString)
-                                        .append(")");
-                                if (modifyInitialDices && CommonUtils.isTrStringNotEmpty(diceModifiersString)) {
-                                    dicesOutput.append(")");
+                                boolean strike = false;
+                                if (!resultFilters.isEmpty()) {
+                                    for (ResultFilter resultFilter : resultFilters) {
+                                        if (resultFilter.notOk(tr)) {
+                                            strike = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (!strike) {
+                                    success++;
+                                    totalSumResult += tr;
+                                    allDices.add((double) tr);
+                                }
+                                dicesOutput.append("[");
+                                if (!strike) {
+                                    dicesOutput.append(tr);
+                                } else {
+                                    dicesOutput.append(String.valueOf(tr), MessageDecoration.STRIKEOUT);
+                                }
+                                if (modifyDices) {
+                                    dicesOutput.append(" (");
+                                    if (modifyInitialDices) {
+                                        dicesOutput.append(initialValue);
+                                        switch (initialModifierType) {
+                                            case ADD_VAL -> dicesOutput.append("+");
+                                            case SUB_VAL -> dicesOutput.append("-");
+                                        }
+                                        if (CommonUtils.isTrStringNotEmpty(diceModifiersString)) {
+                                            dicesOutput.append("(");
+                                        }
+                                    }
+                                    dicesOutput.append(origin)
+                                            .append(diceModifiersString)
+                                            .append(")");
+                                    if (modifyInitialDices && CommonUtils.isTrStringNotEmpty(diceModifiersString)) {
+                                        dicesOutput.append(")");
+                                    }
+                                }
+                                dicesOutput.append("]");
+                                if (d < numOfDice) {
+                                    dicesOutput.append(" ");
                                 }
                             }
-                            dicesOutput.append("]");
-                            if (d < numOfDice) {
-                                dicesOutput.append(" ");
+
+                            final long origTotalSum = totalSumResult;
+                            for (SumModifier summaryModifier : summaryModifiers) {
+                                totalSumResult = summaryModifier.modify(totalSumResult);
                             }
-                        }
-
-                        final long origTotalSum = totalSumResult;
-                        for (SumModifier summaryModifier : summaryModifiers) {
-                            totalSumResult = summaryModifier.modify(totalSumResult);
-                        }
-                        if (initialValue != 0L && initialModifierType.summary) {
-                            switch (initialModifierType) {
-                                case ADD_SUM -> totalSumResult = initialValue + totalSumResult;
-                                case SUB_SUM -> totalSumResult = initialValue - totalSumResult;
+                            if (initialValue != 0L && initialModifierType.summary) {
+                                switch (initialModifierType) {
+                                    case ADD_SUM -> totalSumResult = initialValue + totalSumResult;
+                                    case SUB_SUM -> totalSumResult = initialValue - totalSumResult;
+                                }
                             }
-                        }
 
-                        final Median medianCalculator = new Median();
-                        final Mean averageCalculator = new Mean();
-                        final double[] sortedDices = allDices.toSortedArray();
-                        final double median = medianCalculator.evaluate(sortedDices);
-                        final double average = averageCalculator.evaluate(sortedDices);
+                            final Median medianCalculator = new Median();
+                            final Mean averageCalculator = new Mean();
+                            final double[] sortedDices = allDices.toSortedArray();
+                            final double median = medianCalculator.evaluate(sortedDices);
+                            final double average = averageCalculator.evaluate(sortedDices);
 
-                        if (!resultFilters.isEmpty()) {
-                            dicesOutput.append(" (")
-                                    .append(String.valueOf(success))
-                                    .append(" success)");
-                        }
-                        long max = numOfDice * numOfFaces + 1;
-                        String defName = "You";
-                        if (user != null) {
-                            defName = MessageUtils.escapeSpecialSymbols(server != null ?
-                                    server.getDisplayName(user) :
-                                    user.getName());
-                        }
-                        MessageBuilder msg = new MessageBuilder()
-                                .append(defName, MessageDecoration.BOLD)
-                                .append(" rolled ")
-                                .append(String.valueOf(numOfDice))
-                                .append("-")
-                                .append(String.valueOf(max - 1))
-                                .append(" and got ")
-                                .append(dicesOutput.getStringBuilder().toString())
-                                .append("...");
+                            if (!resultFilters.isEmpty()) {
+                                dicesOutput.append(" (")
+                                        .append(String.valueOf(success))
+                                        .append(" success)");
+                            }
+                            long max = numOfDice * numOfFaces + 1;
+                            String defName = "You";
+                            if (user != null) {
+                                defName = MessageUtils.escapeSpecialSymbols(server != null ?
+                                        server.getDisplayName(user) :
+                                        user.getName());
+                            }
+                            MessageBuilder msg = new MessageBuilder()
+                                    .append(defName, MessageDecoration.BOLD)
+                                    .append(" rolled ")
+                                    .append(String.valueOf(numOfDice))
+                                    .append("-")
+                                    .append(String.valueOf(max - 1))
+                                    .append(" and got ")
+                                    .append(dicesOutput.getStringBuilder().toString())
+                                    .append("...");
 
-                        if (!showAverage && !showMedian) {
-                            msg.append(String.valueOf(totalSumResult), MessageDecoration.BOLD);
-                            if (modifyTotalSum) {
-                                msg.append(" (");
-                                if (modifyInitialSum) {
-                                    msg.append(initialValue);
-                                    switch (initialModifierType) {
-                                        case ADD_SUM -> msg.append("+");
-                                        case SUB_SUM -> msg.append("-");
+                            if (!showAverage && !showMedian) {
+                                msg.append(String.valueOf(totalSumResult), MessageDecoration.BOLD);
+                                if (modifyTotalSum) {
+                                    msg.append(" (");
+                                    if (modifyInitialSum) {
+                                        msg.append(initialValue);
+                                        switch (initialModifierType) {
+                                            case ADD_SUM -> msg.append("+");
+                                            case SUB_SUM -> msg.append("-");
+                                        }
+                                        if (CommonUtils.isTrStringNotEmpty(summaryModifiersString)) {
+                                            msg.append("(");
+                                        }
                                     }
+                                    msg.append(origTotalSum)
+                                            .append(summaryModifiersString)
+                                            .append(")");
                                     if (CommonUtils.isTrStringNotEmpty(summaryModifiersString)) {
-                                        msg.append("(");
+                                        msg.append(")");
                                     }
                                 }
-                                msg.append(origTotalSum)
-                                        .append(summaryModifiersString)
-                                        .append(")");
-                                if (CommonUtils.isTrStringNotEmpty(summaryModifiersString)) {
-                                    msg.append(")");
-                                }
+                            } else if (showAverage) {
+                                msg.append(String.valueOf(average), MessageDecoration.BOLD)
+                                        .append(" (average)");
+                            } else {
+                                msg.append(String.valueOf(median), MessageDecoration.BOLD)
+                                        .append(" (median)");
                             }
-                        } else if (showAverage) {
-                            msg.append(String.valueOf(average), MessageDecoration.BOLD)
-                                    .append(" (average)");
-                        } else {
-                            msg.append(String.valueOf(median), MessageDecoration.BOLD)
-                                    .append(" (median)");
-                        }
 
+                            resultMessage.append(msg.getStringBuilder().toString());
+                            registeredTotalSum += totalSumResult;
+                            registeredMax += max;
+                        }
+                        
                         new MessageBuilder()
                                 .setEmbed(new EmbedBuilder()
                                         .setTitle(anotherString)
                                         .setColor(Color.CYAN)
-                                        .setDescription(msg.getStringBuilder().toString()))
+                                        .setDescription(resultMessage.getStringBuilder().toString()))
                                 .send(textChannel);
                         if (doRofl && !showAverage && !showMedian) {
-                            rofling(textChannel, totalSumResult, totalSumResult < max ?
-                                    max - 1 : totalSumResult);
+                            rofling(textChannel, registeredTotalSum, registeredTotalSum < registeredMax ?
+                                    registeredMax - 1 : registeredTotalSum);
                         }
                     }
 
@@ -368,7 +403,8 @@ public class DiceReaction
         }
     }
 
-    @NotNull @UnmodifiableView
+    @NotNull
+    @UnmodifiableView
     private List<SumModifier> parseModifiers(@NotNull final String diceValue, final boolean getSummaryModifiers) {
 
         final List<SumModifier> modifiers = new ArrayList<>();
