@@ -34,7 +34,7 @@ public class CommonPreference {
     }
 
     @Id
-    @Column(name = "key", unique = true, nullable = false, length = 60)
+    @Column(name = "`KEY`", unique = true, nullable = false, length = 60)
     public String getKey() {
         return key;
     }

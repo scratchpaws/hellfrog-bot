@@ -9,7 +9,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "server_preferences", uniqueConstraints =
-@UniqueConstraint(name = "uniq_serv_key", columnNames = {"server_id", "key"}))
+@UniqueConstraint(name = "uniq_serv_key", columnNames = {"server_id", "`KEY`"}))
 public class ServerPreference {
 
     private long id;
@@ -61,7 +61,7 @@ public class ServerPreference {
         this.serverId = serverId;
     }
 
-    @Column(name = "key", nullable = false, length = 60)
+    @Column(name = "`KEY`", nullable = false, length = 60)
     @Enumerated(EnumType.STRING)
     public ServerPrefKey getKey() {
         return key;
