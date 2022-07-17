@@ -1,7 +1,5 @@
 package hellfrog.common.porfirevich;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.io.Serializable;
 
 public class GptRequest
@@ -9,7 +7,6 @@ public class GptRequest
 
     private String prompt;
     private int length = 30;
-    private int numSamples = 1;
 
     public String getPrompt() {
         return prompt;
@@ -29,22 +26,11 @@ public class GptRequest
         return this;
     }
 
-    @JsonProperty("num_samples")
-    public int getNumSamples() {
-        return numSamples;
-    }
-
-    public GptRequest setNumSamples(int numSamples) {
-        this.numSamples = numSamples;
-        return this;
-    }
-
     @Override
     public String toString() {
         return "GptRequest{" +
                 "prompt='" + prompt + '\'' +
                 ", length=" + length +
-                ", numSamples=" + numSamples +
                 '}';
     }
 }
